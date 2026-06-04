@@ -25,8 +25,8 @@ interface PrinterOption {
 
 const printers: PrinterOption[] = [
   { id: "1", name: "Zebra ZD420", type: "network", status: "online" },
-  { id: "2", name: "Brother QL-820NWB", type: "network", status: "online" },
-  { id: "3", name: "Local Printer Agent", type: "local", status: "offline" },
+  { id: "2", name: "Honeywell PC42", type: "network", status: "online" },
+  { id: "3", name: "Agente local de impresión", type: "local", status: "offline" },
 ]
 
 const mockLabels = [
@@ -63,17 +63,17 @@ export default function PreviewPage() {
             className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Upload
+            Volver a Cargar datos
           </Link>
           <div className="h-6 w-px bg-border" />
           <h1 className="text-lg font-semibold text-foreground">
-            Preview & Print
+            Vista previa e impresión
           </h1>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-1.5 text-sm">
             <Tag className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium text-foreground">Total: {totalLabels} labels</span>
+            <span className="font-medium text-foreground">Total: {totalLabels} etiquetas</span>
           </div>
         </div>
       </div>
@@ -84,7 +84,7 @@ export default function PreviewPage() {
           <div className="mx-auto max-w-xl">
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-sm font-medium text-muted-foreground">
-                Label Preview
+                Vista previa de la etiqueta
               </h2>
               <div className="flex items-center gap-2">
                 <Button
@@ -96,7 +96,7 @@ export default function PreviewPage() {
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <span className="min-w-[60px] text-center text-sm text-muted-foreground">
-                  {currentLabel + 1} of {mockLabels.length}
+                  {currentLabel + 1} de {mockLabels.length}
                 </span>
                 <Button
                   variant="outline"
@@ -156,7 +156,7 @@ export default function PreviewPage() {
             </div>
 
             <p className="mt-4 text-center text-xs text-muted-foreground">
-              Preview shows how the label will look when printed
+              La vista previa muestra cómo se verá la etiqueta al imprimir
             </p>
           </div>
         </div>
@@ -165,7 +165,7 @@ export default function PreviewPage() {
         <div className="w-96 border-l border-border bg-card">
           <div className="border-b border-border px-6 py-4">
             <h2 className="text-base font-semibold text-foreground">
-              Print Settings
+              Opciones de impresión
             </h2>
           </div>
 
@@ -173,7 +173,7 @@ export default function PreviewPage() {
             {/* Print Method */}
             <div>
               <label className="mb-3 block text-sm font-medium text-foreground">
-                Print Method
+                Método de impresión
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <button
@@ -193,7 +193,7 @@ export default function PreviewPage() {
                     "text-sm font-medium",
                     printMethod === "network" ? "text-primary" : "text-muted-foreground"
                   )}>
-                    Network
+                    Red
                   </span>
                 </button>
                 <button
@@ -213,7 +213,7 @@ export default function PreviewPage() {
                     "text-sm font-medium",
                     printMethod === "local" ? "text-primary" : "text-muted-foreground"
                   )}>
-                    Local Agent
+                    Agente local
                   </span>
                 </button>
               </div>
@@ -222,7 +222,7 @@ export default function PreviewPage() {
             {/* Printer Selection */}
             <div>
               <label className="mb-3 block text-sm font-medium text-foreground">
-                Select Printer
+                Seleccionar impresora
               </label>
               <div className="space-y-2">
                 {printers
@@ -262,7 +262,7 @@ export default function PreviewPage() {
                           "h-1.5 w-1.5 rounded-full",
                           printer.status === "online" ? "bg-success" : "bg-destructive"
                         )} />
-                        {printer.status}
+                        {printer.status === "online" ? "en línea" : "fuera de línea"}
                       </span>
                     </button>
                   ))}
@@ -272,12 +272,12 @@ export default function PreviewPage() {
             {/* Summary */}
             <div className="rounded-lg bg-muted p-4">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Labels to print</span>
+                <span className="text-muted-foreground">Etiquetas a imprimir</span>
                 <span className="font-medium text-foreground">{totalLabels}</span>
               </div>
               <div className="mt-2 flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Estimated time</span>
-                <span className="font-medium text-foreground">~3 minutes</span>
+                <span className="text-muted-foreground">Tiempo estimado</span>
+                <span className="font-medium text-foreground">~3 minutos</span>
               </div>
             </div>
 
@@ -291,12 +291,12 @@ export default function PreviewPage() {
               {isPrinting ? (
                 <>
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                  Printing...
+                  Imprimiendo...
                 </>
               ) : (
                 <>
                   <Printer className="h-4 w-4" />
-                  Print All {totalLabels} Labels
+                  Imprimir las {totalLabels} etiquetas
                 </>
               )}
             </Button>
@@ -309,10 +309,10 @@ export default function PreviewPage() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-foreground">
-                      Print job started
+                      Trabajo de impresión iniciado
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Check Print Jobs for progress
+                      Mirá el progreso en Trabajos de impresión
                     </p>
                   </div>
                 </div>

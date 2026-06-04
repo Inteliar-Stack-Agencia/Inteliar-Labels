@@ -39,7 +39,7 @@ interface PrintJob {
 const mockJobs: PrintJob[] = [
   {
     id: "1",
-    templateName: "Product Label A",
+    templateName: "Etiqueta de Producto A",
     labelCount: 150,
     status: "printing",
     createdAt: "2024-01-18 14:30",
@@ -48,15 +48,15 @@ const mockJobs: PrintJob[] = [
   },
   {
     id: "2",
-    templateName: "Shipping Label",
+    templateName: "Etiqueta de Envío",
     labelCount: 45,
     status: "pending",
     createdAt: "2024-01-18 14:25",
-    printer: "Brother QL-820NWB",
+    printer: "Honeywell PC42",
   },
   {
     id: "3",
-    templateName: "Barcode Label",
+    templateName: "Etiqueta de Código de Barras",
     labelCount: 200,
     status: "completed",
     createdAt: "2024-01-18 13:00",
@@ -65,15 +65,15 @@ const mockJobs: PrintJob[] = [
   },
   {
     id: "4",
-    templateName: "QR Code Label",
+    templateName: "Etiqueta QR",
     labelCount: 80,
     status: "error",
     createdAt: "2024-01-18 12:30",
-    printer: "Local Printer Agent",
+    printer: "Agente local de impresión",
   },
   {
     id: "5",
-    templateName: "Inventory Tag",
+    templateName: "Etiqueta de Inventario",
     labelCount: 320,
     status: "completed",
     createdAt: "2024-01-18 10:00",
@@ -82,29 +82,29 @@ const mockJobs: PrintJob[] = [
   },
   {
     id: "6",
-    templateName: "Price Tag",
+    templateName: "Etiqueta de Precio",
     labelCount: 100,
     status: "completed",
     createdAt: "2024-01-17 16:45",
     completedAt: "2024-01-17 16:48",
-    printer: "Brother QL-820NWB",
+    printer: "Honeywell PC42",
   },
 ]
 
 const statusConfig = {
   completed: {
     icon: CheckCircle2,
-    label: "Completed",
+    label: "Completado",
     className: "text-success bg-success/10",
   },
   pending: {
     icon: Clock,
-    label: "Pending",
+    label: "Pendiente",
     className: "text-warning bg-warning/10",
   },
   printing: {
     icon: RefreshCw,
-    label: "Printing",
+    label: "Imprimiendo",
     className: "text-primary bg-primary/10",
   },
   error: {
@@ -118,13 +118,13 @@ export default function PrintJobsPage() {
   return (
     <DashboardLayout>
       <Header
-        title="Print Jobs"
-        description="Monitor and manage print jobs"
+        title="Trabajos de impresión"
+        description="Monitoreá y gestioná los trabajos de impresión"
         actions={
           <Link href="/upload">
             <Button size="sm" className="gap-2">
               <Plus className="h-4 w-4" />
-              New Print Job
+              Nuevo trabajo
             </Button>
           </Link>
         }
@@ -134,10 +134,10 @@ export default function PrintJobsPage() {
         {/* Stats */}
         <div className="mb-6 grid grid-cols-4 gap-4">
           {[
-            { label: "Total Jobs", value: mockJobs.length, color: "text-foreground" },
-            { label: "Completed", value: mockJobs.filter((j) => j.status === "completed").length, color: "text-success" },
-            { label: "In Progress", value: mockJobs.filter((j) => j.status === "printing" || j.status === "pending").length, color: "text-primary" },
-            { label: "Failed", value: mockJobs.filter((j) => j.status === "error").length, color: "text-destructive" },
+            { label: "Trabajos totales", value: mockJobs.length, color: "text-foreground" },
+            { label: "Completados", value: mockJobs.filter((j) => j.status === "completed").length, color: "text-success" },
+            { label: "En progreso", value: mockJobs.filter((j) => j.status === "printing" || j.status === "pending").length, color: "text-primary" },
+            { label: "Fallidos", value: mockJobs.filter((j) => j.status === "error").length, color: "text-destructive" },
           ].map((stat) => (
             <div key={stat.label} className="rounded-lg border border-border bg-card p-4">
               <p className="text-sm text-muted-foreground">{stat.label}</p>
@@ -153,12 +153,12 @@ export default function PrintJobsPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border text-left text-sm text-muted-foreground">
-                <th className="px-6 py-4 font-medium">Job</th>
-                <th className="px-6 py-4 font-medium">Labels</th>
-                <th className="px-6 py-4 font-medium">Printer</th>
-                <th className="px-6 py-4 font-medium">Status</th>
-                <th className="px-6 py-4 font-medium">Created</th>
-                <th className="px-6 py-4 font-medium sr-only">Actions</th>
+                <th className="px-6 py-4 font-medium">Trabajo</th>
+                <th className="px-6 py-4 font-medium">Etiquetas</th>
+                <th className="px-6 py-4 font-medium">Impresora</th>
+                <th className="px-6 py-4 font-medium">Estado</th>
+                <th className="px-6 py-4 font-medium">Creado</th>
+                <th className="px-6 py-4 font-medium sr-only">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -174,13 +174,13 @@ export default function PrintJobsPage() {
                           {job.templateName}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Job #{job.id}
+                          Trabajo #{job.id}
                         </p>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-sm text-card-foreground">
-                        {job.labelCount} labels
+                        {job.labelCount} etiquetas
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -211,7 +211,7 @@ export default function PrintJobsPage() {
                               />
                             </div>
                             <p className="mt-1 text-[10px] text-muted-foreground">
-                              {job.progress}% complete
+                              {job.progress}% completado
                             </p>
                           </div>
                         )}
@@ -224,7 +224,7 @@ export default function PrintJobsPage() {
                         </p>
                         {job.completedAt && (
                           <p className="text-xs text-muted-foreground">
-                            Completed: {job.completedAt}
+                            Completado: {job.completedAt}
                           </p>
                         )}
                       </div>
@@ -239,17 +239,17 @@ export default function PrintJobsPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem>
                             <Eye className="mr-2 h-4 w-4" />
-                            View Details
+                            Ver detalles
                           </DropdownMenuItem>
                           {job.status === "error" && (
                             <DropdownMenuItem>
                               <RefreshCw className="mr-2 h-4 w-4" />
-                              Retry
+                              Reintentar
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem className="text-destructive focus:text-destructive">
                             <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
+                            Eliminar
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

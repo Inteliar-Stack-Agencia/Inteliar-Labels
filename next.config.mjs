@@ -6,6 +6,10 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Requerido para Cloudflare Pages
+  experimental: {
+    runtime: "edge",
+  },
 }
 
 export default nextConfig

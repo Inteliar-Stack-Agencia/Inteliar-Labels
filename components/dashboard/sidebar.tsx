@@ -14,12 +14,12 @@ import {
 } from "lucide-react"
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Panel", href: "/dashboard", icon: LayoutDashboard },
   { name: "Templates", href: "/templates", icon: FileStack },
-  { name: "Upload Data", href: "/upload", icon: Upload },
-  { name: "Print Jobs", href: "/jobs", icon: Printer },
-  { name: "History", href: "/history", icon: Clock },
-  { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Cargar datos", href: "/upload", icon: Upload },
+  { name: "Trabajos de impresión", href: "/jobs", icon: Printer },
+  { name: "Historial", href: "/history", icon: Clock },
+  { name: "Configuración", href: "/settings", icon: Settings },
 ]
 
 export function Sidebar() {
@@ -62,11 +62,11 @@ export function Sidebar() {
       <div className="border-t border-sidebar-border p-4">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
-            JD
+            JP
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-sidebar-foreground truncate">
-              John Doe
+              Juan Pérez
             </p>
             <p className="text-xs text-muted-foreground truncate">
               admin@inteliar.com

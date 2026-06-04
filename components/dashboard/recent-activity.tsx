@@ -14,50 +14,50 @@ interface RecentJob {
 const mockRecentJobs: RecentJob[] = [
   {
     id: "1",
-    templateName: "Product Label A",
+    templateName: "Etiqueta de Producto A",
     labelCount: 150,
     status: "completed",
-    timestamp: "2 minutes ago",
+    timestamp: "hace 2 minutos",
   },
   {
     id: "2",
-    templateName: "Shipping Label",
+    templateName: "Etiqueta de Envío",
     labelCount: 45,
     status: "pending",
-    timestamp: "15 minutes ago",
+    timestamp: "hace 15 minutos",
   },
   {
     id: "3",
-    templateName: "Barcode Label",
+    templateName: "Etiqueta de Código de Barras",
     labelCount: 200,
     status: "completed",
-    timestamp: "1 hour ago",
+    timestamp: "hace 1 hora",
   },
   {
     id: "4",
-    templateName: "QR Code Label",
+    templateName: "Etiqueta QR",
     labelCount: 80,
     status: "error",
-    timestamp: "2 hours ago",
+    timestamp: "hace 2 horas",
   },
   {
     id: "5",
-    templateName: "Inventory Tag",
+    templateName: "Etiqueta de Inventario",
     labelCount: 320,
     status: "completed",
-    timestamp: "3 hours ago",
+    timestamp: "hace 3 horas",
   },
 ]
 
 const statusConfig = {
   completed: {
     icon: CheckCircle2,
-    label: "Completed",
+    label: "Completado",
     className: "text-success bg-success/10",
   },
   pending: {
     icon: Clock,
-    label: "Pending",
+    label: "Pendiente",
     className: "text-warning bg-warning/10",
   },
   error: {
@@ -72,9 +72,9 @@ export function RecentActivity() {
     <div className="rounded-xl border border-border bg-card">
       <div className="flex items-center justify-between border-b border-border px-6 py-4">
         <h2 className="text-base font-semibold text-card-foreground">
-          Recent Activity
+          Actividad reciente
         </h2>
-        <span className="text-sm text-muted-foreground">Last 24 hours</span>
+        <span className="text-sm text-muted-foreground">Últimas 24 horas</span>
       </div>
 
       <div className="divide-y divide-border">
@@ -96,7 +96,7 @@ export function RecentActivity() {
                   {job.templateName}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {job.labelCount} labels
+                  {job.labelCount} etiquetas
                 </p>
               </div>
 

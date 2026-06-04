@@ -34,12 +34,12 @@ interface Template {
 }
 
 const mockTemplates: Template[] = [
-  { id: "1", name: "Product Label A", preview: "qr", lastUsed: "2 hours ago", createdAt: "2024-01-15" },
-  { id: "2", name: "Shipping Label", preview: "barcode", lastUsed: "Yesterday", createdAt: "2024-01-10" },
-  { id: "3", name: "Barcode Label", preview: "barcode", lastUsed: "3 days ago", createdAt: "2024-01-05" },
-  { id: "4", name: "QR Code Label", preview: "qr", lastUsed: "1 week ago", createdAt: "2023-12-20" },
-  { id: "5", name: "Inventory Tag", preview: "text", lastUsed: "2 weeks ago", createdAt: "2023-12-15" },
-  { id: "6", name: "Price Tag", preview: "text", lastUsed: "1 month ago", createdAt: "2023-11-30" },
+  { id: "1", name: "Etiqueta de Producto A", preview: "qr", lastUsed: "hace 2 horas", createdAt: "2024-01-15" },
+  { id: "2", name: "Etiqueta de Envío", preview: "barcode", lastUsed: "Ayer", createdAt: "2024-01-10" },
+  { id: "3", name: "Etiqueta de Código de Barras", preview: "barcode", lastUsed: "hace 3 días", createdAt: "2024-01-05" },
+  { id: "4", name: "Etiqueta QR", preview: "qr", lastUsed: "hace 1 semana", createdAt: "2023-12-20" },
+  { id: "5", name: "Etiqueta de Inventario", preview: "text", lastUsed: "hace 2 semanas", createdAt: "2023-12-15" },
+  { id: "6", name: "Etiqueta de Precio", preview: "text", lastUsed: "hace 1 mes", createdAt: "2023-11-30" },
 ]
 
 const previewIcons = {
@@ -55,12 +55,12 @@ export default function TemplatesPage() {
     <DashboardLayout>
       <Header
         title="Templates"
-        description="Manage your label templates"
+        description="Gestioná tus templates de etiquetas"
         actions={
           <Link href="/templates/new">
             <Button size="sm" className="gap-2">
               <Plus className="h-4 w-4" />
-              Create Template
+              Crear template
             </Button>
           </Link>
         }
@@ -123,7 +123,7 @@ export default function TemplatesPage() {
                           {template.name}
                         </h3>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          Last used {template.lastUsed}
+                          Último uso: {template.lastUsed}
                         </p>
                       </div>
                       <DropdownMenu>
@@ -136,16 +136,16 @@ export default function TemplatesPage() {
                           <DropdownMenuItem asChild>
                             <Link href={`/templates/${template.id}/edit`}>
                               <Edit className="mr-2 h-4 w-4" />
-                              Edit
+                              Editar
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem>
                             <Copy className="mr-2 h-4 w-4" />
-                            Duplicate
+                            Duplicar
                           </DropdownMenuItem>
                           <DropdownMenuItem className="text-destructive focus:text-destructive">
                             <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
+                            Eliminar
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -160,11 +160,11 @@ export default function TemplatesPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border text-left text-sm text-muted-foreground">
-                  <th className="px-6 py-3 font-medium">Name</th>
-                  <th className="px-6 py-3 font-medium">Type</th>
-                  <th className="px-6 py-3 font-medium">Last Used</th>
-                  <th className="px-6 py-3 font-medium">Created</th>
-                  <th className="px-6 py-3 font-medium sr-only">Actions</th>
+                  <th className="px-6 py-3 font-medium">Nombre</th>
+                  <th className="px-6 py-3 font-medium">Tipo</th>
+                  <th className="px-6 py-3 font-medium">Último uso</th>
+                  <th className="px-6 py-3 font-medium">Creado</th>
+                  <th className="px-6 py-3 font-medium sr-only">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -206,16 +206,16 @@ export default function TemplatesPage() {
                               <DropdownMenuItem asChild>
                                 <Link href={`/templates/${template.id}/edit`}>
                                   <Edit className="mr-2 h-4 w-4" />
-                                  Edit
+                                  Editar
                                 </Link>
                               </DropdownMenuItem>
                               <DropdownMenuItem>
                                 <Copy className="mr-2 h-4 w-4" />
-                                Duplicate
+                                Duplicar
                               </DropdownMenuItem>
                               <DropdownMenuItem className="text-destructive focus:text-destructive">
                                 <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
+                                Eliminar
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
