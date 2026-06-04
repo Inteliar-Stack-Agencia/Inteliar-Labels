@@ -1,33 +1,43 @@
-# v0-inteliar-labels-ui
+# Inteliar Labels
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [v0](https://v0.app).
+Plataforma SaaS para diseño, generación e impresión masiva de etiquetas térmicas.
 
-## Built with v0
+Alternativa moderna, simple y económica a BarTender para empresas de alimentos, logística, depósitos, laboratorios, retail y cualquier negocio que utilice impresoras térmicas (Honeywell PC42, Zebra, Brother, etc.).
 
-This repository is linked to a [v0](https://v0.app) project. You can continue developing by visiting the link below -- start new chats to make changes, and v0 will push commits directly to this repo. Every merge to `main` will automatically deploy.
+## Funcionalidades MVP
 
-[Continue working on v0 →](https://v0.app/chat/projects/prj_HjDLnm9NWhI6HmURAmhZJK3SgrwH)
+- Crear plantillas visuales de etiquetas
+- Subir archivos Excel / CSV con datos
+- Mapeo automático de variables dinámicas
+- Generación de etiquetas en lote
+- Impresión directa a impresoras térmicas
 
-## Getting Started
+## Stack
 
-First, run the development server:
+- **Frontend:** Next.js 16 + TypeScript + TailwindCSS + shadcn/ui
+- **Editor visual:** Konva.js
+- **Excel:** SheetJS
+- **ZPL:** fluent-zpl
+- **Backend:** Supabase (auth + DB)
+- **Printer Agent:** Node.js (local)
+
+## Desarrollo
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abrir [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Estructura
 
-## Learn More
+- `/` — Landing page pública
+- `/dashboard` — Dashboard del SaaS
+- `/templates`, `/upload`, `/jobs`, `/history`, `/preview`, `/settings`
 
-To learn more, take a look at the following resources:
+## Documentación
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-- [v0 Documentation](https://v0.app/docs) - learn about v0 and how to use it.
+- [PRD.md](./PRD.md) — Product Requirements Document
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — Arquitectura técnica
+- [MVP_TASKS.md](./MVP_TASKS.md) — Backlog de sprints
