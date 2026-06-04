@@ -90,19 +90,19 @@ const demoSteps = [
   {
     id: "preview",
     icon: Eye,
-    title: "Print Preview",
-    description: "See exactly what will print before sending to your printer.",
+    title: "Vista previa de impresión",
+    description: "Mirá exactamente qué se va a imprimir antes de mandarlo a la impresora.",
     content: (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-medium text-foreground">247 labels ready to print</p>
+          <p className="text-sm font-medium text-foreground">247 etiquetas listas para imprimir</p>
           <div className="flex items-center gap-2 text-sm text-green-600">
             <Check className="w-4 h-4" />
-            <span>Zebra ZD420 connected</span>
+            <span>Zebra ZD420 conectada</span>
           </div>
         </div>
         <div className="grid grid-cols-4 gap-3">
-          {["Organic Milk 1L", "Fresh Bread", "Greek Yogurt", "Orange Juice"].map((product, i) => (
+          {["Leche Orgánica 1L", "Pan Fresco", "Yogur Griego", "Jugo de Naranja"].map((product, i) => (
             <div key={i} className="aspect-[3/4] bg-card border border-border rounded-lg p-2 flex flex-col justify-between text-center">
               <p className="text-[10px] font-medium text-foreground truncate">{product}</p>
               <div className="flex gap-px justify-center">
@@ -110,17 +110,17 @@ const demoSteps = [
                   <div key={j} className="w-px bg-foreground/60 rounded-full" style={{ height: `${Math.random() * 10 + 8}px` }} />
                 ))}
               </div>
-              <p className="text-[8px] text-muted-foreground">EXP: 04/26</p>
+              <p className="text-[8px] text-muted-foreground">VTO: 04/26</p>
             </div>
           ))}
         </div>
         <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
           <div>
-            <p className="text-sm font-medium text-foreground">Estimated print time</p>
-            <p className="text-2xl font-bold text-primary">~47 seconds</p>
+            <p className="text-sm font-medium text-foreground">Tiempo estimado de impresión</p>
+            <p className="text-2xl font-bold text-primary">~47 segundos</p>
           </div>
           <Button size="lg" className="px-8">
-            Print All Labels
+            Imprimir todas las etiquetas
           </Button>
         </div>
       </div>
@@ -137,12 +137,12 @@ export function ProductDemoSection() {
     <section className="py-24 px-4 sm:px-6">
       <div className="max-w-6xl mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-12">
-          <p className="text-sm font-medium text-primary mb-3 uppercase tracking-wide">Product Demo</p>
+          <p className="text-sm font-medium text-primary mb-3 uppercase tracking-wide">Demo del producto</p>
           <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 text-balance">
-            See it in action
+            Miralo en acción
           </h2>
           <p className="text-lg text-muted-foreground">
-            Experience how simple bulk label printing can be.
+            Descubrí lo simple que puede ser imprimir etiquetas en lote.
           </p>
         </div>
 

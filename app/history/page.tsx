@@ -30,74 +30,74 @@ const mockHistory: HistoryEntry[] = [
   {
     id: "1",
     type: "print",
-    action: "Print job completed",
-    details: "150 labels printed using Product Label A",
+    action: "Trabajo de impresión completado",
+    details: "150 etiquetas impresas con Etiqueta de Producto A",
     timestamp: "2024-01-18 14:35",
     status: "success",
-    user: "John Doe",
+    user: "Juan Pérez",
   },
   {
     id: "2",
     type: "upload",
-    action: "Data uploaded",
-    details: "products_batch_01.xlsx - 500 rows",
+    action: "Datos cargados",
+    details: "productos_lote_01.xlsx - 500 filas",
     timestamp: "2024-01-18 14:30",
     status: "success",
-    user: "John Doe",
+    user: "Juan Pérez",
   },
   {
     id: "3",
     type: "template",
-    action: "Template created",
-    details: "New template: Shipping Label v2",
+    action: "Template creado",
+    details: "Nuevo template: Etiqueta de Envío v2",
     timestamp: "2024-01-18 13:15",
     status: "success",
-    user: "Jane Smith",
+    user: "Ana García",
   },
   {
     id: "4",
     type: "print",
-    action: "Print job failed",
-    details: "Connection lost to Zebra ZD420",
+    action: "Trabajo de impresión fallido",
+    details: "Conexión perdida con Zebra ZD420",
     timestamp: "2024-01-18 12:30",
     status: "error",
-    user: "John Doe",
+    user: "Juan Pérez",
   },
   {
     id: "5",
     type: "print",
-    action: "Print job completed",
-    details: "200 labels printed using Barcode Label",
+    action: "Trabajo de impresión completado",
+    details: "200 etiquetas impresas con Etiqueta de Código de Barras",
     timestamp: "2024-01-18 10:05",
     status: "success",
-    user: "Jane Smith",
+    user: "Ana García",
   },
   {
     id: "6",
     type: "template",
-    action: "Template modified",
-    details: "Updated: Product Label A",
+    action: "Template modificado",
+    details: "Actualizado: Etiqueta de Producto A",
     timestamp: "2024-01-17 16:00",
     status: "success",
-    user: "John Doe",
+    user: "Juan Pérez",
   },
   {
     id: "7",
     type: "print",
-    action: "Print job completed",
-    details: "320 labels printed using Inventory Tag",
+    action: "Trabajo de impresión completado",
+    details: "320 etiquetas impresas con Etiqueta de Inventario",
     timestamp: "2024-01-17 15:30",
     status: "success",
-    user: "Jane Smith",
+    user: "Ana García",
   },
   {
     id: "8",
     type: "upload",
-    action: "Data uploaded",
-    details: "inventory_update.csv - 1200 rows",
+    action: "Datos cargados",
+    details: "actualizacion_inventario.csv - 1200 filas",
     timestamp: "2024-01-17 14:00",
     status: "success",
-    user: "John Doe",
+    user: "Juan Pérez",
   },
 ]
 
@@ -120,12 +120,12 @@ export default function HistoryPage() {
   return (
     <DashboardLayout>
       <Header
-        title="History"
-        description="Full activity log"
+        title="Historial"
+        description="Registro completo de actividad"
         actions={
           <Button variant="outline" size="sm" className="gap-2">
             <Download className="h-4 w-4" />
-            Export
+            Exportar
           </Button>
         }
       />
@@ -140,10 +140,10 @@ export default function HistoryPage() {
               onChange={(e) => setDateFilter(e.target.value)}
               className="h-9 rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
             >
-              <option value="all">All Time</option>
-              <option value="today">Today</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
+              <option value="all">Todo el tiempo</option>
+              <option value="today">Hoy</option>
+              <option value="week">Esta semana</option>
+              <option value="month">Este mes</option>
             </select>
           </div>
 
@@ -154,15 +154,15 @@ export default function HistoryPage() {
               onChange={(e) => setTemplateFilter(e.target.value)}
               className="h-9 rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
             >
-              <option value="all">All Types</option>
-              <option value="print">Print Jobs</option>
+              <option value="all">Todos los tipos</option>
+              <option value="print">Trabajos de impresión</option>
               <option value="template">Templates</option>
-              <option value="upload">Uploads</option>
+              <option value="upload">Cargas</option>
             </select>
           </div>
 
           <div className="ml-auto text-sm text-muted-foreground">
-            Showing {mockHistory.length} entries
+            Mostrando {mockHistory.length} entradas
           </div>
         </div>
 
@@ -212,7 +212,7 @@ export default function HistoryPage() {
                               ) : (
                                 <XCircle className="h-3 w-3" />
                               )}
-                              {entry.status}
+                              {entry.status === "success" ? "éxito" : "error"}
                             </span>
                           )}
                         </div>
@@ -225,7 +225,7 @@ export default function HistoryPage() {
                           {entry.timestamp}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          by {entry.user}
+                          por {entry.user}
                         </p>
                       </div>
                     </div>
@@ -238,7 +238,7 @@ export default function HistoryPage() {
 
         {/* Load More */}
         <div className="mt-6 flex justify-center">
-          <Button variant="outline">Load More</Button>
+          <Button variant="outline">Cargar más</Button>
         </div>
       </div>
     </DashboardLayout>

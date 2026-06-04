@@ -5,22 +5,22 @@ import { FileStack, Upload, Printer, ArrowRight } from "lucide-react"
 
 const actions = [
   {
-    title: "Create Template",
-    description: "Design a new label template with drag & drop editor",
+    title: "Crear template",
+    description: "Diseñá una nueva etiqueta con el editor de arrastrar y soltar",
     href: "/templates/new",
     icon: FileStack,
     color: "bg-primary/10 text-primary",
   },
   {
-    title: "Upload Excel",
-    description: "Import data from Excel or CSV files for batch printing",
+    title: "Cargar Excel",
+    description: "Importá datos desde archivos Excel o CSV para imprimir en lote",
     href: "/upload",
     icon: Upload,
     color: "bg-success/10 text-success",
   },
   {
-    title: "Print Labels",
-    description: "Start a new print job with your existing templates",
+    title: "Imprimir etiquetas",
+    description: "Iniciá un nuevo trabajo de impresión con tus templates",
     href: "/jobs/new",
     icon: Printer,
     color: "bg-chart-4/10 text-chart-4",
@@ -32,7 +32,7 @@ export function QuickActions() {
     <div className="rounded-xl border border-border bg-card">
       <div className="border-b border-border px-6 py-4">
         <h2 className="text-base font-semibold text-card-foreground">
-          Quick Actions
+          Acciones rápidas
         </h2>
       </div>
 
@@ -53,7 +53,7 @@ export function QuickActions() {
               {action.description}
             </p>
             <div className="mt-3 flex items-center gap-1 text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
-              Get started
+              Empezar
               <ArrowRight className="h-3 w-3" />
             </div>
           </Link>

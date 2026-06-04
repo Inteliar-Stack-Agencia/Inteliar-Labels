@@ -38,7 +38,7 @@ const mockPrinters: PrinterConfig[] = [
   },
   {
     id: "2",
-    name: "Brother QL-820NWB",
+    name: "Honeywell PC42",
     ip: "192.168.1.101",
     type: "network",
     status: "online",
@@ -46,7 +46,7 @@ const mockPrinters: PrinterConfig[] = [
   },
   {
     id: "3",
-    name: "Local Printer Agent",
+    name: "Agente local de impresión",
     ip: "localhost:8080",
     type: "local",
     status: "offline",
@@ -60,7 +60,7 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("printers")
   const [printers, setPrinters] = useState(mockPrinters)
   const [accountForm, setAccountForm] = useState({
-    name: "John Doe",
+    name: "Juan Pérez",
     email: "admin@inteliar.com",
     company: "Inteliar Industries",
   })
@@ -84,8 +84,8 @@ export default function SettingsPage() {
   return (
     <DashboardLayout>
       <Header
-        title="Settings"
-        description="Manage your printers and account"
+        title="Configuración"
+        description="Gestioná tus impresoras y tu cuenta"
       />
 
       <div className="p-6">
@@ -102,7 +102,7 @@ export default function SettingsPage() {
               )}
             >
               <Printer className="h-4 w-4" />
-              Printers
+              Impresoras
             </button>
             <button
               onClick={() => setActiveTab("account")}
@@ -114,7 +114,7 @@ export default function SettingsPage() {
               )}
             >
               <User className="h-4 w-4" />
-              Account
+              Cuenta
             </button>
           </div>
 
@@ -125,15 +125,15 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-semibold text-foreground">
-                      Printer Settings
+                      Configuración de impresoras
                     </h2>
                     <p className="text-sm text-muted-foreground">
-                      Configure your label printers and print agents
+                      Configurá tus impresoras de etiquetas y agentes de impresión
                     </p>
                   </div>
                   <Button size="sm" className="gap-2">
                     <Plus className="h-4 w-4" />
-                    Add Printer
+                    Agregar impresora
                   </Button>
                 </div>
 
@@ -170,12 +170,12 @@ export default function SettingsPage() {
                               </h3>
                               {printer.isDefault && (
                                 <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                                  Default
+                                  Predeterminada
                                 </span>
                               )}
                             </div>
                             <p className="mt-1 text-sm text-muted-foreground">
-                              {printer.type === "network" ? "IP: " : "Address: "}
+                              {printer.type === "network" ? "IP: " : "Dirección: "}
                               {printer.ip}
                             </p>
                             <div className="mt-2 flex items-center gap-2">
@@ -192,10 +192,10 @@ export default function SettingsPage() {
                                 ) : (
                                   <XCircle className="h-3 w-3" />
                                 )}
-                                {printer.status === "online" ? "Online" : "Offline"}
+                                {printer.status === "online" ? "En línea" : "Fuera de línea"}
                               </span>
-                              <span className="text-xs text-muted-foreground capitalize">
-                                {printer.type} printer
+                              <span className="text-xs text-muted-foreground">
+                                Impresora {printer.type === "network" ? "de red" : "local"}
                               </span>
                             </div>
                           </div>
@@ -209,7 +209,7 @@ export default function SettingsPage() {
                             onClick={() => testConnection(printer.id)}
                           >
                             <RefreshCw className="h-4 w-4" />
-                            Test
+                            Probar
                           </Button>
                           {!printer.isDefault && (
                             <Button
@@ -217,7 +217,7 @@ export default function SettingsPage() {
                               size="sm"
                               onClick={() => setDefaultPrinter(printer.id)}
                             >
-                              Set Default
+                              Predeterminar
                             </Button>
                           )}
                           <Button
@@ -236,17 +236,17 @@ export default function SettingsPage() {
                 {/* Local Agent Info */}
                 <div className="rounded-xl border border-border bg-muted/30 p-6">
                   <h3 className="font-semibold text-foreground">
-                    Local Print Agent
+                    Agente local de impresión
                   </h3>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Install the local print agent to print directly from your computer without network configuration.
+                    Instalá el agente local para imprimir directamente desde tu computadora sin configurar red.
                   </p>
                   <div className="mt-4 flex gap-3">
                     <Button variant="outline" size="sm">
-                      Download for Windows
+                      Descargar para Windows
                     </Button>
                     <Button variant="outline" size="sm">
-                      Download for macOS
+                      Descargar para macOS
                     </Button>
                   </div>
                 </div>
@@ -257,10 +257,10 @@ export default function SettingsPage() {
               <div className="space-y-6">
                 <div>
                   <h2 className="text-lg font-semibold text-foreground">
-                    Account Settings
+                    Configuración de la cuenta
                   </h2>
                   <p className="text-sm text-muted-foreground">
-                    Manage your account information
+                    Gestioná la información de tu cuenta
                   </p>
                 </div>
 
@@ -273,10 +273,10 @@ export default function SettingsPage() {
                       </div>
                       <div>
                         <Button variant="outline" size="sm">
-                          Change Avatar
+                          Cambiar avatar
                         </Button>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          JPG, GIF or PNG. 1MB max.
+                          JPG, GIF o PNG. 1 MB máximo.
                         </p>
                       </div>
                     </div>
@@ -285,7 +285,7 @@ export default function SettingsPage() {
                     <div className="grid gap-4 pt-4">
                       <div>
                         <label className="mb-2 block text-sm font-medium text-foreground">
-                          Full Name
+                          Nombre completo
                         </label>
                         <input
                           type="text"
@@ -299,7 +299,7 @@ export default function SettingsPage() {
 
                       <div>
                         <label className="mb-2 block text-sm font-medium text-foreground">
-                          Email Address
+                          Correo electrónico
                         </label>
                         <input
                           type="email"
@@ -313,7 +313,7 @@ export default function SettingsPage() {
 
                       <div>
                         <label className="mb-2 block text-sm font-medium text-foreground">
-                          Company
+                          Empresa
                         </label>
                         <input
                           type="text"
@@ -329,7 +329,7 @@ export default function SettingsPage() {
                     <div className="flex justify-end pt-4">
                       <Button className="gap-2">
                         <Save className="h-4 w-4" />
-                        Save Changes
+                        Guardar cambios
                       </Button>
                     </div>
                   </div>
@@ -338,17 +338,17 @@ export default function SettingsPage() {
                 {/* Danger Zone */}
                 <div className="rounded-xl border border-destructive/50 bg-destructive/5 p-6">
                   <h3 className="font-semibold text-destructive">
-                    Danger Zone
+                    Zona de peligro
                   </h3>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Permanently delete your account and all associated data.
+                    Eliminá permanentemente tu cuenta y todos los datos asociados.
                   </p>
                   <Button
                     variant="outline"
                     size="sm"
                     className="mt-4 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
                   >
-                    Delete Account
+                    Eliminar cuenta
                   </Button>
                 </div>
               </div>

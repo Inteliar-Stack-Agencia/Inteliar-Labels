@@ -2,51 +2,51 @@ import { Check, X, Minus } from "lucide-react"
 
 const comparisonData = [
   {
-    feature: "Time to first label",
-    inteliar: "2 minutes",
-    bartender: "Hours to days",
+    feature: "Tiempo hasta la primera etiqueta",
+    inteliar: "2 minutos",
+    bartender: "Horas o días",
     inteliarBetter: true,
   },
   {
-    feature: "Learning curve",
-    inteliar: "None",
-    bartender: "Steep",
+    feature: "Curva de aprendizaje",
+    inteliar: "Ninguna",
+    bartender: "Empinada",
     inteliarBetter: true,
   },
   {
-    feature: "Installation required",
+    feature: "Requiere instalación",
     inteliar: "No",
-    bartender: "Yes",
+    bartender: "Sí",
     inteliarBetter: true,
   },
   {
-    feature: "Monthly cost",
-    inteliar: "From $10",
-    bartender: "$500+/seat",
+    feature: "Costo mensual",
+    inteliar: "Desde US$10",
+    bartender: "US$500+/usuario",
     inteliarBetter: true,
   },
   {
-    feature: "Excel native support",
-    inteliar: "Yes",
-    bartender: "Limited",
+    feature: "Soporte nativo de Excel",
+    inteliar: "Sí",
+    bartender: "Limitado",
     inteliarBetter: true,
   },
   {
-    feature: "Bulk printing speed",
-    inteliar: "100+/minute",
+    feature: "Velocidad de impresión masiva",
+    inteliar: "100+/minuto",
     bartender: "Manual",
     inteliarBetter: true,
   },
   {
-    feature: "Updates & maintenance",
-    inteliar: "Automatic",
+    feature: "Actualizaciones y mantenimiento",
+    inteliar: "Automático",
     bartender: "Manual",
     inteliarBetter: true,
   },
   {
-    feature: "Team collaboration",
-    inteliar: "Built-in",
-    bartender: "Complex setup",
+    feature: "Colaboración en equipo",
+    inteliar: "Incluida",
+    bartender: "Configuración compleja",
     inteliarBetter: true,
   },
 ]
@@ -56,19 +56,19 @@ export function ComparisonSection() {
     <section className="py-24 px-4 sm:px-6 bg-muted/30">
       <div className="max-w-4xl mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-12">
-          <p className="text-sm font-medium text-primary mb-3 uppercase tracking-wide">Comparison</p>
+          <p className="text-sm font-medium text-primary mb-3 uppercase tracking-wide">Comparativa</p>
           <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 text-balance">
-            Why businesses are switching from BarTender
+            Por qué las empresas están dejando BarTender
           </h2>
           <p className="text-lg text-muted-foreground">
-            Enterprise labeling software shouldn't require enterprise budgets and IT teams.
+            El software de etiquetado no debería pedirte presupuesto enterprise ni un equipo de IT.
           </p>
         </div>
 
         <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-lg">
           <div className="grid grid-cols-3 bg-muted/50 border-b border-border">
             <div className="p-4 sm:p-6">
-              <span className="text-sm font-medium text-muted-foreground">Feature</span>
+              <span className="text-sm font-medium text-muted-foreground">Característica</span>
             </div>
             <div className="p-4 sm:p-6 text-center border-x border-border bg-primary/5">
               <div className="flex items-center justify-center gap-2">
@@ -94,7 +94,7 @@ export function ComparisonSection() {
                 <span className="text-sm text-foreground">{row.feature}</span>
               </div>
               <div className="p-4 sm:p-6 flex items-center justify-center border-x border-border bg-primary/5">
-                {row.inteliar === "Yes" ? (
+                {row.inteliar === "Sí" ? (
                   <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
                     <Check className="w-4 h-4 text-green-600" />
                   </div>
@@ -107,7 +107,7 @@ export function ComparisonSection() {
                 )}
               </div>
               <div className="p-4 sm:p-6 flex items-center justify-center">
-                {row.bartender === "Yes" ? (
+                {row.bartender === "Sí" ? (
                   <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
                     <Check className="w-4 h-4 text-green-600" />
                   </div>
@@ -115,7 +115,7 @@ export function ComparisonSection() {
                   <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center">
                     <X className="w-4 h-4 text-red-600" />
                   </div>
-                ) : row.bartender === "Limited" ? (
+                ) : row.bartender === "Limitado" ? (
                   <div className="flex items-center gap-2">
                     <Minus className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">{row.bartender}</span>
@@ -129,9 +129,9 @@ export function ComparisonSection() {
         </div>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
-          Still not convinced?{" "}
+          ¿Todavía no te convencimos?{" "}
           <a href="#" className="text-primary hover:underline">
-            See the full comparison
+            Ver la comparativa completa
           </a>
         </p>
       </div>

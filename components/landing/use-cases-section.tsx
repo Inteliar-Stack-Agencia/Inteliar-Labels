@@ -4,27 +4,27 @@ import { Button } from "@/components/ui/button"
 const useCases = [
   {
     icon: UtensilsCrossed,
-    industry: "Food Production",
-    title: "Expiration & ingredient labels in minutes, not hours",
-    description: "Commercial kitchens and food manufacturers use Inteliar to print batch-accurate expiration labels, ingredient lists, and allergen warnings directly from their inventory systems.",
-    stats: "Cut labeling time by 85%",
-    labels: ["Exp: 04/15/26", "Contains: Milk, Soy", "Batch #2847"],
+    industry: "Producción de alimentos",
+    title: "Etiquetas de vencimiento e ingredientes en minutos, no horas",
+    description: "Cocinas industriales y fábricas de alimentos usan Inteliar para imprimir etiquetas de vencimiento por lote, listas de ingredientes y advertencias de alérgenos directamente desde sus sistemas de inventario.",
+    stats: "Reducí el tiempo de etiquetado un 85%",
+    labels: ["VTO: 15/04/26", "Contiene: Leche, Soja", "Lote #2847"],
   },
   {
     icon: Truck,
-    industry: "Logistics & Shipping",
-    title: "From manifest to printed labels in one click",
-    description: "Warehouses and fulfillment centers print shipping labels, packing slips, and tracking barcodes directly from their order exports. No middleware, no delays.",
-    stats: "Process 500+ shipments/hour",
-    labels: ["TRACK: 1Z999AA10", "SHIP TO: NYC", "2 of 3"],
+    industry: "Logística y envíos",
+    title: "Del remito a las etiquetas impresas en un clic",
+    description: "Depósitos y centros de distribución imprimen etiquetas de envío, remitos y códigos de seguimiento directamente desde sus exportaciones de pedidos. Sin middleware, sin demoras.",
+    stats: "Procesá 500+ envíos por hora",
+    labels: ["TRACK: 1Z999AA10", "ENVÍO: CABA", "2 de 3"],
   },
   {
     icon: Store,
-    industry: "Retail & Inventory",
-    title: "Price tags and SKU labels that update instantly",
-    description: "Retail stores print shelf labels, price tags, and inventory labels from their POS exports. Update pricing across your entire store in minutes.",
-    stats: "Update 1000s of prices instantly",
-    labels: ["$24.99", "SKU: A-4521", "SALE 20% OFF"],
+    industry: "Retail e inventario",
+    title: "Etiquetas de precios y SKU que se actualizan al instante",
+    description: "Locales y comercios imprimen etiquetas de góndola, precios e inventario desde las exportaciones de su POS. Actualizá precios de todo el local en minutos.",
+    stats: "Actualizá miles de precios al instante",
+    labels: ["$24.99", "SKU: A-4521", "OFERTA 20% OFF"],
   },
 ]
 
@@ -33,12 +33,12 @@ export function UseCasesSection() {
     <section className="py-24 px-4 sm:px-6">
       <div className="max-w-6xl mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <p className="text-sm font-medium text-primary mb-3 uppercase tracking-wide">Use Cases</p>
+          <p className="text-sm font-medium text-primary mb-3 uppercase tracking-wide">Casos de uso</p>
           <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 text-balance">
-            Built for businesses that print thousands of labels
+            Pensado para empresas que imprimen miles de etiquetas
           </h2>
           <p className="text-lg text-muted-foreground">
-            Join hundreds of food producers, warehouses, and retailers who've automated their labeling.
+            Sumate a cientos de productores de alimentos, depósitos y comercios que ya automatizaron su etiquetado.
           </p>
         </div>
 
@@ -63,7 +63,7 @@ export function UseCasesSection() {
                       {useCase.stats}
                     </span>
                     <Button variant="link" className="text-primary p-0 h-auto gap-1 group">
-                      See how it works
+                      Ver cómo funciona
                       <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                     </Button>
                   </div>

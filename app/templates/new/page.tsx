@@ -41,7 +41,7 @@ const defaultElements: LabelElement[] = [
 export default function TemplateEditorPage() {
   const [elements, setElements] = useState<LabelElement[]>(defaultElements)
   const [selectedElement, setSelectedElement] = useState<string | null>(null)
-  const [templateName, setTemplateName] = useState("Untitled Template")
+  const [templateName, setTemplateName] = useState("Template sin título")
 
   const selectedElementData = elements.find((el) => el.id === selectedElement)
 
@@ -49,7 +49,7 @@ export default function TemplateEditorPage() {
     const newElement: LabelElement = {
       id: Date.now().toString(),
       type,
-      content: type === "text" ? "New Text" : `{{variable_${elements.length + 1}}}`,
+      content: type === "text" ? "Nuevo texto" : `{{variable_${elements.length + 1}}}`,
       x: 50,
       y: 50,
       fontSize: 12,
@@ -77,7 +77,7 @@ export default function TemplateEditorPage() {
             className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back
+            Volver
           </Link>
           <div className="h-6 w-px bg-border" />
           <input
@@ -89,7 +89,7 @@ export default function TemplateEditorPage() {
         </div>
         <Button size="sm" className="gap-2">
           <Save className="h-4 w-4" />
-          Save Template
+          Guardar template
         </Button>
       </div>
 
@@ -99,7 +99,7 @@ export default function TemplateEditorPage() {
           <div className="mx-auto max-w-2xl">
             {/* Toolbox */}
             <div className="mb-6 flex items-center gap-2">
-              <span className="text-sm font-medium text-muted-foreground">Add Element:</span>
+              <span className="text-sm font-medium text-muted-foreground">Agregar elemento:</span>
               <Button
                 variant="outline"
                 size="sm"
@@ -107,7 +107,7 @@ export default function TemplateEditorPage() {
                 onClick={() => addElement("text")}
               >
                 <Type className="h-4 w-4" />
-                Text
+                Texto
               </Button>
               <Button
                 variant="outline"
@@ -116,7 +116,7 @@ export default function TemplateEditorPage() {
                 onClick={() => addElement("qr")}
               >
                 <QrCode className="h-4 w-4" />
-                QR Code
+                Código QR
               </Button>
               <Button
                 variant="outline"
@@ -125,7 +125,7 @@ export default function TemplateEditorPage() {
                 onClick={() => addElement("barcode")}
               >
                 <Barcode className="h-4 w-4" />
-                Barcode
+                Código de barras
               </Button>
             </div>
 
@@ -185,7 +185,7 @@ export default function TemplateEditorPage() {
                   <div className="text-center">
                     <Plus className="mx-auto h-8 w-8 text-muted-foreground" />
                     <p className="mt-2 text-sm text-muted-foreground">
-                      Add elements to your label
+                      Agregá elementos a tu etiqueta
                     </p>
                   </div>
                 </div>
@@ -193,7 +193,7 @@ export default function TemplateEditorPage() {
             </div>
 
             <p className="mt-4 text-center text-xs text-muted-foreground">
-              Click on elements to edit their properties
+              Hacé clic en los elementos para editar sus propiedades
             </p>
           </div>
         </div>
@@ -201,7 +201,7 @@ export default function TemplateEditorPage() {
         {/* Right Panel - Properties */}
         <div className="w-80 border-l border-border bg-card">
           <div className="border-b border-border px-4 py-3">
-            <h2 className="text-sm font-semibold text-foreground">Properties</h2>
+            <h2 className="text-sm font-semibold text-foreground">Propiedades</h2>
           </div>
 
           {selectedElementData ? (
@@ -213,14 +213,14 @@ export default function TemplateEditorPage() {
                   return <Icon className="h-5 w-5 text-muted-foreground" />
                 })()}
                 <span className="text-sm font-medium text-foreground capitalize">
-                  {selectedElementData.type} Element
+                  Elemento {selectedElementData.type}
                 </span>
               </div>
 
               {/* Content */}
               <div>
                 <label className="mb-2 block text-xs font-medium text-muted-foreground">
-                  Content / Variable
+                  Contenido / Variable
                 </label>
                 <input
                   type="text"
@@ -229,10 +229,10 @@ export default function TemplateEditorPage() {
                     updateElement(selectedElementData.id, { content: e.target.value })
                   }
                   className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-                  placeholder="Enter content or {{variable}}"
+                  placeholder="Ingresá contenido o {{variable}}"
                 />
                 <p className="mt-1.5 text-[11px] text-muted-foreground">
-                  Use {"{{variable}}"} syntax for dynamic content
+                  Usá la sintaxis {"{{variable}}"} para contenido dinámico
                 </p>
               </div>
 
@@ -240,7 +240,7 @@ export default function TemplateEditorPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="mb-2 block text-xs font-medium text-muted-foreground">
-                    X Position
+                    Posición X
                   </label>
                   <input
                     type="number"
@@ -253,7 +253,7 @@ export default function TemplateEditorPage() {
                 </div>
                 <div>
                   <label className="mb-2 block text-xs font-medium text-muted-foreground">
-                    Y Position
+                    Posición Y
                   </label>
                   <input
                     type="number"
@@ -269,7 +269,7 @@ export default function TemplateEditorPage() {
               {/* Font Size (for text elements) */}
               <div>
                 <label className="mb-2 block text-xs font-medium text-muted-foreground">
-                  Font Size
+                  Tamaño de fuente
                 </label>
                 <input
                   type="number"
@@ -289,13 +289,13 @@ export default function TemplateEditorPage() {
                 onClick={() => deleteElement(selectedElementData.id)}
               >
                 <Trash2 className="h-4 w-4" />
-                Delete Element
+                Eliminar elemento
               </Button>
             </div>
           ) : (
             <div className="flex h-64 items-center justify-center">
               <p className="text-sm text-muted-foreground">
-                Select an element to edit
+                Seleccioná un elemento para editarlo
               </p>
             </div>
           )}
@@ -303,7 +303,7 @@ export default function TemplateEditorPage() {
           {/* Elements List */}
           <div className="border-t border-border">
             <div className="border-b border-border px-4 py-3">
-              <h3 className="text-sm font-semibold text-foreground">Elements</h3>
+              <h3 className="text-sm font-semibold text-foreground">Elementos</h3>
             </div>
             <div className="divide-y divide-border">
               {elements.map((element) => {

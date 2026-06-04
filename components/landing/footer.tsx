@@ -2,27 +2,27 @@ import { Printer } from "lucide-react"
 
 const footerLinks = {
   product: [
-    { label: "Features", href: "#features" },
-    { label: "Pricing", href: "#pricing" },
+    { label: "Funcionalidades", href: "#features" },
+    { label: "Precios", href: "#pricing" },
     { label: "Demo", href: "#" },
     { label: "API", href: "#" },
   ],
   resources: [
-    { label: "Documentation", href: "#" },
+    { label: "Documentación", href: "#" },
     { label: "Templates", href: "#" },
-    { label: "Help Center", href: "#" },
+    { label: "Centro de ayuda", href: "#" },
     { label: "Blog", href: "#" },
   ],
   company: [
-    { label: "About", href: "#" },
-    { label: "Careers", href: "#" },
-    { label: "Contact", href: "#" },
+    { label: "Nosotros", href: "#" },
+    { label: "Trabajá con nosotros", href: "#" },
+    { label: "Contacto", href: "#" },
     { label: "Partners", href: "#" },
   ],
   legal: [
-    { label: "Privacy", href: "#" },
-    { label: "Terms", href: "#" },
-    { label: "Security", href: "#" },
+    { label: "Privacidad", href: "#" },
+    { label: "Términos", href: "#" },
+    { label: "Seguridad", href: "#" },
   ],
 }
 
@@ -39,12 +39,12 @@ export function Footer() {
               <span className="font-semibold text-foreground">Inteliar Labels</span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              The fastest way to print thermal labels from your spreadsheet data.
+              La forma más rápida de imprimir etiquetas térmicas desde los datos de tu planilla.
             </p>
           </div>
 
           <div>
-            <h4 className="font-semibold text-foreground mb-4 text-sm">Product</h4>
+            <h4 className="font-semibold text-foreground mb-4 text-sm">Producto</h4>
             <ul className="space-y-3">
               {footerLinks.product.map((link) => (
                 <li key={link.label}>
@@ -60,7 +60,7 @@ export function Footer() {
           </div>
 
           <div>
-            <h4 className="font-semibold text-foreground mb-4 text-sm">Resources</h4>
+            <h4 className="font-semibold text-foreground mb-4 text-sm">Recursos</h4>
             <ul className="space-y-3">
               {footerLinks.resources.map((link) => (
                 <li key={link.label}>
@@ -76,7 +76,7 @@ export function Footer() {
           </div>
 
           <div>
-            <h4 className="font-semibold text-foreground mb-4 text-sm">Company</h4>
+            <h4 className="font-semibold text-foreground mb-4 text-sm">Empresa</h4>
             <ul className="space-y-3">
               {footerLinks.company.map((link) => (
                 <li key={link.label}>
@@ -110,10 +110,10 @@ export function Footer() {
 
         <div className="border-t border-border pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Inteliar Labels. All rights reserved.
+            © {new Date().getFullYear()} Inteliar Labels. Todos los derechos reservados.
           </p>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span>Made for businesses that print smarter.</span>
+            <span>Hecho para empresas que imprimen más inteligente.</span>
           </div>
         </div>
       </div>

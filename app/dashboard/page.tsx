@@ -9,31 +9,31 @@ export default function DashboardPage() {
   return (
     <DashboardLayout>
       <Header
-        title="Dashboard"
-        description="Overview of your label printing activity"
+        title="Panel"
+        description="Resumen de tu actividad de impresión de etiquetas"
       />
 
       <div className="p-6 space-y-6">
         {/* KPI Cards */}
         <div className="grid gap-6 md:grid-cols-3">
           <KpiCard
-            title="Labels Printed Today"
-            value="1,247"
-            change="+12% from yesterday"
+            title="Etiquetas impresas hoy"
+            value="1.247"
+            change="+12% respecto a ayer"
             changeType="positive"
             icon={Tag}
           />
           <KpiCard
-            title="Total Jobs"
+            title="Trabajos totales"
             value="24"
-            change="8 pending"
+            change="8 pendientes"
             changeType="neutral"
             icon={Printer}
           />
           <KpiCard
-            title="Active Templates"
+            title="Templates activos"
             value="12"
-            change="2 new this week"
+            change="2 nuevos esta semana"
             changeType="positive"
             icon={FileStack}
           />

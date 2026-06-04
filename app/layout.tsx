@@ -7,8 +7,8 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Inteliar Labels | Print 100+ Labels in Seconds from Excel',
-  description: 'Stop wasting hours on label printing. Upload your Excel, apply a template, and print instantly to any thermal printer. No BarTender. No complexity. Start free today.',
+  title: 'Inteliar Labels | Imprimí 100+ etiquetas en segundos desde Excel',
+  description: 'Dejá de perder horas imprimiendo etiquetas. Subí tu Excel, aplicá un template e imprimí al instante en cualquier impresora térmica. Sin BarTender. Sin vueltas. Empezá gratis hoy.',
   generator: 'v0.app',
   icons: {
     icon: [
@@ -35,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="es" className="dark">
       <body className={`${inter.variable} font-sans antialiased`}>
         {children}
         <Analytics />

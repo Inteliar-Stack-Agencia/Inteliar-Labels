@@ -87,8 +87,8 @@ export default function UploadPage() {
   return (
     <DashboardLayout>
       <Header
-        title="Upload Data"
-        description="Import data from Excel or CSV files"
+        title="Cargar datos"
+        description="Importá datos desde archivos Excel o CSV"
       />
 
       <div className="p-6 space-y-6">
@@ -119,10 +119,10 @@ export default function UploadPage() {
                 <Upload className="h-8 w-8 text-muted-foreground" />
               </div>
               <h3 className="text-lg font-semibold text-foreground">
-                Drop your file here
+                Soltá tu archivo acá
               </h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                or click to browse for Excel (.xlsx) or CSV files
+                o hacé clic para buscar archivos Excel (.xlsx) o CSV
               </p>
             </div>
           </div>
@@ -137,7 +137,7 @@ export default function UploadPage() {
             <div className="flex-1">
               <p className="font-medium text-card-foreground">{uploadedFile.name}</p>
               <p className="text-sm text-muted-foreground">
-                {data ? `${data.rows.length} rows, ${data.columns.length} columns` : "Processing..."}
+                {data ? `${data.rows.length} filas, ${data.columns.length} columnas` : "Procesando..."}
               </p>
             </div>
             <Button
@@ -162,15 +162,15 @@ export default function UploadPage() {
               <div className="flex items-center justify-between border-b border-border px-6 py-4">
                 <div>
                   <h2 className="text-base font-semibold text-card-foreground">
-                    Column Mapping
+                    Mapeo de columnas
                   </h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Map your data columns to template variables
+                    Asociá las columnas de tus datos con las variables del template
                   </p>
                 </div>
                 <div className="flex items-center gap-2 rounded-full bg-success/10 px-3 py-1.5 text-xs font-medium text-success">
                   <Check className="h-3.5 w-3.5" />
-                  {Object.keys(columnMappings).length} columns mapped
+                  {Object.keys(columnMappings).length} columnas mapeadas
                 </div>
               </div>
 
@@ -187,7 +187,7 @@ export default function UploadPage() {
                       <div>
                         <p className="font-medium text-card-foreground">{column}</p>
                         <p className="text-xs text-muted-foreground">
-                          Sample: {data.rows[0]?.[column] || "-"}
+                          Ejemplo: {data.rows[0]?.[column] || "-"}
                         </p>
                       </div>
                     </div>
@@ -204,7 +204,7 @@ export default function UploadPage() {
                         }
                         className="h-9 w-40 rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
                       >
-                        <option value="">Skip column</option>
+                        <option value="">Omitir columna</option>
                         {templateVariables.map((variable) => (
                           <option key={variable} value={variable}>
                             {variable}
@@ -222,14 +222,14 @@ export default function UploadPage() {
               <AlertCircle className="h-5 w-5 text-warning" />
               <div className="flex-1">
                 <p className="font-medium text-foreground">
-                  Quantity column detected: &quot;cantidad&quot;
+                  Columna de cantidad detectada: &quot;cantidad&quot;
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Each row will generate the number of labels specified in this column
+                  Cada fila generará la cantidad de etiquetas indicada en esta columna
                 </p>
               </div>
               <span className="rounded-full bg-warning/20 px-3 py-1 text-sm font-medium text-warning">
-                Total: {totalLabels} labels
+                Total: {totalLabels} etiquetas
               </span>
             </div>
 
@@ -237,7 +237,7 @@ export default function UploadPage() {
             <div className="rounded-xl border border-border bg-card">
               <div className="border-b border-border px-6 py-4">
                 <h2 className="text-base font-semibold text-card-foreground">
-                  Data Preview
+                  Vista previa de los datos
                 </h2>
               </div>
               <div className="overflow-x-auto">
@@ -277,7 +277,7 @@ export default function UploadPage() {
             {/* Generate Button */}
             <div className="flex justify-end">
               <Button size="lg" className="gap-2" onClick={handleGenerateLabels}>
-                Generate Labels
+                Generar etiquetas
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </div>

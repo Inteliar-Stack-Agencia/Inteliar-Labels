@@ -3,39 +3,39 @@ import { Zap, Code, FileSpreadsheet, Printer, Cloud, Shield } from "lucide-react
 const features = [
   {
     icon: Zap,
-    title: "Blazing Fast Bulk Printing",
-    description: "Print hundreds of labels in seconds, not minutes. Your thermal printer becomes a production machine.",
-    highlight: "100+ labels/minute",
+    title: "Impresión masiva ultrarrápida",
+    description: "Imprimí cientos de etiquetas en segundos, no en minutos. Tu impresora térmica se convierte en una máquina de producción.",
+    highlight: "100+ etiquetas/minuto",
   },
   {
     icon: Code,
-    title: "Dynamic Templates",
-    description: "Use {{variables}} to automatically pull data from your spreadsheet into each label. No manual entry.",
-    highlight: "Zero manual input",
+    title: "Templates dinámicos",
+    description: "Usá {{variables}} para traer datos automáticamente desde tu planilla a cada etiqueta. Sin carga manual.",
+    highlight: "Cero carga manual",
   },
   {
     icon: FileSpreadsheet,
-    title: "Excel & CSV Native",
-    description: "Works with the files you already have. No data conversion or reformatting required.",
-    highlight: "Drag & drop ready",
+    title: "Excel y CSV nativos",
+    description: "Funciona con los archivos que ya tenés. Sin conversiones ni reformateo.",
+    highlight: "Arrastrá y soltá",
   },
   {
     icon: Printer,
-    title: "Any Thermal Printer",
-    description: "ZPL, EPL, CPCL—we speak your printer's language. Zebra, Dymo, Brother, and more.",
-    highlight: "Universal compatibility",
+    title: "Cualquier impresora térmica",
+    description: "ZPL, EPL, CPCL: hablamos el idioma de tu impresora. Zebra, Honeywell, Brother y más.",
+    highlight: "Compatibilidad universal",
   },
   {
     icon: Cloud,
-    title: "Nothing to Install",
-    description: "100% cloud-based. Works in your browser on any device. Always up to date automatically.",
-    highlight: "Start in 2 minutes",
+    title: "Nada que instalar",
+    description: "100% en la nube. Funciona en tu navegador en cualquier dispositivo. Siempre actualizado.",
+    highlight: "Listo en 2 minutos",
   },
   {
     icon: Shield,
-    title: "Enterprise Reliable",
-    description: "99.9% uptime. Your labels print when you need them. Period.",
-    highlight: "24/7 availability",
+    title: "Confiable para tu negocio",
+    description: "99.9% de uptime. Tus etiquetas se imprimen cuando las necesitás. Punto.",
+    highlight: "Disponibilidad 24/7",
   },
 ]
 
@@ -44,12 +44,12 @@ export function FeaturesSection() {
     <section id="features" className="py-24 px-4 sm:px-6 bg-muted/30">
       <div className="max-w-6xl mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <p className="text-sm font-medium text-primary mb-3 uppercase tracking-wide">Features</p>
+          <p className="text-sm font-medium text-primary mb-3 uppercase tracking-wide">Funcionalidades</p>
           <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 text-balance">
-            Everything you need, nothing you don't
+            Todo lo que necesitás, nada que te sobre
           </h2>
           <p className="text-lg text-muted-foreground">
-            Built for speed and simplicity. Designed by people who've wasted too many hours on BarTender.
+            Pensado para velocidad y simpleza. Diseñado por gente que perdió demasiadas horas con BarTender.
           </p>
         </div>
 
