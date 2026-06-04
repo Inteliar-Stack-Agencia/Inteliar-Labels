@@ -7,8 +7,8 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Inteliar Labels - Thermal Label Printing System',
-  description: 'Professional thermal label printing and management system',
+  title: 'Inteliar Labels | Print 100+ Labels in Seconds from Excel',
+  description: 'Stop wasting hours on label printing. Upload your Excel, apply a template, and print instantly to any thermal printer. No BarTender. No complexity. Start free today.',
   generator: 'v0.app',
   icons: {
     icon: [
