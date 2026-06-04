@@ -9,42 +9,42 @@ export function HeroSection() {
           <div className="space-y-8">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border text-sm">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-muted-foreground">Used by 500+ businesses worldwide</span>
+              <span className="text-muted-foreground">Usado por más de 500 empresas en todo el mundo</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground leading-[1.1] text-balance">
-              Stop wasting hours.{" "}
-              <span className="text-primary">Print 100+ labels</span> in seconds.
+              Dejá de perder horas.{" "}
+              <span className="text-primary">Imprimí 100+ etiquetas</span> en segundos.
             </h1>
 
             <p className="text-lg sm:text-xl text-muted-foreground max-w-xl leading-relaxed">
-              Ditch expensive, complex label software. Upload your Excel, pick a template, 
-              and print instantly to any thermal printer. No training needed.
+              Olvidate del software de etiquetas caro y complicado. Subí tu Excel, elegí un template
+              e imprimí al instante en cualquier impresora térmica. Sin capacitación.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
               <Button size="lg" className="text-base h-12 px-8 gap-2 group">
-                Start Free — No Credit Card
+                Empezá gratis — Sin tarjeta
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </Button>
               <Button size="lg" variant="outline" className="text-base h-12 px-8 gap-2">
                 <Play className="w-4 h-4" />
-                Watch 2-Min Demo
+                Ver demo de 2 minutos
               </Button>
             </div>
 
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground pt-2">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-green-600" />
-                <span>14-day free trial</span>
+                <span>14 días de prueba gratis</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-green-600" />
-                <span>Works with any thermal printer</span>
+                <span>Compatible con cualquier impresora térmica</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-green-600" />
-                <span>Setup in 5 minutes</span>
+                <span>Listo en 5 minutos</span>
               </div>
             </div>
           </div>
@@ -67,11 +67,11 @@ export function HeroSection() {
                       <span className="text-green-700 text-xs font-semibold">XLS</span>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-foreground">products_batch_042.xlsx</p>
-                      <p className="text-xs text-muted-foreground">247 items ready to print</p>
+                      <p className="text-sm font-medium text-foreground">productos_lote_042.xlsx</p>
+                      <p className="text-xs text-muted-foreground">247 ítems listos para imprimir</p>
                     </div>
                   </div>
-                  <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 font-medium">Loaded</span>
+                  <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 font-medium">Cargado</span>
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">
@@ -96,7 +96,7 @@ export function HeroSection() {
                 </div>
 
                 <Button className="w-full h-11 text-base">
-                  Print All 247 Labels
+                  Imprimir las 247 etiquetas
                 </Button>
               </div>
             </div>

@@ -4,20 +4,20 @@ const steps = [
   {
     number: "01",
     icon: Upload,
-    title: "Upload Your Data",
-    description: "Drag and drop your Excel or CSV file. We automatically detect your columns and map them to label fields.",
+    title: "Subí tus datos",
+    description: "Arrastrá y soltá tu archivo Excel o CSV. Detectamos las columnas automáticamente y las mapeamos a los campos de la etiqueta.",
   },
   {
     number: "02",
     icon: Layout,
-    title: "Pick Your Template",
-    description: "Choose from pre-built templates or create your own. Use {{variables}} to pull data directly from your spreadsheet.",
+    title: "Elegí tu template",
+    description: "Usá los templates listos o creá el tuyo. Usá {{variables}} para traer datos directamente desde tu planilla.",
   },
   {
     number: "03",
     icon: Printer,
-    title: "Print Everything",
-    description: "Hit print and watch 100+ labels come out in seconds. That's it. No complex setup, no learning curve.",
+    title: "Imprimí todo",
+    description: "Tocá imprimir y mirá cómo salen 100+ etiquetas en segundos. Listo. Sin configuraciones complicadas ni curva de aprendizaje.",
   },
 ]
 
@@ -26,12 +26,12 @@ export function HowItWorksSection() {
     <section id="how-it-works" className="py-24 px-4 sm:px-6 bg-muted/30">
       <div className="max-w-6xl mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <p className="text-sm font-medium text-primary mb-3 uppercase tracking-wide">How it works</p>
+          <p className="text-sm font-medium text-primary mb-3 uppercase tracking-wide">Cómo funciona</p>
           <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 text-balance">
-            From spreadsheet to printed labels in 60 seconds
+            De la planilla a las etiquetas impresas en 60 segundos
           </h2>
           <p className="text-lg text-muted-foreground">
-            No software to install. No complex configuration. Just results.
+            Sin instalaciones. Sin configuraciones complejas. Solo resultados.
           </p>
         </div>
 

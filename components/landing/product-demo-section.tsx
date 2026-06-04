@@ -8,31 +8,31 @@ const demoSteps = [
   {
     id: "upload",
     icon: FileSpreadsheet,
-    title: "Excel Upload",
-    description: "Supports .xlsx, .xls, and .csv files. Columns are auto-detected.",
+    title: "Carga de Excel",
+    description: "Soporta archivos .xlsx, .xls y .csv. Las columnas se detectan automáticamente.",
     content: (
       <div className="space-y-4">
         <div className="border-2 border-dashed border-border rounded-xl p-8 text-center bg-muted/30">
           <FileSpreadsheet className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-          <p className="text-sm text-muted-foreground">Drop your file here or click to browse</p>
+          <p className="text-sm text-muted-foreground">Soltá tu archivo acá o hacé clic para buscar</p>
         </div>
         <div className="bg-card border border-border rounded-lg overflow-hidden">
           <div className="bg-muted/50 px-4 py-2 border-b border-border">
-            <span className="text-xs font-medium text-muted-foreground">Preview: inventory_march.xlsx</span>
+            <span className="text-xs font-medium text-muted-foreground">Vista previa: inventario_marzo.xlsx</span>
           </div>
           <div className="p-4">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left py-2 text-muted-foreground font-medium">Product</th>
+                  <th className="text-left py-2 text-muted-foreground font-medium">Producto</th>
                   <th className="text-left py-2 text-muted-foreground font-medium">SKU</th>
-                  <th className="text-left py-2 text-muted-foreground font-medium">Exp. Date</th>
+                  <th className="text-left py-2 text-muted-foreground font-medium">Vencimiento</th>
                 </tr>
               </thead>
               <tbody className="text-foreground">
-                <tr className="border-b border-border/50"><td className="py-2">Organic Milk 1L</td><td className="py-2">MLK-001</td><td className="py-2">2026-04-15</td></tr>
-                <tr className="border-b border-border/50"><td className="py-2">Fresh Bread</td><td className="py-2">BRD-042</td><td className="py-2">2026-03-25</td></tr>
-                <tr><td className="py-2">Greek Yogurt</td><td className="py-2">YGT-103</td><td className="py-2">2026-04-01</td></tr>
+                <tr className="border-b border-border/50"><td className="py-2">Leche Orgánica 1L</td><td className="py-2">MLK-001</td><td className="py-2">2026-04-15</td></tr>
+                <tr className="border-b border-border/50"><td className="py-2">Pan Fresco</td><td className="py-2">BRD-042</td><td className="py-2">2026-03-25</td></tr>
+                <tr><td className="py-2">Yogur Griego</td><td className="py-2">YGT-103</td><td className="py-2">2026-04-01</td></tr>
               </tbody>
             </table>
           </div>
@@ -43,30 +43,30 @@ const demoSteps = [
   {
     id: "template",
     icon: Pencil,
-    title: "Template Editor",
-    description: "Drag-and-drop editor. Use {{variables}} for dynamic content.",
+    title: "Editor de templates",
+    description: "Editor con arrastrar y soltar. Usá {{variables}} para contenido dinámico.",
     content: (
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-3">
-          <p className="text-sm font-medium text-muted-foreground">Available Fields</p>
+          <p className="text-sm font-medium text-muted-foreground">Campos disponibles</p>
           <div className="flex flex-wrap gap-2">
-            {["{{Product}}", "{{SKU}}", "{{Exp. Date}}", "{{Barcode}}"].map((field) => (
+            {["{{Producto}}", "{{SKU}}", "{{Vencimiento}}", "{{Código de barras}}"].map((field) => (
               <span key={field} className="px-3 py-1.5 bg-primary/10 text-primary text-sm rounded-full font-mono">
                 {field}
               </span>
             ))}
           </div>
           <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-            <p className="text-xs text-muted-foreground">Template Code</p>
+            <p className="text-xs text-muted-foreground">Código del template</p>
             <pre className="text-xs font-mono text-foreground leading-relaxed">
 {`^XA
 ^FO50,30^A0N,30,30
-^FD{{Product}}^FS
+^FD{{Producto}}^FS
 ^FO50,70^BY2
 ^BCN,60,Y,N,N
 ^FD{{SKU}}^FS
 ^FO50,150^A0N,20,20
-^FDEXP: {{Exp. Date}}^FS
+^FDVTO: {{Vencimiento}}^FS
 ^XZ`}
             </pre>
           </div>
@@ -74,14 +74,14 @@ const demoSteps = [
         <div className="flex items-center justify-center">
           <div className="w-48 h-32 bg-card border-2 border-foreground rounded-lg p-4 flex flex-col justify-between shadow-md">
             <div>
-              <p className="font-semibold text-foreground text-sm">Organic Milk 1L</p>
+              <p className="font-semibold text-foreground text-sm">Leche Orgánica 1L</p>
             </div>
             <div className="flex gap-0.5 justify-center">
               {[...Array(20)].map((_, i) => (
                 <div key={i} className="w-0.5 bg-foreground rounded-full" style={{ height: `${Math.random() * 16 + 12}px` }} />
               ))}
             </div>
-            <p className="text-xs text-muted-foreground text-center">EXP: 2026-04-15</p>
+            <p className="text-xs text-muted-foreground text-center">VTO: 2026-04-15</p>
           </div>
         </div>
       </div>

@@ -20,27 +20,27 @@ export function Navbar() {
 
           <nav className="hidden md:flex items-center gap-8">
             <a href="#how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              How it Works
+              Cómo funciona
             </a>
             <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Features
+              Funcionalidades
             </a>
             <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Pricing
+              Precios
             </a>
           </nav>
 
           <div className="hidden md:flex items-center gap-3">
             <Button variant="ghost" size="sm" className="text-muted-foreground">
-              Watch Demo
+              Ver demo
             </Button>
-            <Button size="sm">Start Free Trial</Button>
+            <Button size="sm">Probar gratis</Button>
           </div>
 
           <button
             className="md:hidden p-2"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            aria-label="Toggle menu"
+            aria-label="Abrir menú"
           >
             {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -50,19 +50,19 @@ export function Navbar() {
           <div className="md:hidden py-4 border-t border-border">
             <nav className="flex flex-col gap-4">
               <a href="#how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                How it Works
+                Cómo funciona
               </a>
               <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Features
+                Funcionalidades
               </a>
               <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Pricing
+                Precios
               </a>
               <div className="flex flex-col gap-2 pt-4">
                 <Button variant="outline" size="sm" className="w-full">
-                  Watch Demo
+                  Ver demo
                 </Button>
-                <Button size="sm" className="w-full">Start Free Trial</Button>
+                <Button size="sm" className="w-full">Probar gratis</Button>
               </div>
             </nav>
           </div>
