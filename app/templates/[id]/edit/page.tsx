@@ -61,6 +61,7 @@ export default function TemplateEditPage() {
   const [heightMm, setHeightMm] = useState(50)
   const [selectedPreset, setSelectedPreset] = useState(5)
   const [cutBetweenLabels, setCutBetweenLabels] = useState(true)
+  const [cutEveryN, setCutEveryN] = useState(1)
   const [elements, setElements] = useState<LabelElement[]>([])
   const [selectedElement, setSelectedElement] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -89,9 +90,10 @@ export default function TemplateEditPage() {
       setWidthMm(data.width_mm ?? 100)
       setHeightMm(data.height_mm ?? 50)
 
-      const canvas = data.canvas_data as { elements?: LabelElement[]; cutBetweenLabels?: boolean }
+      const canvas = data.canvas_data as { elements?: LabelElement[]; cutBetweenLabels?: boolean; cutEveryN?: number }
       if (canvas?.elements) setElements(canvas.elements)
       if (canvas?.cutBetweenLabels !== undefined) setCutBetweenLabels(canvas.cutBetweenLabels)
+      if (canvas?.cutEveryN) setCutEveryN(canvas.cutEveryN)
 
       // Match preset
       const presetIdx = PRESET_SIZES.findIndex(
@@ -273,7 +275,7 @@ export default function TemplateEditPage() {
         name: templateName,
         width_mm: widthMm,
         height_mm: heightMm,
-        canvas_data: { elements, cutBetweenLabels },
+        canvas_data: { elements, cutBetweenLabels, cutEveryN },
         variables,
         updated_at: new Date().toISOString(),
       })
@@ -401,23 +403,39 @@ export default function TemplateEditPage() {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center justify-between rounded-lg border border-border p-3">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Corte automático entre etiquetas</p>
-                    <p className="text-xs text-muted-foreground">La impresora corta el papel después de cada etiqueta</p>
+                <div className="rounded-lg border border-border p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Corte automático</p>
+                      <p className="text-xs text-muted-foreground">La impresora corta el papel entre lotes</p>
+                    </div>
+                    <button
+                      onClick={() => setCutBetweenLabels(!cutBetweenLabels)}
+                      className={cn(
+                        "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
+                        cutBetweenLabels ? "bg-primary" : "bg-muted"
+                      )}
+                    >
+                      <span className={cn(
+                        "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                        cutBetweenLabels ? "translate-x-6" : "translate-x-1"
+                      )} />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => setCutBetweenLabels(!cutBetweenLabels)}
-                    className={cn(
-                      "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-                      cutBetweenLabels ? "bg-primary" : "bg-muted"
-                    )}
-                  >
-                    <span className={cn(
-                      "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
-                      cutBetweenLabels ? "translate-x-6" : "translate-x-1"
-                    )} />
-                  </button>
+                  {cutBetweenLabels && (
+                    <div className="flex items-center gap-3">
+                      <label className="text-xs text-muted-foreground whitespace-nowrap">Cortar cada</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={9999}
+                        value={cutEveryN}
+                        onChange={(e) => setCutEveryN(Math.max(1, Number(e.target.value)))}
+                        className="w-20 rounded-lg border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                      />
+                      <label className="text-xs text-muted-foreground">etiquetas</label>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

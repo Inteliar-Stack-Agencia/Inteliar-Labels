@@ -29,73 +29,94 @@ interface Template {
   canvas_data: {
     elements: LabelElement[]
     cutBetweenLabels?: boolean
+    cutEveryN?: number
   }
 }
 
-// Map fontSize (px) to ZPL font size (A=9pt..Z=21pt, or use scalable ^A0)
 function fontSizeToZpl(fontSize: number): string {
-  // Use scalable font: ^A0N,height,width
   const h = Math.max(10, Math.round(fontSize * 3.5))
   const w = Math.round(h * 0.6)
   return `^A0N,${h},${w}`
 }
 
-export function generateZPL(
+function buildLabelZpl(
   template: Template,
-  rows: Array<{ row_data: Record<string, string>; quantity: number }>
+  row: Record<string, string>,
+  copies: number,
+  cut: boolean
 ): string {
   const w = mmToDots(template.width_mm)
   const h = mmToDots(template.height_mm)
-  const cut = template.canvas_data.cutBetweenLabels !== false
+  const fields: string[] = []
 
-  const labels: string[] = []
+  for (const el of template.canvas_data.elements) {
+    const x = mmToDots(el.x)
+    const y = mmToDots(el.y)
+    const content = substituteVars(el.content, row)
 
-  for (const { row_data, quantity } of rows) {
-    const copies = Math.max(1, quantity)
-
-    const fields: string[] = []
-
-    for (const el of template.canvas_data.elements) {
-      const x = mmToDots(el.x)
-      const y = mmToDots(el.y)
-      const content = substituteVars(el.content, row_data)
-
-      if (el.type === "text") {
-        const font = fontSizeToZpl(el.fontSize)
-        const bold = el.bold ? "^FB" : ""
-        fields.push(`^FO${x},${y}${font}^FD${content}^FS`)
-
-      } else if (el.type === "barcode") {
-        // Code 128 barcode
-        const barH = mmToDots(8) // 8mm tall
-        fields.push(`^FO${x},${y}^BCN,${barH},Y,N,N^FD${content || "000"}^FS`)
-
-      } else if (el.type === "qr") {
-        // QR code
-        fields.push(`^FO${x},${y}^BQN,2,4^FDMM,A${content || "0"}^FS`)
-
-      } else if (el.type === "image") {
-        // Skip images in ZPL (would need bitmap conversion)
-        fields.push(`^FO${x},${y}^A0N,14,10^FD[logo]^FS`)
-      }
+    if (el.type === "text") {
+      fields.push(`^FO${x},${y}${fontSizeToZpl(el.fontSize)}^FD${content}^FS`)
+    } else if (el.type === "barcode") {
+      const barH = mmToDots(8)
+      fields.push(`^FO${x},${y}^BCN,${barH},Y,N,N^FD${content || "000"}^FS`)
+    } else if (el.type === "qr") {
+      fields.push(`^FO${x},${y}^BQN,2,4^FDMM,A${content || "0"}^FS`)
+    } else if (el.type === "image") {
+      fields.push(`^FO${x},${y}^A0N,14,10^FD[logo]^FS`)
     }
-
-    const zpl = [
-      `^XA`,
-      `^PW${w}`,
-      `^LL${h}`,
-      `^LH0,0`,
-      `^CI28`,
-      ...fields,
-      `^PQ${copies}`,
-      cut ? `^MCY` : `^MCN`,
-      `^XZ`,
-    ].join("\n")
-
-    labels.push(zpl)
   }
 
-  return labels.join("\n\n")
+  return [
+    `^XA`,
+    `^PW${w}`,
+    `^LL${h}`,
+    `^LH0,0`,
+    `^CI28`,
+    ...fields,
+    `^PQ${copies}`,
+    cut ? `^MCY` : `^MCN`,
+    `^XZ`,
+  ].join("\n")
+}
+
+export interface GenerateZPLOptions {
+  startFromLabel?: number // 1-based, skip labels before this
+}
+
+export function generateZPL(
+  template: Template,
+  rows: Array<{ row_data: Record<string, string>; quantity: number }>,
+  options: GenerateZPLOptions = {}
+): string {
+  const cutEveryN = template.canvas_data.cutEveryN ?? 1
+  const doCut = template.canvas_data.cutBetweenLabels !== false
+  const startFrom = options.startFromLabel ?? 1
+
+  // Expand rows into flat label list (respecting quantity)
+  const allLabels: Record<string, string>[] = []
+  for (const { row_data, quantity } of rows) {
+    for (let i = 0; i < Math.max(1, quantity); i++) {
+      allLabels.push(row_data)
+    }
+  }
+
+  // Skip labels before startFrom
+  const labelsToPrint = allLabels.slice(startFrom - 1)
+
+  const zplBlocks: string[] = []
+
+  // Group into batches of cutEveryN
+  for (let i = 0; i < labelsToPrint.length; i += cutEveryN) {
+    const batch = labelsToPrint.slice(i, i + cutEveryN)
+
+    // Each label in the batch as individual ZPL block (1 copy each), cut only at end of batch
+    for (let j = 0; j < batch.length; j++) {
+      const isLastInBatch = j === batch.length - 1
+      zplBlocks.push(buildLabelZpl(template, batch[j], 1, doCut && isLastInBatch))
+    }
+  }
+
+  return zplBlocks.join("\n\n")
 }
 
 export function downloadZPL(zplContent: string, filename: string) {
