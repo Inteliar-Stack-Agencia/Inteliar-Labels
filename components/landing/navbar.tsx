@@ -25,16 +25,24 @@ export function Navbar() {
             <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Funcionalidades
             </a>
+            <a href="#descargar" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Descarga
+            </a>
             <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Precios
+            </a>
+            <a href="/manual" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Manual
             </a>
           </nav>
 
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="ghost" size="sm" className="text-muted-foreground">
-              Ver demo
+            <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
+              <a href="/auth/login">Iniciar sesión</a>
             </Button>
-            <Button size="sm">Probar gratis</Button>
+            <Button size="sm" asChild>
+              <a href="/auth/register">Probar gratis</a>
+            </Button>
           </div>
 
           <button
@@ -55,14 +63,22 @@ export function Navbar() {
               <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 Funcionalidades
               </a>
+              <a href="#descargar" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Descarga
+              </a>
               <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 Precios
               </a>
+              <a href="/manual" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Manual
+              </a>
               <div className="flex flex-col gap-2 pt-4">
-                <Button variant="outline" size="sm" className="w-full">
-                  Ver demo
+                <Button variant="outline" size="sm" className="w-full" asChild>
+                  <a href="/auth/login">Iniciar sesión</a>
                 </Button>
-                <Button size="sm" className="w-full">Probar gratis</Button>
+                <Button size="sm" className="w-full" asChild>
+                  <a href="/auth/register">Probar gratis</a>
+                </Button>
               </div>
             </nav>
           </div>

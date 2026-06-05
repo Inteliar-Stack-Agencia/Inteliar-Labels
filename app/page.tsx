@@ -5,6 +5,7 @@ import { FeaturesSection } from "@/components/landing/features-section"
 import { UseCasesSection } from "@/components/landing/use-cases-section"
 import { ComparisonSection } from "@/components/landing/comparison-section"
 import { PricingSection } from "@/components/landing/pricing-section"
+import { DownloadSection } from "@/components/landing/download-section"
 import { FinalCtaSection } from "@/components/landing/final-cta-section"
 import { Footer } from "@/components/landing/footer"
 import { Navbar } from "@/components/landing/navbar"
@@ -20,6 +21,7 @@ export default function LandingPage() {
         <FeaturesSection />
         <UseCasesSection />
         <ComparisonSection />
+        <DownloadSection />
         <PricingSection />
         <FinalCtaSection />
       </main>
