@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useRef, useCallback, useEffect } from "react"
+import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Button } from "@/components/ui/button"
@@ -47,23 +47,24 @@ const PRESET_SIZES = [
   { label: "Personalizado", width: 0, height: 0 },
 ]
 
-export default function TemplateEditorPage() {
+export default function TemplateEditPage() {
   const router = useRouter()
+  const params = useParams()
+  const templateId = params.id as string
   const supabase = createClient()
   const logoInputRef = useRef<HTMLInputElement>(null)
 
-  const [templateName, setTemplateName] = useState("Template sin título")
+  const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
+  const [templateName, setTemplateName] = useState("Cargando...")
   const [widthMm, setWidthMm] = useState(100)
   const [heightMm, setHeightMm] = useState(50)
-  const [selectedPreset, setSelectedPreset] = useState(0)
+  const [selectedPreset, setSelectedPreset] = useState(5)
   const [cutBetweenLabels, setCutBetweenLabels] = useState(true)
-  const [elements, setElements] = useState<LabelElement[]>([
-    { id: "1", type: "text", content: "{{empresa}}", x: 10, y: 10, fontSize: 16, bold: true },
-    { id: "2", type: "text", content: "{{plato}}", x: 10, y: 35, fontSize: 12, bold: false },
-  ])
+  const [elements, setElements] = useState<LabelElement[]>([])
   const [selectedElement, setSelectedElement] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const [showSizePanel, setShowSizePanel] = useState(true)
+  const [showSizePanel, setShowSizePanel] = useState(false)
   const dragRef = useRef<{ id: string; startX: number; startY: number; origX: number; origY: number } | null>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
   const [uploadingLogo, setUploadingLogo] = useState(false)
@@ -72,6 +73,36 @@ export default function TemplateEditorPage() {
   const [aiDescription, setAiDescription] = useState("")
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
+
+  // Load template from Supabase
+  useEffect(() => {
+    const load = async () => {
+      const { data, error } = await supabase
+        .from("templates")
+        .select("*")
+        .eq("id", templateId)
+        .single()
+
+      if (error || !data) { setNotFound(true); setLoading(false); return }
+
+      setTemplateName(data.name)
+      setWidthMm(data.width_mm ?? 100)
+      setHeightMm(data.height_mm ?? 50)
+
+      const canvas = data.canvas_data as { elements?: LabelElement[]; cutBetweenLabels?: boolean }
+      if (canvas?.elements) setElements(canvas.elements)
+      if (canvas?.cutBetweenLabels !== undefined) setCutBetweenLabels(canvas.cutBetweenLabels)
+
+      // Match preset
+      const presetIdx = PRESET_SIZES.findIndex(
+        (p) => p.width === data.width_mm && p.height === data.height_mm
+      )
+      setSelectedPreset(presetIdx >= 0 ? presetIdx : 5)
+      setLoading(false)
+    }
+    load()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templateId])
 
   const selectedElementData = elements.find((el) => el.id === selectedElement)
 
@@ -140,9 +171,7 @@ export default function TemplateEditorPage() {
         .upload(path, file, { upsert: true })
 
       if (uploadErr) {
-        // Si el bucket no existe, usamos URL local como fallback
-        const localUrl = URL.createObjectURL(file)
-        insertImageElement(localUrl, file.name)
+        insertImageElement(URL.createObjectURL(file), file.name)
       } else {
         const { data: { publicUrl } } = supabase.storage.from("logos").getPublicUrl(path)
         insertImageElement(publicUrl, file.name)
@@ -229,8 +258,6 @@ export default function TemplateEditorPage() {
 
   const handleSave = async () => {
     setSaving(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.push("/auth/login"); return }
 
     const variables = elements
       .map((el) => {
@@ -240,14 +267,17 @@ export default function TemplateEditorPage() {
       .flat()
       .filter((v, i, arr) => arr.indexOf(v) === i)
 
-    const { error } = await supabase.from("templates").insert({
-      user_id: user.id,
-      name: templateName,
-      width_mm: widthMm,
-      height_mm: heightMm,
-      canvas_data: { elements, cutBetweenLabels },
-      variables,
-    })
+    const { error } = await supabase
+      .from("templates")
+      .update({
+        name: templateName,
+        width_mm: widthMm,
+        height_mm: heightMm,
+        canvas_data: { elements, cutBetweenLabels },
+        variables,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", templateId)
 
     setSaving(false)
     if (!error) router.push("/templates")
@@ -258,6 +288,29 @@ export default function TemplateEditorPage() {
     if (type === "qr") return QrCode
     if (type === "barcode") return Barcode
     return ImageIcon
+  }
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex h-screen items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (notFound) {
+    return (
+      <DashboardLayout>
+        <div className="flex h-screen flex-col items-center justify-center gap-4">
+          <p className="text-lg font-semibold text-foreground">Template no encontrado</p>
+          <Link href="/templates">
+            <Button variant="outline">Volver a templates</Button>
+          </Link>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   return (
@@ -293,7 +346,7 @@ export default function TemplateEditorPage() {
           </Button>
           <Button size="sm" className="gap-2" onClick={handleSave} disabled={saving}>
             <Save className="h-4 w-4" />
-            {saving ? "Guardando..." : "Guardar template"}
+            {saving ? "Guardando..." : "Guardar cambios"}
           </Button>
         </div>
       </div>
@@ -303,11 +356,9 @@ export default function TemplateEditorPage() {
         <div className="flex-1 overflow-auto bg-muted/30 p-8">
           <div className="mx-auto max-w-3xl space-y-6">
 
-            {/* Size Configuration Panel */}
             {showSizePanel && (
               <div className="rounded-xl border border-border bg-card p-5 space-y-4">
                 <h3 className="text-sm font-semibold text-foreground">Configuración de etiqueta</h3>
-
                 <div>
                   <label className="mb-2 block text-xs font-medium text-muted-foreground">Tamaño predefinido</label>
                   <div className="flex flex-wrap gap-2">
@@ -327,13 +378,10 @@ export default function TemplateEditorPage() {
                     ))}
                   </div>
                 </div>
-
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Ancho (mm)</label>
-                    <input
-                      type="number"
-                      value={widthMm}
+                    <input type="number" value={widthMm}
                       onChange={(e) => { setWidthMm(Number(e.target.value)); setSelectedPreset(5) }}
                       className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                       min={20} max={300}
@@ -341,9 +389,7 @@ export default function TemplateEditorPage() {
                   </div>
                   <div>
                     <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Alto (mm)</label>
-                    <input
-                      type="number"
-                      value={heightMm}
+                    <input type="number" value={heightMm}
                       onChange={(e) => { setHeightMm(Number(e.target.value)); setSelectedPreset(5) }}
                       className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                       min={10} max={300}
@@ -355,7 +401,6 @@ export default function TemplateEditorPage() {
                     </div>
                   </div>
                 </div>
-
                 <div className="flex items-center justify-between rounded-lg border border-border p-3">
                   <div>
                     <p className="text-sm font-medium text-foreground">Corte automático entre etiquetas</p>
@@ -390,17 +435,13 @@ export default function TemplateEditorPage() {
                 <Barcode className="h-4 w-4" /> Código de barras
               </Button>
               <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
+                variant="outline" size="sm" className="gap-2"
                 onClick={() => logoInputRef.current?.click()}
                 disabled={uploadingLogo}
               >
-                {uploadingLogo ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                ) : (
-                  <Upload className="h-4 w-4" />
-                )}
+                {uploadingLogo
+                  ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  : <Upload className="h-4 w-4" />}
                 {uploadingLogo ? "Subiendo..." : "Logo / Imagen"}
               </Button>
               <input
@@ -437,13 +478,11 @@ export default function TemplateEditorPage() {
                     style={{ width: `${canvasW}px`, height: `${canvasH}px`, minWidth: "200px", minHeight: "100px" }}
                     onClick={() => setSelectedElement(null)}
                   >
-                    {/* Grid */}
                     <div className="absolute inset-0 opacity-10" style={{
                       backgroundImage: `linear-gradient(to right, #888 1px, transparent 1px), linear-gradient(to bottom, #888 1px, transparent 1px)`,
                       backgroundSize: `${SCALE * 10}px ${SCALE * 10}px`,
                     }} />
 
-                    {/* Elements */}
                     {elements.map((element) => {
                       const Icon = elementIcon(element.type)
                       return (
@@ -465,7 +504,6 @@ export default function TemplateEditorPage() {
                               {element.type.toUpperCase()}
                             </div>
                           )}
-
                           {element.type === "image" && element.imageUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
@@ -526,19 +564,13 @@ export default function TemplateEditorPage() {
                 </span>
               </div>
 
-              {/* Image preview */}
               {selectedElementData.type === "image" && selectedElementData.imageUrl && (
                 <div className="rounded-lg border border-border bg-muted/50 p-2 flex items-center justify-center" style={{ minHeight: 80 }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={selectedElementData.imageUrl}
-                    alt="Logo"
-                    className="max-h-20 max-w-full object-contain"
-                  />
+                  <img src={selectedElementData.imageUrl} alt="Logo" className="max-h-20 max-w-full object-contain" />
                 </div>
               )}
 
-              {/* Content field — hidden for images */}
               {selectedElementData.type !== "image" && (
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Contenido / Variable</label>
@@ -553,7 +585,6 @@ export default function TemplateEditorPage() {
                 </div>
               )}
 
-              {/* Position */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Pos. X (mm)</label>
@@ -571,7 +602,6 @@ export default function TemplateEditorPage() {
                 </div>
               </div>
 
-              {/* Image size controls */}
               {selectedElementData.type === "image" ? (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -612,15 +642,9 @@ export default function TemplateEditorPage() {
                 </>
               )}
 
-              {/* Replace image button */}
               {selectedElementData.type === "image" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full gap-2"
-                  onClick={() => logoInputRef.current?.click()}
-                  disabled={uploadingLogo}
-                >
+                <Button variant="outline" size="sm" className="w-full gap-2"
+                  onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo}>
                   <Upload className="h-4 w-4" />
                   Reemplazar imagen
                 </Button>
@@ -638,7 +662,6 @@ export default function TemplateEditorPage() {
             </div>
           )}
 
-          {/* Elements List */}
           <div className="border-t border-border">
             <div className="border-b border-border px-4 py-3">
               <h3 className="text-sm font-semibold">Elementos ({elements.length})</h3>
@@ -662,6 +685,7 @@ export default function TemplateEditorPage() {
           </div>
         </div>
       </div>
+
       {/* AI Generate Modal */}
       {showAiModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
@@ -679,19 +703,16 @@ export default function TemplateEditorPage() {
               </button>
             </div>
             <p className="mb-3 text-sm text-muted-foreground">
-              Describí la etiqueta que necesitás y la IA la va a diseñar automáticamente con los elementos
-              posicionados y las variables detectadas.
+              Describí la etiqueta que necesitás y la IA la va a diseñar automáticamente.
             </p>
             <textarea
               className="mb-1 h-32 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-              placeholder="Ej: etiqueta para alimentos congelados con logo en la esquina, nombre del producto grande, fecha de vencimiento, peso en gramos y código de barras abajo"
+              placeholder="Ej: etiqueta para alimentos congelados con logo, nombre del producto, fecha de vencimiento y código de barras"
               value={aiDescription}
               onChange={(e) => setAiDescription(e.target.value)}
               disabled={aiLoading}
             />
-            <p className="mb-4 text-xs text-muted-foreground">
-              Tamaño actual: {widthMm} × {heightMm} mm
-            </p>
+            <p className="mb-4 text-xs text-muted-foreground">Tamaño actual: {widthMm} × {heightMm} mm</p>
             {aiError && (
               <p className="mb-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{aiError}</p>
             )}
