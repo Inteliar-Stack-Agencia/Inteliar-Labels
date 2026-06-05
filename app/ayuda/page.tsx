@@ -149,6 +149,77 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    title: "Código QR",
+    emoji: "📱",
+    items: [
+      {
+        q: "¿Qué información puedo poner en un QR?",
+        a: (
+          <div className="space-y-2 text-xs text-muted-foreground">
+            <p>Un QR puede contener cualquier texto. Al escanearlo con el celular, muestra o abre ese contenido. Las opciones más comunes:</p>
+            <div className="space-y-1.5 mt-2">
+              {[
+                ["🌐 URL de tu web o menú", "https://turestaurante.com/menu"],
+                ["💬 Link directo a WhatsApp", "https://wa.me/5491112345678"],
+                ["📋 Ficha del producto", "https://tutienda.com/producto/{{codigo}}"],
+                ["📸 Redes sociales", "https://instagram.com/tuempresa"],
+                ["📝 Formulario de pedidos", "https://forms.google.com/..."],
+                ["🔍 Info de trazabilidad", "Lote: {{lote}} - Fecha: {{hoy}}"],
+              ].map(([label, example]) => (
+                <div key={label} className="rounded-lg bg-muted/50 px-3 py-2">
+                  <p className="font-medium text-foreground">{label}</p>
+                  <code className="text-[10px] text-primary">{example}</code>
+                </div>
+              ))}
+            </div>
+          </div>
+        ),
+      },
+      {
+        q: "¿Cómo combino el QR con datos del Excel?",
+        a: (
+          <div className="space-y-2 text-xs text-muted-foreground">
+            <p>Usá variables dentro del contenido del QR. Ejemplos:</p>
+            <div className="space-y-1 mt-1">
+              <div className="rounded bg-muted px-3 py-1.5">
+                <code className="text-primary">{"https://miempresa.com/plato/{{codigo_plato}}"}</code>
+                <p className="mt-0.5">→ Cada etiqueta abre la página de ese plato específico</p>
+              </div>
+              <div className="rounded bg-muted px-3 py-1.5">
+                <code className="text-primary">{"https://wa.me/549{{telefono}}"}</code>
+                <p className="mt-0.5">→ Abre WhatsApp con el número del cliente</p>
+              </div>
+              <div className="rounded bg-muted px-3 py-1.5">
+                <code className="text-primary">{"Pedido: {{numero_pedido}} - {{hoy}}"}</code>
+                <p className="mt-0.5">→ Texto con número de pedido y fecha</p>
+              </div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        q: "¿Para qué sirve el QR en etiquetas de catering o food service?",
+        a: (
+          <div className="space-y-2 text-xs text-muted-foreground">
+            <p>Es muy útil para que el cliente final escanee la etiqueta y acceda a:</p>
+            <ul className="list-disc list-inside space-y-1 mt-1">
+              <li>Información nutricional y alérgenos del plato</li>
+              <li>Menú completo del día o de la semana</li>
+              <li>Formulario para hacer el próximo pedido</li>
+              <li>Contacto directo por WhatsApp para consultas</li>
+              <li>Redes sociales del negocio</li>
+            </ul>
+            <p className="mt-2">Solo necesitás tener una página web, un Google Form, o incluso un link de Instagram. Lo ponés en el campo de contenido del elemento QR y listo.</p>
+          </div>
+        ),
+      },
+      {
+        q: "¿Cómo agrego un QR a mi plantilla?",
+        a: "En el editor de plantilla, hacé click en el botón 'QR' de la barra de herramientas. Se agrega un elemento QR al canvas. Selecciónalo y en el panel de propiedades escribí el contenido: una URL, un texto, o una variable como {{url_producto}}. El QR se genera automáticamente en cada etiqueta al imprimir.",
+      },
+    ],
+  },
+  {
     title: "Numeración automática (Serial)",
     emoji: "🔢",
     items: [
@@ -192,7 +263,7 @@ function FAQRow({ item }: { item: FAQItem }) {
 }
 
 export default function AyudaPage() {
-  const _cn = cn // suppress unused import warning
+  const _cn = cn
   void _cn
   return (
     <DashboardLayout>
