@@ -15,6 +15,7 @@ import {
   Printer,
   X,
   Eye,
+  Download,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import * as XLSX from "xlsx"
@@ -39,6 +40,9 @@ export default function UploadPage() {
   const [quantityColumn, setQuantityColumn] = useState<string>("")
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [previewRows, setPreviewRows] = useState(3)
+  const [sampleTemplates, setSampleTemplates] = useState<{ id: string; name: string; variables: string[] }[]>([])
+  const [loadingSampleTemplates, setLoadingSampleTemplates] = useState(false)
+  const [showSamplePicker, setShowSamplePicker] = useState(false)
 
   const parseFile = useCallback((file: File) => {
     setError(null)
@@ -67,7 +71,6 @@ export default function UploadPage() {
           totalRows: jsonData.length,
         })
 
-        // Auto-detectar columna de cantidad
         const cantCol = columns.find((c) =>
           ["cantidad", "quantity", "cant", "qty", "copias", "copies"].includes(c.toLowerCase())
         )
@@ -81,6 +84,7 @@ export default function UploadPage() {
       setLoading(false)
     }
     reader.readAsArrayBuffer(file)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadTemplates = async () => {
@@ -134,7 +138,6 @@ export default function UploadPage() {
 
     if (error || !job) { setLoading(false); return }
 
-    // Save Excel rows so job detail can render previews
     const rowsToInsert = data.rows.map((row, i) => ({
       job_id: job.id,
       row_index: i,
@@ -142,13 +145,39 @@ export default function UploadPage() {
       quantity: quantityColumn ? Math.max(1, Number(row[quantityColumn]) || 1) : 1,
     }))
 
-    // Insert in batches of 500
     for (let i = 0; i < rowsToInsert.length; i += 500) {
       await supabase.from("print_job_rows").insert(rowsToInsert.slice(i, i + 500))
     }
 
     setLoading(false)
     router.push(`/jobs/${job.id}`)
+  }
+
+  const loadSampleTemplates = async () => {
+    if (sampleTemplates.length > 0) { setShowSamplePicker(true); return }
+    setLoadingSampleTemplates(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data } = await supabase
+        .from("templates")
+        .select("id, name, variables")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+      if (data) setSampleTemplates(data)
+    }
+    setLoadingSampleTemplates(false)
+    setShowSamplePicker(true)
+  }
+
+  const downloadSampleExcel = (tmpl: { name: string; variables: string[] }) => {
+    const vars = tmpl.variables ?? []
+    const headers = vars.length > 0 ? [...vars, "cantidad"] : ["campo1", "campo2", "cantidad"]
+    const exampleRow = Object.fromEntries(headers.map((h) => [h, h === "cantidad" ? "1" : `ejemplo_${h}`]))
+    const ws = XLSX.utils.json_to_sheet([exampleRow], { header: headers })
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Etiquetas")
+    XLSX.writeFile(wb, `plantilla_${tmpl.name.replace(/\s+/g, "_")}.xlsx`)
+    setShowSamplePicker(false)
   }
 
   return (
@@ -183,44 +212,98 @@ export default function UploadPage() {
 
         {/* STEP 1: Upload */}
         {step === 1 && (
-          <div
-            onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={handleDrop}
-            className={cn(
-              "flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-16 transition-colors cursor-pointer",
-              isDragging ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/50"
-            )}
-            onClick={() => document.getElementById("file-input")?.click()}
-          >
-            <input
-              id="file-input"
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              className="hidden"
-              onChange={handleFileInput}
-            />
-            {loading ? (
-              <div className="text-center space-y-2">
-                <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                <p className="text-sm text-muted-foreground">Leyendo archivo...</p>
-              </div>
-            ) : (
-              <div className="text-center space-y-4">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                  <Upload className="h-8 w-8 text-primary" />
+          <div className="space-y-4">
+            <div
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+              className={cn(
+                "flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-16 transition-colors cursor-pointer",
+                isDragging ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/50"
+              )}
+              onClick={() => document.getElementById("file-input")?.click()}
+            >
+              <input
+                id="file-input"
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                className="hidden"
+                onChange={handleFileInput}
+              />
+              {loading ? (
+                <div className="text-center space-y-2">
+                  <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                  <p className="text-sm text-muted-foreground">Leyendo archivo...</p>
                 </div>
+              ) : (
+                <div className="text-center space-y-4">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                    <Upload className="h-8 w-8 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold text-foreground">Arrastrá tu archivo aquí</p>
+                    <p className="text-sm text-muted-foreground mt-1">o hacé click para seleccionar</p>
+                  </div>
+                  <div className="flex items-center gap-2 justify-center">
+                    <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">Excel .xlsx</span>
+                    <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">Excel .xls</span>
+                    <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">CSV</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Sample Excel download */}
+            <div className="rounded-xl border border-border bg-card p-4">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-lg font-semibold text-foreground">Arrastrá tu archivo aquí</p>
-                  <p className="text-sm text-muted-foreground mt-1">o hacé click para seleccionar</p>
+                  <p className="text-sm font-medium text-foreground">¿No tenés el Excel todavía?</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Descargá una plantilla con las columnas correctas para tu etiqueta</p>
                 </div>
-                <div className="flex items-center gap-2 justify-center">
-                  <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">Excel .xlsx</span>
-                  <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">Excel .xls</span>
-                  <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">CSV</span>
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 flex-shrink-0"
+                  onClick={(e) => { e.stopPropagation(); loadSampleTemplates() }}
+                  disabled={loadingSampleTemplates}
+                >
+                  {loadingSampleTemplates
+                    ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    : <Download className="h-4 w-4" />}
+                  Descargar plantilla Excel
+                </Button>
               </div>
-            )}
+
+              {showSamplePicker && (
+                <div className="mt-4 space-y-2 border-t border-border pt-4">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Elegí la plantilla de etiqueta:</p>
+                  {sampleTemplates.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No tenés plantillas creadas. <button onClick={() => router.push("/templates/new")} className="text-primary underline">Crear una →</button></p>
+                  ) : (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {sampleTemplates.map((t) => (
+                        <button
+                          key={t.id}
+                          onClick={() => downloadSampleExcel(t)}
+                          className="flex items-center gap-3 rounded-lg border border-border bg-background p-3 text-left hover:border-primary hover:bg-primary/5 transition-colors"
+                        >
+                          <FileSpreadsheet className="h-5 w-5 text-green-500 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{t.name}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">
+                              {(t.variables ?? []).length > 0
+                                ? (t.variables ?? []).join(", ")
+                                : "Sin variables"}
+                            </p>
+                          </div>
+                          <Download className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -235,7 +318,6 @@ export default function UploadPage() {
         {/* STEP 2: Configure */}
         {step === 2 && data && (
           <div className="space-y-6">
-            {/* File info */}
             <div className="flex items-center gap-4 rounded-xl border border-border bg-card p-4">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10">
                 <FileSpreadsheet className="h-5 w-5 text-green-500" />
@@ -249,7 +331,6 @@ export default function UploadPage() {
               </button>
             </div>
 
-            {/* Columns detected */}
             <div className="rounded-xl border border-border bg-card p-5 space-y-3">
               <h3 className="text-sm font-semibold">Columnas detectadas</h3>
               <div className="flex flex-wrap gap-2">
@@ -262,7 +343,6 @@ export default function UploadPage() {
               <p className="text-xs text-muted-foreground">Usá estas variables en tu plantilla de etiqueta</p>
             </div>
 
-            {/* Quantity column */}
             <div className="rounded-xl border border-border bg-card p-5 space-y-3">
               <h3 className="text-sm font-semibold">Columna de cantidad</h3>
               <p className="text-xs text-muted-foreground">¿Qué columna indica cuántas etiquetas imprimir por fila?</p>
@@ -278,7 +358,6 @@ export default function UploadPage() {
               </select>
             </div>
 
-            {/* Template selection */}
             <div className="rounded-xl border border-border bg-card p-5 space-y-3">
               <h3 className="text-sm font-semibold">Plantilla de etiqueta</h3>
               {templates.length === 0 ? (
@@ -316,7 +395,6 @@ export default function UploadPage() {
               )}
             </div>
 
-            {/* Data preview */}
             <div className="rounded-xl border border-border bg-card p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold">Vista previa de datos</h3>
@@ -354,11 +432,7 @@ export default function UploadPage() {
             </div>
 
             <div className="flex justify-end">
-              <Button
-                onClick={() => setStep(3)}
-                disabled={!selectedTemplate}
-                className="gap-2"
-              >
+              <Button onClick={() => setStep(3)} disabled={!selectedTemplate} className="gap-2">
                 Continuar
                 <ArrowRight className="h-4 w-4" />
               </Button>
@@ -371,7 +445,6 @@ export default function UploadPage() {
           <div className="space-y-6">
             <div className="rounded-xl border border-border bg-card p-6 space-y-6">
               <h3 className="text-lg font-semibold">Resumen del trabajo de impresión</h3>
-
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="rounded-lg bg-muted p-4 text-center">
                   <p className="text-3xl font-bold text-foreground">{data.totalRows}</p>
@@ -388,7 +461,6 @@ export default function UploadPage() {
                   <p className="text-xs text-muted-foreground mt-1">Plantilla</p>
                 </div>
               </div>
-
               {quantityColumn && (
                 <div className="flex items-center gap-2 rounded-lg bg-green-500/10 border border-green-500/20 p-3">
                   <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
@@ -398,7 +470,6 @@ export default function UploadPage() {
                 </div>
               )}
             </div>
-
             <div className="flex items-center gap-3 justify-end">
               <Button variant="outline" onClick={() => setStep(2)}>Volver</Button>
               <Button onClick={handleCreateJob} disabled={loading} className="gap-2">
