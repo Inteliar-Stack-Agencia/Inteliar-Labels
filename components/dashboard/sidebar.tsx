@@ -1,8 +1,10 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
+import { createClient } from "@/lib/supabase/client"
 import {
   LayoutDashboard,
   FileStack,
@@ -12,6 +14,7 @@ import {
   Settings,
   Tag,
   PrinterCheck,
+  LogOut,
 } from "lucide-react"
 
 const navigation = [
@@ -24,8 +27,43 @@ const navigation = [
   { name: "Configuración", href: "/settings", icon: Settings },
 ]
 
+function getInitials(name: string, email: string): string {
+  if (name) {
+    const parts = name.trim().split(" ")
+    return parts.length >= 2
+      ? (parts[0][0] + parts[1][0]).toUpperCase()
+      : parts[0].slice(0, 2).toUpperCase()
+  }
+  return email.slice(0, 2).toUpperCase()
+}
+
 export function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
+  const supabase = createClient()
+
+  const [displayName, setDisplayName] = useState("")
+  const [email, setEmail] = useState("")
+  const [initials, setInitials] = useState("··")
+
+  useEffect(() => {
+    const load = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const name = user.user_metadata?.full_name || user.user_metadata?.name || ""
+      const userEmail = user.email || ""
+      setDisplayName(name || userEmail.split("@")[0])
+      setEmail(userEmail)
+      setInitials(getInitials(name, userEmail))
+    }
+    load()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.push("/auth/login")
+  }
 
   return (
     <aside className="flex h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar">
@@ -40,9 +78,9 @@ export function Sidebar() {
 
       <nav className="flex-1 space-y-1 px-3 py-4">
         {navigation.map((item) => {
-          const isActive = pathname === item.href || 
+          const isActive = pathname === item.href ||
             (item.href !== "/" && pathname.startsWith(item.href))
-          
+
           return (
             <Link
               key={item.name}
@@ -63,17 +101,24 @@ export function Sidebar() {
 
       <div className="border-t border-sidebar-border p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
-            JP
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground flex-shrink-0">
+            {initials}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-sidebar-foreground truncate">
-              Juan Pérez
+              {displayName || "···"}
             </p>
             <p className="text-xs text-muted-foreground truncate">
-              admin@inteliar.com
+              {email || "···"}
             </p>
           </div>
+          <button
+            onClick={handleSignOut}
+            title="Cerrar sesión"
+            className="rounded p-1 text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </aside>
