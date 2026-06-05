@@ -19,7 +19,7 @@ import {
   Printer,
   Download,
 } from "lucide-react"
-import { generateZPL, downloadZPL } from "@/lib/zpl"
+import { generateZPL, downloadZPL, type GenerateZPLOptions } from "@/lib/zpl"
 import { cn } from "@/lib/utils"
 
 interface LabelElement {
@@ -154,6 +154,7 @@ export default function JobDetailPage() {
   const [markingDone, setMarkingDone] = useState(false)
   const [visibleCount, setVisibleCount] = useState(6)
   const [generatingZpl, setGeneratingZpl] = useState(false)
+  const [startFromLabel, setStartFromLabel] = useState(1)
 
   useEffect(() => {
     const load = async () => {
@@ -205,7 +206,7 @@ export default function JobDetailPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId])
 
-  function handleDownloadZpl() {
+  function handleDownloadZpl(opts: GenerateZPLOptions = {}) {
     if (!template || rows.length === 0) return
     setGeneratingZpl(true)
     try {
@@ -215,9 +216,13 @@ export default function JobDetailPage() {
           height_mm: template.height_mm,
           canvas_data: template.canvas_data,
         },
-        rows
+        rows,
+        opts
       )
-      downloadZPL(zpl, `${job?.name ?? "etiquetas"}.zpl`)
+      const suffix = opts.startFromLabel && opts.startFromLabel > 1
+        ? `-desde-${opts.startFromLabel}`
+        : ""
+      downloadZPL(zpl, `${job?.name ?? "etiquetas"}${suffix}.zpl`)
     } finally {
       setGeneratingZpl(false)
     }
@@ -279,16 +284,29 @@ export default function JobDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           {rows.length > 0 && template && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={handleDownloadZpl}
-              disabled={generatingZpl}
-            >
-              <Download className="h-4 w-4" />
-              {generatingZpl ? "Generando..." : "Descargar ZPL"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1">
+                <span className="text-xs text-muted-foreground">Desde etiqueta</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={job?.total_labels ?? 9999}
+                  value={startFromLabel}
+                  onChange={(e) => setStartFromLabel(Math.max(1, Number(e.target.value)))}
+                  className="w-14 bg-transparent text-center text-sm focus:outline-none"
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => handleDownloadZpl({ startFromLabel })}
+                disabled={generatingZpl}
+              >
+                <Download className="h-4 w-4" />
+                {generatingZpl ? "Generando..." : "Descargar ZPL"}
+              </Button>
+            </div>
           )}
           {job.status === "pending" && (
             <Button size="sm" className="gap-2" onClick={markCompleted} disabled={markingDone}>
