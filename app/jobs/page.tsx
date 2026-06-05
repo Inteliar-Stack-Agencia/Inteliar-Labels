@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
+import { useRouter } from "next/navigation"
 
 type JobStatus = "completed" | "pending" | "processing" | "failed"
 
@@ -57,12 +58,25 @@ function formatDateTime(dateStr: string) {
 }
 
 export default function PrintJobsPage() {
+  const router = useRouter()
   const [jobs, setJobs] = useState<PrintJob[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     loadJobs()
   }, [])
+
+  async function handleDelete(id: string) {
+    const supabase = createClient()
+    await supabase.from("print_jobs").delete().eq("id", id)
+    setJobs((prev) => prev.filter((j) => j.id !== id))
+  }
+
+  async function handleRetry(id: string) {
+    const supabase = createClient()
+    await supabase.from("print_jobs").update({ status: "pending", error_message: null }).eq("id", id)
+    setJobs((prev) => prev.map((j) => j.id === id ? { ...j, status: "pending" as JobStatus, error_message: null } : j))
+  }
 
   async function loadJobs() {
     const supabase = createClient()
@@ -228,17 +242,20 @@ export default function PrintJobsPage() {
                             </button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => router.push(`/jobs/${job.id}`)}>
                               <Eye className="mr-2 h-4 w-4" />
                               Ver detalles
                             </DropdownMenuItem>
                             {job.status === "failed" && (
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleRetry(job.id)}>
                                 <RefreshCw className="mr-2 h-4 w-4" />
                                 Reintentar
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem className="text-destructive focus:text-destructive">
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => handleDelete(job.id)}
+                            >
                               <Trash2 className="mr-2 h-4 w-4" />
                               Eliminar
                             </DropdownMenuItem>
