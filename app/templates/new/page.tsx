@@ -20,23 +20,13 @@ import {
   Upload,
   Sparkles,
   X,
+  Hash,
+  Calendar,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-
-type ElementType = "text" | "qr" | "barcode" | "image"
-
-interface LabelElement {
-  id: string
-  type: ElementType
-  content: string
-  x: number
-  y: number
-  fontSize: number
-  bold: boolean
-  imageUrl?: string
-  imgWidth?: number
-  imgHeight?: number
-}
+import type { LabelElement, ElementType } from "@/lib/label-types"
+import { resolveDateVars, DATE_SHORTCUTS } from "@/lib/date-vars"
+import { PRESET_TEMPLATES } from "@/lib/preset-templates"
 
 const PRESET_SIZES = [
   { label: "100 × 50 mm (viandas)", width: 100, height: 50 },
@@ -52,16 +42,14 @@ export default function TemplateEditorPage() {
   const supabase = createClient()
   const logoInputRef = useRef<HTMLInputElement>(null)
 
+  const [step, setStep] = useState<"preset" | "editor">("preset")
   const [templateName, setTemplateName] = useState("Template sin título")
   const [widthMm, setWidthMm] = useState(100)
   const [heightMm, setHeightMm] = useState(50)
   const [selectedPreset, setSelectedPreset] = useState(0)
   const [cutBetweenLabels, setCutBetweenLabels] = useState(true)
   const [cutEveryN, setCutEveryN] = useState(1)
-  const [elements, setElements] = useState<LabelElement[]>([
-    { id: "1", type: "text", content: "{{empresa}}", x: 10, y: 10, fontSize: 16, bold: true },
-    { id: "2", type: "text", content: "{{plato}}", x: 10, y: 35, fontSize: 12, bold: false },
-  ])
+  const [elements, setElements] = useState<LabelElement[]>([])
   const [selectedElement, setSelectedElement] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [showSizePanel, setShowSizePanel] = useState(true)
@@ -93,11 +81,13 @@ export default function TemplateEditorPage() {
     const newElement: LabelElement = {
       id: Date.now().toString(),
       type,
-      content: type === "text" ? "Nuevo texto" : `{{variable_${elements.length + 1}}}`,
+      content: type === "text" ? "Nuevo texto" : type === "serial" ? "" : `{{variable_${elements.length + 1}}}`,
       x: 20,
       y: 20,
-      fontSize: 12,
+      fontSize: type === "serial" ? 14 : 12,
       bold: false,
+      ...(type === "barcode" ? { barcodeType: "code128" as const } : {}),
+      ...(type === "serial" ? { serialStart: 1, serialIncrement: 1, serialDigits: 4, serialPrefix: "", serialSuffix: "" } : {}),
     }
     setElements([...elements, newElement])
     setSelectedElement(newElement.id)
@@ -258,7 +248,53 @@ export default function TemplateEditorPage() {
     if (type === "text") return Type
     if (type === "qr") return QrCode
     if (type === "barcode") return Barcode
+    if (type === "serial") return Hash
     return ImageIcon
+  }
+
+  // ── STEP 0: Preset picker ──────────────────────────────────────────
+  if (step === "preset") {
+    return (
+      <DashboardLayout>
+        <div className="flex h-16 items-center border-b border-border bg-card px-6">
+          <Link href="/templates" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" />
+            Volver
+          </Link>
+          <h1 className="ml-4 text-lg font-semibold">Nueva plantilla</h1>
+        </div>
+        <div className="mx-auto max-w-2xl p-8">
+          <h2 className="mb-1 text-xl font-bold">¿Qué querés etiquetar?</h2>
+          <p className="mb-6 text-sm text-muted-foreground">Elegí una plantilla base y la personalizás en segundos</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {PRESET_TEMPLATES.map((preset) => (
+              <button
+                key={preset.id}
+                onClick={() => {
+                  setTemplateName(preset.name)
+                  setWidthMm(preset.widthMm)
+                  setHeightMm(preset.heightMm)
+                  setElements(preset.canvas.elements.map((el, i) => ({ ...el, id: Date.now().toString() + i })))
+                  setCutBetweenLabels(preset.canvas.cutBetweenLabels ?? true)
+                  setCutEveryN(preset.canvas.cutEveryN ?? 1)
+                  const idx = PRESET_SIZES.findIndex((s) => s.width === preset.widthMm && s.height === preset.heightMm)
+                  setSelectedPreset(idx >= 0 ? idx : 5)
+                  setStep("editor")
+                }}
+                className="flex items-start gap-4 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-primary hover:bg-primary/5"
+              >
+                <span className="text-3xl">{preset.emoji}</span>
+                <div>
+                  <p className="font-semibold text-foreground">{preset.name}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{preset.description}</p>
+                  <p className="mt-1 text-[10px] text-muted-foreground">{preset.widthMm} × {preset.heightMm} mm</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   return (
@@ -406,6 +442,9 @@ export default function TemplateEditorPage() {
               <Button variant="outline" size="sm" className="gap-2" onClick={() => addElement("barcode")}>
                 <Barcode className="h-4 w-4" /> Código de barras
               </Button>
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => addElement("serial")}>
+                <Hash className="h-4 w-4" /> Numeración
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -502,7 +541,10 @@ export default function TemplateEditorPage() {
                                 className="text-gray-800"
                                 style={{ fontSize: `${element.fontSize}px`, fontWeight: element.bold ? "bold" : "normal" }}
                               >
-                                {element.content}
+                                {element.type === "serial"
+                                  ? `${element.serialPrefix ?? ""}${String(element.serialStart ?? 1).padStart(element.serialDigits ?? 4, "0")}${element.serialSuffix ?? ""}`
+                                  : resolveDateVars(element.content)
+                                }
                               </span>
                             </div>
                           )}
@@ -555,8 +597,50 @@ export default function TemplateEditorPage() {
                 </div>
               )}
 
-              {/* Content field — hidden for images */}
-              {selectedElementData.type !== "image" && (
+              {/* Serial config */}
+              {selectedElementData.type === "serial" && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-muted-foreground">Número inicial</label>
+                      <input type="number" value={selectedElementData.serialStart ?? 1}
+                        onChange={(e) => updateElement(selectedElementData.id, { serialStart: Number(e.target.value) })}
+                        className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-muted-foreground">Incremento</label>
+                      <input type="number" value={selectedElementData.serialIncrement ?? 1}
+                        onChange={(e) => updateElement(selectedElementData.id, { serialIncrement: Number(e.target.value) })}
+                        className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                        min={1}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-muted-foreground">Dígitos</label>
+                      <input type="number" value={selectedElementData.serialDigits ?? 4}
+                        onChange={(e) => updateElement(selectedElementData.id, { serialDigits: Number(e.target.value) })}
+                        className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                        min={1} max={10}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-muted-foreground">Prefijo</label>
+                      <input type="text" value={selectedElementData.serialPrefix ?? ""}
+                        onChange={(e) => updateElement(selectedElementData.id, { serialPrefix: e.target.value })}
+                        className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                        placeholder="LOT-"
+                      />
+                    </div>
+                  </div>
+                  <p className="rounded-md bg-muted px-2 py-1.5 text-xs text-muted-foreground">
+                    Vista previa: <strong>{`${selectedElementData.serialPrefix ?? ""}${String(selectedElementData.serialStart ?? 1).padStart(selectedElementData.serialDigits ?? 4, "0")}`}</strong>
+                  </p>
+                </div>
+              )}
+
+              {/* Content field — hidden for images and serial */}
+              {selectedElementData.type !== "image" && selectedElementData.type !== "serial" && (
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Contenido / Variable</label>
                   <input
@@ -566,7 +650,42 @@ export default function TemplateEditorPage() {
                     className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                     placeholder="Texto o {{variable}}"
                   />
-                  <p className="mt-1 text-[10px] text-muted-foreground">Usá {"{{nombre_columna}}"} para datos dinámicos</p>
+                  {/* Date shortcuts for text */}
+                  {selectedElementData.type === "text" && (
+                    <div className="mt-2">
+                      <p className="mb-1 text-[10px] text-muted-foreground flex items-center gap-1"><Calendar className="h-3 w-3" /> Fechas rápidas:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {DATE_SHORTCUTS.map((s) => (
+                          <button
+                            key={s.variable}
+                            title={s.description}
+                            onClick={() => updateElement(selectedElementData.id, { content: selectedElementData.content + s.variable })}
+                            className="rounded border border-border px-2 py-0.5 text-[10px] hover:border-primary hover:text-primary transition-colors"
+                          >
+                            {s.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* Barcode type */}
+                  {selectedElementData.type === "barcode" && (
+                    <div className="mt-2">
+                      <label className="mb-1 block text-xs font-medium text-muted-foreground">Tipo de código</label>
+                      <select
+                        value={selectedElementData.barcodeType ?? "code128"}
+                        onChange={(e) => updateElement(selectedElementData.id, { barcodeType: e.target.value as LabelElement["barcodeType"] })}
+                        className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                      >
+                        <option value="code128">Code 128 (universal)</option>
+                        <option value="ean13">EAN-13 (retail/alimentos)</option>
+                        <option value="ean8">EAN-8 (pequeño)</option>
+                        <option value="code39">Code 39 (industrial)</option>
+                        <option value="datamatrix">Data Matrix (2D)</option>
+                      </select>
+                    </div>
+                  )}
+                  <p className="mt-1 text-[10px] text-muted-foreground">Usá {"{{nombre_columna}}"} para datos del Excel</p>
                 </div>
               )}
 
@@ -608,7 +727,7 @@ export default function TemplateEditorPage() {
                     />
                   </div>
                 </div>
-              ) : (
+              ) : selectedElementData.type !== "serial" ? (
                 <>
                   <div>
                     <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Tamaño de fuente (px)</label>
@@ -627,6 +746,14 @@ export default function TemplateEditorPage() {
                     >B</button>
                   </div>
                 </>
+              ) : (
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Tamaño de fuente (px)</label>
+                  <input type="number" value={selectedElementData.fontSize}
+                    onChange={(e) => updateElement(selectedElementData.id, { fontSize: Number(e.target.value) })}
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                </div>
               )}
 
               {/* Replace image button */}
