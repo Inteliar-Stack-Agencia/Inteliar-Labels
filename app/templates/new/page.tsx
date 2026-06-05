@@ -18,6 +18,8 @@ import {
   Settings2,
   ImageIcon,
   Upload,
+  Sparkles,
+  X,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -64,6 +66,10 @@ export default function TemplateEditorPage() {
   const [showSizePanel, setShowSizePanel] = useState(true)
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [showAiModal, setShowAiModal] = useState(false)
+  const [aiDescription, setAiDescription] = useState("")
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState<string | null>(null)
 
   const selectedElementData = elements.find((el) => el.id === selectedElement)
 
@@ -164,6 +170,34 @@ export default function TemplateEditorPage() {
     setSelectedElement(newElement.id)
   }
 
+  const handleAiGenerate = async () => {
+    if (!aiDescription.trim()) return
+    setAiLoading(true)
+    setAiError(null)
+    try {
+      const res = await fetch("/api/ai/generate-template", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: aiDescription, widthMm, heightMm }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setAiError(data.error || "Error generando plantilla"); return }
+      const newElements: LabelElement[] = data.elements.map((el: LabelElement, i: number) => ({
+        ...el,
+        id: Date.now().toString() + i,
+      }))
+      setElements(newElements)
+      if (data.widthMm) setWidthMm(data.widthMm)
+      if (data.heightMm) setHeightMm(data.heightMm)
+      setShowAiModal(false)
+      setAiDescription("")
+    } catch {
+      setAiError("Error de conexión. Intentá de nuevo.")
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
   const handleSave = async () => {
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
@@ -215,6 +249,15 @@ export default function TemplateEditorPage() {
           />
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 border-violet-500/50 text-violet-400 hover:bg-violet-500/10 hover:text-violet-300"
+            onClick={() => setShowAiModal(true)}
+          >
+            <Sparkles className="h-4 w-4" />
+            Generar con IA
+          </Button>
           <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowSizePanel(!showSizePanel)}>
             <Settings2 className="h-4 w-4" />
             Tamaño
@@ -588,6 +631,56 @@ export default function TemplateEditorPage() {
           </div>
         </div>
       </div>
+      {/* AI Generate Modal */}
+      {showAiModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-violet-400" />
+                <h2 className="text-lg font-semibold">Generar plantilla con IA</h2>
+              </div>
+              <button
+                onClick={() => { setShowAiModal(false); setAiError(null) }}
+                className="rounded-md p-1 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="mb-3 text-sm text-muted-foreground">
+              Describí la etiqueta que necesitás y la IA la va a diseñar automáticamente con los elementos
+              posicionados y las variables detectadas.
+            </p>
+            <textarea
+              className="mb-1 h-32 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              placeholder="Ej: etiqueta para alimentos congelados con logo en la esquina, nombre del producto grande, fecha de vencimiento, peso en gramos y código de barras abajo"
+              value={aiDescription}
+              onChange={(e) => setAiDescription(e.target.value)}
+              disabled={aiLoading}
+            />
+            <p className="mb-4 text-xs text-muted-foreground">
+              Tamaño actual: {widthMm} × {heightMm} mm
+            </p>
+            {aiError && (
+              <p className="mb-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{aiError}</p>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => { setShowAiModal(false); setAiError(null) }} disabled={aiLoading}>
+                Cancelar
+              </Button>
+              <Button
+                size="sm"
+                className="gap-2 bg-violet-600 hover:bg-violet-700"
+                onClick={handleAiGenerate}
+                disabled={aiLoading || !aiDescription.trim()}
+              >
+                <Sparkles className="h-4 w-4" />
+                {aiLoading ? "Generando..." : "Generar plantilla"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   )
 }
