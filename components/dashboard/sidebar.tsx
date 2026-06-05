@@ -11,13 +11,15 @@ import {
   Clock,
   Settings,
   Tag,
+  PrinterCheck,
 } from "lucide-react"
 
 const navigation = [
   { name: "Panel", href: "/dashboard", icon: LayoutDashboard },
   { name: "Templates", href: "/templates", icon: FileStack },
-  { name: "Cargar datos", href: "/upload", icon: Upload },
-  { name: "Trabajos de impresión", href: "/jobs", icon: Printer },
+  { name: "Imprimir", href: "/imprimir", icon: PrinterCheck },
+  { name: "Cargar Excel", href: "/upload", icon: Upload },
+  { name: "Trabajos", href: "/jobs", icon: Printer },
   { name: "Historial", href: "/history", icon: Clock },
   { name: "Configuración", href: "/settings", icon: Settings },
 ]

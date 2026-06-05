@@ -20,23 +20,13 @@ import {
   Upload,
   Sparkles,
   X,
+  Hash,
+  Link2,
+  Unlink2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-
-type ElementType = "text" | "qr" | "barcode" | "image"
-
-interface LabelElement {
-  id: string
-  type: ElementType
-  content: string
-  x: number
-  y: number
-  fontSize: number
-  bold: boolean
-  imageUrl?: string
-  imgWidth?: number
-  imgHeight?: number
-}
+import type { LabelElement, ElementType, BarcodeType } from "@/lib/label-types"
+import { resolveDateVars, DATE_SHORTCUTS } from "@/lib/date-vars"
 
 const PRESET_SIZES = [
   { label: "100 × 50 mm (viandas)", width: 100, height: 50 },
@@ -74,6 +64,7 @@ export default function TemplateEditPage() {
   const [aiDescription, setAiDescription] = useState("")
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
+  const [lockAspect, setLockAspect] = useState(true)
 
   // Load template from Supabase
   useEffect(() => {
@@ -125,11 +116,12 @@ export default function TemplateEditPage() {
     const newElement: LabelElement = {
       id: Date.now().toString(),
       type,
-      content: type === "text" ? "Nuevo texto" : `{{variable_${elements.length + 1}}}`,
+      content: type === "text" ? "Nuevo texto" : type === "serial" ? "" : `{{variable_${elements.length + 1}}}`,
       x: 20,
       y: 20,
       fontSize: 12,
       bold: false,
+      ...(type === "serial" ? { serialStart: 1, serialIncrement: 1, serialDigits: 4, serialPrefix: "", serialSuffix: "" } : {}),
     }
     setElements([...elements, newElement])
     setSelectedElement(newElement.id)
@@ -289,6 +281,7 @@ export default function TemplateEditPage() {
     if (type === "text") return Type
     if (type === "qr") return QrCode
     if (type === "barcode") return Barcode
+    if (type === "serial") return Hash
     return ImageIcon
   }
 
@@ -452,6 +445,9 @@ export default function TemplateEditPage() {
               <Button variant="outline" size="sm" className="gap-2" onClick={() => addElement("barcode")}>
                 <Barcode className="h-4 w-4" /> Código de barras
               </Button>
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => addElement("serial")}>
+                <Hash className="h-4 w-4" /> Numeración
+              </Button>
               <Button
                 variant="outline" size="sm" className="gap-2"
                 onClick={() => logoInputRef.current?.click()}
@@ -541,7 +537,9 @@ export default function TemplateEditPage() {
                                 className="text-gray-800"
                                 style={{ fontSize: `${element.fontSize}px`, fontWeight: element.bold ? "bold" : "normal" }}
                               >
-                                {element.content}
+                                {element.type === "serial"
+                                  ? `${element.serialPrefix ?? ""}${String(element.serialStart ?? 1).padStart(element.serialDigits ?? 4, "0")}${element.serialSuffix ?? ""}`
+                                  : resolveDateVars(element.content)}
                               </span>
                             </div>
                           )}
@@ -589,7 +587,45 @@ export default function TemplateEditPage() {
                 </div>
               )}
 
-              {selectedElementData.type !== "image" && (
+              {selectedElementData.type === "serial" && (
+                <div className="space-y-3">
+                  <p className="text-xs font-medium text-muted-foreground">Numeración automática</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="mb-1 block text-[10px] text-muted-foreground">Inicio</label>
+                      <input type="number" value={selectedElementData.serialStart ?? 1}
+                        onChange={(e) => updateElement(selectedElementData.id, { serialStart: Number(e.target.value) })}
+                        className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] text-muted-foreground">Incremento</label>
+                      <input type="number" value={selectedElementData.serialIncrement ?? 1}
+                        onChange={(e) => updateElement(selectedElementData.id, { serialIncrement: Number(e.target.value) })}
+                        className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] text-muted-foreground">Dígitos</label>
+                      <input type="number" value={selectedElementData.serialDigits ?? 4}
+                        onChange={(e) => updateElement(selectedElementData.id, { serialDigits: Number(e.target.value) })}
+                        className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                        min={1} max={10}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[10px] text-muted-foreground">Prefijo</label>
+                    <input type="text" value={selectedElementData.serialPrefix ?? ""}
+                      onChange={(e) => updateElement(selectedElementData.id, { serialPrefix: e.target.value })}
+                      className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                      placeholder="Ej: SN-"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {selectedElementData.type !== "image" && selectedElementData.type !== "serial" && (
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Contenido / Variable</label>
                   <input
@@ -600,6 +636,37 @@ export default function TemplateEditPage() {
                     placeholder="Texto o {{variable}}"
                   />
                   <p className="mt-1 text-[10px] text-muted-foreground">Usá {"{{nombre_columna}}"} para datos dinámicos</p>
+                  {selectedElementData.type === "text" && (
+                    <div className="mt-2">
+                      <p className="mb-1.5 text-[10px] text-muted-foreground">Fechas dinámicas:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {DATE_SHORTCUTS.map((s) => (
+                          <button
+                            key={s.variable}
+                            onClick={() => updateElement(selectedElementData.id, { content: selectedElementData.content + s.variable })}
+                            className="rounded border border-border bg-background px-1.5 py-0.5 text-[10px] hover:border-primary hover:bg-primary/10 transition-colors"
+                            title={s.description}
+                          >{s.label}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {selectedElementData.type === "barcode" && (
+                    <div className="mt-3">
+                      <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Tipo de código</label>
+                      <select
+                        value={selectedElementData.barcodeType ?? "code128"}
+                        onChange={(e) => updateElement(selectedElementData.id, { barcodeType: e.target.value as BarcodeType })}
+                        className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                      >
+                        <option value="code128">Code 128 (general)</option>
+                        <option value="ean13">EAN-13 (retail)</option>
+                        <option value="ean8">EAN-8 (retail pequeño)</option>
+                        <option value="code39">Code 39</option>
+                        <option value="datamatrix">Data Matrix (2D)</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -621,25 +688,57 @@ export default function TemplateEditPage() {
               </div>
 
               {selectedElementData.type === "image" ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Ancho (mm)</label>
-                    <input type="number" value={selectedElementData.imgWidth ?? 30}
-                      onChange={(e) => updateElement(selectedElementData.id, { imgWidth: Number(e.target.value) })}
-                      className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                      min={5} max={widthMm}
-                    />
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-muted-foreground">Tamaño (mm)</label>
+                    <button
+                      onClick={() => setLockAspect(!lockAspect)}
+                      title={lockAspect ? "Proporción bloqueada" : "Proporción libre"}
+                      className={cn(
+                        "flex items-center gap-1 rounded px-1.5 py-1 text-[10px] border transition-colors",
+                        lockAspect ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary"
+                      )}
+                    >
+                      {lockAspect ? <Link2 className="h-3 w-3" /> : <Unlink2 className="h-3 w-3" />}
+                      {lockAspect ? "Proporcional" : "Libre"}
+                    </button>
                   </div>
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Alto (mm)</label>
-                    <input type="number" value={selectedElementData.imgHeight ?? 20}
-                      onChange={(e) => updateElement(selectedElementData.id, { imgHeight: Number(e.target.value) })}
-                      className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                      min={5} max={heightMm}
-                    />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1 block text-[10px] text-muted-foreground">Ancho</label>
+                      <input type="number" value={selectedElementData.imgWidth ?? 30}
+                        onChange={(e) => {
+                          const w = Number(e.target.value)
+                          if (lockAspect) {
+                            const ratio = (selectedElementData.imgHeight ?? 20) / (selectedElementData.imgWidth ?? 30)
+                            updateElement(selectedElementData.id, { imgWidth: w, imgHeight: Math.round(w * ratio) })
+                          } else {
+                            updateElement(selectedElementData.id, { imgWidth: w })
+                          }
+                        }}
+                        className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                        min={5} max={widthMm}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] text-muted-foreground">Alto</label>
+                      <input type="number" value={selectedElementData.imgHeight ?? 20}
+                        onChange={(e) => {
+                          const h = Number(e.target.value)
+                          if (lockAspect) {
+                            const ratio = (selectedElementData.imgWidth ?? 30) / (selectedElementData.imgHeight ?? 20)
+                            updateElement(selectedElementData.id, { imgHeight: h, imgWidth: Math.round(h * ratio) })
+                          } else {
+                            updateElement(selectedElementData.id, { imgHeight: h })
+                          }
+                        }}
+                        className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                        min={5} max={heightMm}
+                      />
+                    </div>
                   </div>
                 </div>
-              ) : (
+              ) : selectedElementData.type !== "serial" ? (
                 <>
                   <div>
                     <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Tamaño de fuente (px)</label>
@@ -658,6 +757,14 @@ export default function TemplateEditPage() {
                     >B</button>
                   </div>
                 </>
+              ) : (
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Tamaño de fuente (px)</label>
+                  <input type="number" value={selectedElementData.fontSize}
+                    onChange={(e) => updateElement(selectedElementData.id, { fontSize: Number(e.target.value) })}
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                </div>
               )}
 
               {selectedElementData.type === "image" && (
