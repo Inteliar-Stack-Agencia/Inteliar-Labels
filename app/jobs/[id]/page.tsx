@@ -17,7 +17,9 @@ import {
   Barcode,
   ImageIcon,
   Printer,
+  Download,
 } from "lucide-react"
+import { generateZPL, downloadZPL } from "@/lib/zpl"
 import { cn } from "@/lib/utils"
 
 interface LabelElement {
@@ -146,11 +148,12 @@ export default function JobDetailPage() {
 
   const [job, setJob] = useState<PrintJob | null>(null)
   const [template, setTemplate] = useState<Template | null>(null)
-  const [rows, setRows] = useState<Record<string, string>[]>([])
+  const [rows, setRows] = useState<Array<{ row_data: Record<string, string>; quantity: number }>>([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [markingDone, setMarkingDone] = useState(false)
   const [visibleCount, setVisibleCount] = useState(6)
+  const [generatingZpl, setGeneratingZpl] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -176,12 +179,12 @@ export default function JobDetailPage() {
       // Load rows from print_job_rows if exists, else generate placeholder rows
       const { data: rowData } = await supabase
         .from("print_job_rows")
-        .select("row_data")
+        .select("row_data, quantity")
         .eq("job_id", jobId)
         .order("row_index", { ascending: true })
 
       if (rowData && rowData.length > 0) {
-        setRows(rowData.map((r) => r.row_data as Record<string, string>))
+        setRows(rowData.map((r) => ({ row_data: r.row_data as Record<string, string>, quantity: r.quantity ?? 1 })))
       } else {
         // Generate placeholder preview rows from template variables
         const { data: tmpl } = await supabase
@@ -192,7 +195,7 @@ export default function JobDetailPage() {
         if (tmpl?.variables) {
           const placeholders: Record<string, string> = {}
           for (const v of tmpl.variables) placeholders[v] = `[${v}]`
-          setRows([placeholders])
+          setRows([{ row_data: placeholders, quantity: 1 }])
         }
       }
 
@@ -201,6 +204,24 @@ export default function JobDetailPage() {
     load()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId])
+
+  function handleDownloadZpl() {
+    if (!template || rows.length === 0) return
+    setGeneratingZpl(true)
+    try {
+      const zpl = generateZPL(
+        {
+          width_mm: template.width_mm,
+          height_mm: template.height_mm,
+          canvas_data: template.canvas_data,
+        },
+        rows
+      )
+      downloadZPL(zpl, `${job?.name ?? "etiquetas"}.zpl`)
+    } finally {
+      setGeneratingZpl(false)
+    }
+  }
 
   async function markCompleted() {
     setMarkingDone(true)
@@ -257,6 +278,18 @@ export default function JobDetailPage() {
           <h1 className="text-lg font-semibold">{job.name}</h1>
         </div>
         <div className="flex items-center gap-2">
+          {rows.length > 0 && template && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={handleDownloadZpl}
+              disabled={generatingZpl}
+            >
+              <Download className="h-4 w-4" />
+              {generatingZpl ? "Generando..." : "Descargar ZPL"}
+            </Button>
+          )}
           {job.status === "pending" && (
             <Button size="sm" className="gap-2" onClick={markCompleted} disabled={markingDone}>
               <Printer className="h-4 w-4" />
@@ -301,7 +334,7 @@ export default function JobDetailPage() {
                   {rows.length > 1 ? ` · ${rows.length} etiquetas únicas` : ""}
                 </p>
               </div>
-              {rows.length === 1 && (
+              {rows.length === 1 && rows[0].row_data && Object.values(rows[0].row_data)[0]?.startsWith("[") && (
                 <span className="rounded-full bg-yellow-500/10 px-3 py-1 text-xs text-yellow-600">
                   Preview con datos de muestra — subí el Excel para ver datos reales
                 </span>
@@ -309,10 +342,12 @@ export default function JobDetailPage() {
             </div>
 
             <div className="flex flex-wrap gap-4">
-              {previewRows.map((row, i) => (
+              {previewRows.map((r, i) => (
                 <div key={i} className="flex flex-col items-center gap-1">
-                  <LabelPreview template={template} row={row} />
-                  <span className="text-[10px] text-muted-foreground">#{i + 1}</span>
+                  <LabelPreview template={template} row={r.row_data} />
+                  <span className="text-[10px] text-muted-foreground">
+                    #{i + 1}{r.quantity > 1 ? ` ×${r.quantity}` : ""}
+                  </span>
                 </div>
               ))}
             </div>

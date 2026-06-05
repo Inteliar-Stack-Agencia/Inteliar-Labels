@@ -73,6 +73,22 @@ create policy "users_own_jobs" on print_jobs
 create policy "users_own_printers" on printers
   for all using (user_id = auth.uid());
 
+-- Filas de datos del Excel por job
+create table if not exists print_job_rows (
+  id uuid primary key default gen_random_uuid(),
+  job_id uuid references print_jobs(id) on delete cascade not null,
+  row_index int not null,
+  row_data jsonb not null,
+  quantity int not null default 1
+);
+
+alter table print_job_rows enable row level security;
+
+create policy "users_own_job_rows" on print_job_rows
+  for all using (
+    job_id in (select id from print_jobs where user_id = auth.uid())
+  );
+
 -- Trigger para updated_at en templates
 create or replace function update_updated_at()
 returns trigger as $$
