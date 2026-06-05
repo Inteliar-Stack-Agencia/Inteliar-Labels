@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
@@ -16,10 +16,12 @@ import {
   Trash2,
   Plus,
   Settings2,
+  ImageIcon,
+  Upload,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-type ElementType = "text" | "qr" | "barcode"
+type ElementType = "text" | "qr" | "barcode" | "image"
 
 interface LabelElement {
   id: string
@@ -29,9 +31,11 @@ interface LabelElement {
   y: number
   fontSize: number
   bold: boolean
+  imageUrl?: string
+  imgWidth?: number
+  imgHeight?: number
 }
 
-// Tamaños predefinidos comunes para impresoras térmicas
 const PRESET_SIZES = [
   { label: "100 × 50 mm (viandas)", width: 100, height: 50 },
   { label: "100 × 100 mm (cuadrada)", width: 100, height: 100 },
@@ -41,15 +45,10 @@ const PRESET_SIZES = [
   { label: "Personalizado", width: 0, height: 0 },
 ]
 
-const elementIcons = {
-  text: Type,
-  qr: QrCode,
-  barcode: Barcode,
-}
-
 export default function TemplateEditorPage() {
   const router = useRouter()
   const supabase = createClient()
+  const logoInputRef = useRef<HTMLInputElement>(null)
 
   const [templateName, setTemplateName] = useState("Template sin título")
   const [widthMm, setWidthMm] = useState(100)
@@ -63,10 +62,11 @@ export default function TemplateEditorPage() {
   const [selectedElement, setSelectedElement] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [showSizePanel, setShowSizePanel] = useState(true)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   const selectedElementData = elements.find((el) => el.id === selectedElement)
 
-  // Escala para visualizar mm en pantalla (3px por mm)
   const SCALE = 3
   const canvasW = widthMm * SCALE
   const canvasH = heightMm * SCALE
@@ -103,6 +103,67 @@ export default function TemplateEditorPage() {
     if (selectedElement === id) setSelectedElement(null)
   }
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/svg+xml", "image/webp"]
+    if (!allowedTypes.includes(file.type)) {
+      setUploadError("Formato no soportado. Usá PNG, JPG o SVG.")
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError("El archivo no puede superar los 5 MB.")
+      return
+    }
+
+    setUploadError(null)
+    setUploadingLogo(true)
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.push("/auth/login"); return }
+
+      const ext = file.name.split(".").pop()
+      const path = `${user.id}/${Date.now()}.${ext}`
+
+      const { error: uploadErr } = await supabase.storage
+        .from("logos")
+        .upload(path, file, { upsert: true })
+
+      if (uploadErr) {
+        // Si el bucket no existe, usamos URL local como fallback
+        const localUrl = URL.createObjectURL(file)
+        insertImageElement(localUrl, file.name)
+      } else {
+        const { data: { publicUrl } } = supabase.storage.from("logos").getPublicUrl(path)
+        insertImageElement(publicUrl, file.name)
+      }
+    } catch {
+      setUploadError("Error al subir la imagen. Intentá de nuevo.")
+    }
+
+    setUploadingLogo(false)
+    if (logoInputRef.current) logoInputRef.current.value = ""
+  }
+
+  const insertImageElement = (imageUrl: string, name: string) => {
+    const newElement: LabelElement = {
+      id: Date.now().toString(),
+      type: "image",
+      content: name,
+      x: 5,
+      y: 5,
+      fontSize: 12,
+      bold: false,
+      imageUrl,
+      imgWidth: 30,
+      imgHeight: 20,
+    }
+    setElements((prev) => [...prev, newElement])
+    setSelectedElement(newElement.id)
+  }
+
   const handleSave = async () => {
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
@@ -127,6 +188,13 @@ export default function TemplateEditorPage() {
 
     setSaving(false)
     if (!error) router.push("/templates")
+  }
+
+  const elementIcon = (type: ElementType) => {
+    if (type === "text") return Type
+    if (type === "qr") return QrCode
+    if (type === "barcode") return Barcode
+    return ImageIcon
   }
 
   return (
@@ -168,7 +236,6 @@ export default function TemplateEditorPage() {
               <div className="rounded-xl border border-border bg-card p-5 space-y-4">
                 <h3 className="text-sm font-semibold text-foreground">Configuración de etiqueta</h3>
 
-                {/* Presets */}
                 <div>
                   <label className="mb-2 block text-xs font-medium text-muted-foreground">Tamaño predefinido</label>
                   <div className="flex flex-wrap gap-2">
@@ -189,7 +256,6 @@ export default function TemplateEditorPage() {
                   </div>
                 </div>
 
-                {/* Custom dimensions */}
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Ancho (mm)</label>
@@ -218,7 +284,6 @@ export default function TemplateEditorPage() {
                   </div>
                 </div>
 
-                {/* Cut between labels */}
                 <div className="flex items-center justify-between rounded-lg border border-border p-3">
                   <div>
                     <p className="text-sm font-medium text-foreground">Corte automático entre etiquetas</p>
@@ -241,7 +306,7 @@ export default function TemplateEditorPage() {
             )}
 
             {/* Toolbox */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium text-muted-foreground">Agregar:</span>
               <Button variant="outline" size="sm" className="gap-2" onClick={() => addElement("text")}>
                 <Type className="h-4 w-4" /> Texto
@@ -252,7 +317,34 @@ export default function TemplateEditorPage() {
               <Button variant="outline" size="sm" className="gap-2" onClick={() => addElement("barcode")}>
                 <Barcode className="h-4 w-4" /> Código de barras
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => logoInputRef.current?.click()}
+                disabled={uploadingLogo}
+              >
+                {uploadingLogo ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                {uploadingLogo ? "Subiendo..." : "Logo / Imagen"}
+              </Button>
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+                className="hidden"
+                onChange={handleLogoUpload}
+              />
             </div>
+
+            {uploadError && (
+              <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {uploadError}
+              </div>
+            )}
 
             {/* Label Canvas */}
             <div className="flex justify-center">
@@ -280,13 +372,13 @@ export default function TemplateEditorPage() {
 
                     {/* Elements */}
                     {elements.map((element) => {
-                      const Icon = elementIcons[element.type]
+                      const Icon = elementIcon(element.type)
                       return (
                         <div
                           key={element.id}
                           onClick={(e) => { e.stopPropagation(); setSelectedElement(element.id) }}
                           className={cn(
-                            "absolute cursor-pointer rounded border-2 px-1.5 py-1 transition-colors",
+                            "absolute cursor-pointer rounded border-2 transition-colors",
                             selectedElement === element.id
                               ? "border-primary bg-primary/10"
                               : "border-transparent hover:border-border"
@@ -299,15 +391,30 @@ export default function TemplateEditorPage() {
                               {element.type.toUpperCase()}
                             </div>
                           )}
-                          <div className="flex items-center gap-1">
-                            <Icon className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                            <span
-                              className="text-gray-800"
-                              style={{ fontSize: `${element.fontSize}px`, fontWeight: element.bold ? "bold" : "normal" }}
-                            >
-                              {element.content}
-                            </span>
-                          </div>
+
+                          {element.type === "image" && element.imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={element.imageUrl}
+                              alt={element.content}
+                              style={{
+                                width: `${(element.imgWidth ?? 30) * SCALE / 10}px`,
+                                height: `${(element.imgHeight ?? 20) * SCALE / 10}px`,
+                                objectFit: "contain",
+                                display: "block",
+                              }}
+                            />
+                          ) : (
+                            <div className="flex items-center gap-1 px-1.5 py-1">
+                              <Icon className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                              <span
+                                className="text-gray-800"
+                                style={{ fontSize: `${element.fontSize}px`, fontWeight: element.bold ? "bold" : "normal" }}
+                              >
+                                {element.content}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       )
                     })}
@@ -339,22 +446,40 @@ export default function TemplateEditorPage() {
           {selectedElementData ? (
             <div className="p-4 space-y-4">
               <div className="flex items-center gap-3 rounded-lg bg-muted p-3">
-                {(() => { const Icon = elementIcons[selectedElementData.type]; return <Icon className="h-4 w-4 text-muted-foreground" /> })()}
-                <span className="text-sm font-medium capitalize">Elemento {selectedElementData.type}</span>
+                {(() => { const Icon = elementIcon(selectedElementData.type); return <Icon className="h-4 w-4 text-muted-foreground" /> })()}
+                <span className="text-sm font-medium capitalize">
+                  {selectedElementData.type === "image" ? "Imagen / Logo" : `Elemento ${selectedElementData.type}`}
+                </span>
               </div>
 
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Contenido / Variable</label>
-                <input
-                  type="text"
-                  value={selectedElementData.content}
-                  onChange={(e) => updateElement(selectedElementData.id, { content: e.target.value })}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                  placeholder="Texto o {{variable}}"
-                />
-                <p className="mt-1 text-[10px] text-muted-foreground">Usá {"{{nombre_columna}}"} para datos dinámicos</p>
-              </div>
+              {/* Image preview */}
+              {selectedElementData.type === "image" && selectedElementData.imageUrl && (
+                <div className="rounded-lg border border-border bg-muted/50 p-2 flex items-center justify-center" style={{ minHeight: 80 }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={selectedElementData.imageUrl}
+                    alt="Logo"
+                    className="max-h-20 max-w-full object-contain"
+                  />
+                </div>
+              )}
 
+              {/* Content field — hidden for images */}
+              {selectedElementData.type !== "image" && (
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Contenido / Variable</label>
+                  <input
+                    type="text"
+                    value={selectedElementData.content}
+                    onChange={(e) => updateElement(selectedElementData.id, { content: e.target.value })}
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                    placeholder="Texto o {{variable}}"
+                  />
+                  <p className="mt-1 text-[10px] text-muted-foreground">Usá {"{{nombre_columna}}"} para datos dinámicos</p>
+                </div>
+              )}
+
+              {/* Position */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Pos. X (mm)</label>
@@ -372,23 +497,60 @@ export default function TemplateEditorPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Tamaño de fuente (px)</label>
-                <input type="number" value={selectedElementData.fontSize}
-                  onChange={(e) => updateElement(selectedElementData.id, { fontSize: Number(e.target.value) })}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                />
-              </div>
+              {/* Image size controls */}
+              {selectedElementData.type === "image" ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Ancho (mm)</label>
+                    <input type="number" value={selectedElementData.imgWidth ?? 30}
+                      onChange={(e) => updateElement(selectedElementData.id, { imgWidth: Number(e.target.value) })}
+                      className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                      min={5} max={widthMm}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Alto (mm)</label>
+                    <input type="number" value={selectedElementData.imgHeight ?? 20}
+                      onChange={(e) => updateElement(selectedElementData.id, { imgHeight: Number(e.target.value) })}
+                      className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                      min={5} max={heightMm}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Tamaño de fuente (px)</label>
+                    <input type="number" value={selectedElementData.fontSize}
+                      onChange={(e) => updateElement(selectedElementData.id, { fontSize: Number(e.target.value) })}
+                      className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-muted-foreground">Negrita</label>
+                    <button
+                      onClick={() => updateElement(selectedElementData.id, { bold: !selectedElementData.bold })}
+                      className={cn("rounded px-3 py-1 text-xs font-bold border transition-colors",
+                        selectedElementData.bold ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary"
+                      )}
+                    >B</button>
+                  </div>
+                </>
+              )}
 
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-medium text-muted-foreground">Negrita</label>
-                <button
-                  onClick={() => updateElement(selectedElementData.id, { bold: !selectedElementData.bold })}
-                  className={cn("rounded px-3 py-1 text-xs font-bold border transition-colors",
-                    selectedElementData.bold ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary"
-                  )}
-                >B</button>
-              </div>
+              {/* Replace image button */}
+              {selectedElementData.type === "image" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-2"
+                  onClick={() => logoInputRef.current?.click()}
+                  disabled={uploadingLogo}
+                >
+                  <Upload className="h-4 w-4" />
+                  Reemplazar imagen
+                </Button>
+              )}
 
               <Button variant="outline" size="sm" className="w-full gap-2 text-destructive hover:bg-destructive hover:text-destructive-foreground"
                 onClick={() => deleteElement(selectedElementData.id)}>
@@ -409,14 +571,16 @@ export default function TemplateEditorPage() {
             </div>
             <div className="divide-y divide-border">
               {elements.map((element) => {
-                const Icon = elementIcons[element.type]
+                const Icon = elementIcon(element.type)
                 return (
                   <button key={element.id} onClick={() => setSelectedElement(element.id)}
                     className={cn("flex w-full items-center gap-3 px-4 py-3 text-left transition-colors",
                       selectedElement === element.id ? "bg-sidebar-accent" : "hover:bg-muted/50"
                     )}>
                     <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <span className="flex-1 truncate text-sm">{element.content}</span>
+                    <span className="flex-1 truncate text-sm">
+                      {element.type === "image" ? `🖼 ${element.content}` : element.content}
+                    </span>
                   </button>
                 )
               })}
