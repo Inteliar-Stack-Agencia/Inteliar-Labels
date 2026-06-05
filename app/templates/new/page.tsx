@@ -22,6 +22,8 @@ import {
   X,
   Hash,
   Calendar,
+  Link2,
+  Unlink2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { LabelElement, ElementType } from "@/lib/label-types"
@@ -61,6 +63,7 @@ export default function TemplateEditorPage() {
   const [aiDescription, setAiDescription] = useState("")
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
+  const [lockAspect, setLockAspect] = useState(true)
 
   const selectedElementData = elements.find((el) => el.id === selectedElement)
 
@@ -709,22 +712,54 @@ export default function TemplateEditorPage() {
 
               {/* Image size controls */}
               {selectedElementData.type === "image" ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Ancho (mm)</label>
-                    <input type="number" value={selectedElementData.imgWidth ?? 30}
-                      onChange={(e) => updateElement(selectedElementData.id, { imgWidth: Number(e.target.value) })}
-                      className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                      min={5} max={widthMm}
-                    />
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-muted-foreground">Tamaño (mm)</label>
+                    <button
+                      onClick={() => setLockAspect(!lockAspect)}
+                      title={lockAspect ? "Proporción bloqueada" : "Proporción libre"}
+                      className={cn(
+                        "flex items-center gap-1 rounded px-1.5 py-1 text-[10px] border transition-colors",
+                        lockAspect ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary"
+                      )}
+                    >
+                      {lockAspect ? <Link2 className="h-3 w-3" /> : <Unlink2 className="h-3 w-3" />}
+                      {lockAspect ? "Proporcional" : "Libre"}
+                    </button>
                   </div>
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Alto (mm)</label>
-                    <input type="number" value={selectedElementData.imgHeight ?? 20}
-                      onChange={(e) => updateElement(selectedElementData.id, { imgHeight: Number(e.target.value) })}
-                      className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                      min={5} max={heightMm}
-                    />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1 block text-[10px] text-muted-foreground">Ancho</label>
+                      <input type="number" value={selectedElementData.imgWidth ?? 30}
+                        onChange={(e) => {
+                          const w = Number(e.target.value)
+                          if (lockAspect) {
+                            const ratio = (selectedElementData.imgHeight ?? 20) / (selectedElementData.imgWidth ?? 30)
+                            updateElement(selectedElementData.id, { imgWidth: w, imgHeight: Math.round(w * ratio) })
+                          } else {
+                            updateElement(selectedElementData.id, { imgWidth: w })
+                          }
+                        }}
+                        className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                        min={5} max={widthMm}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] text-muted-foreground">Alto</label>
+                      <input type="number" value={selectedElementData.imgHeight ?? 20}
+                        onChange={(e) => {
+                          const h = Number(e.target.value)
+                          if (lockAspect) {
+                            const ratio = (selectedElementData.imgWidth ?? 30) / (selectedElementData.imgHeight ?? 20)
+                            updateElement(selectedElementData.id, { imgHeight: h, imgWidth: Math.round(h * ratio) })
+                          } else {
+                            updateElement(selectedElementData.id, { imgHeight: h })
+                          }
+                        }}
+                        className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                        min={5} max={heightMm}
+                      />
+                    </div>
                   </div>
                 </div>
               ) : selectedElementData.type !== "serial" ? (
