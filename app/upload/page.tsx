@@ -15,6 +15,7 @@ import {
   Printer,
   X,
   Eye,
+  Download,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import * as XLSX from "xlsx"
@@ -39,6 +40,9 @@ export default function UploadPage() {
   const [quantityColumn, setQuantityColumn] = useState<string>("")
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [previewRows, setPreviewRows] = useState(3)
+  const [sampleTemplates, setSampleTemplates] = useState<{ id: string; name: string; variables: string[] }[]>([])
+  const [loadingSampleTemplates, setLoadingSampleTemplates] = useState(false)
+  const [showSamplePicker, setShowSamplePicker] = useState(false)
 
   const parseFile = useCallback((file: File) => {
     setError(null)
@@ -151,6 +155,33 @@ export default function UploadPage() {
     router.push(`/jobs/${job.id}`)
   }
 
+  const loadSampleTemplates = async () => {
+    if (sampleTemplates.length > 0) { setShowSamplePicker(true); return }
+    setLoadingSampleTemplates(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data } = await supabase
+        .from("templates")
+        .select("id, name, variables")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+      if (data) setSampleTemplates(data)
+    }
+    setLoadingSampleTemplates(false)
+    setShowSamplePicker(true)
+  }
+
+  const downloadSampleExcel = (tmpl: { name: string; variables: string[] }) => {
+    const vars = tmpl.variables ?? []
+    const headers = vars.length > 0 ? [...vars, "cantidad"] : ["campo1", "campo2", "cantidad"]
+    const exampleRow = Object.fromEntries(headers.map((h) => [h, h === "cantidad" ? "1" : `ejemplo_${h}`]))
+    const ws = XLSX.utils.json_to_sheet([exampleRow], { header: headers })
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Etiquetas")
+    XLSX.writeFile(wb, `plantilla_${tmpl.name.replace(/\s+/g, "_")}.xlsx`)
+    setShowSamplePicker(false)
+  }
+
   return (
     <DashboardLayout>
       <Header
@@ -183,44 +214,98 @@ export default function UploadPage() {
 
         {/* STEP 1: Upload */}
         {step === 1 && (
-          <div
-            onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={handleDrop}
-            className={cn(
-              "flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-16 transition-colors cursor-pointer",
-              isDragging ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/50"
-            )}
-            onClick={() => document.getElementById("file-input")?.click()}
-          >
-            <input
-              id="file-input"
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              className="hidden"
-              onChange={handleFileInput}
-            />
-            {loading ? (
-              <div className="text-center space-y-2">
-                <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                <p className="text-sm text-muted-foreground">Leyendo archivo...</p>
-              </div>
-            ) : (
-              <div className="text-center space-y-4">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                  <Upload className="h-8 w-8 text-primary" />
+          <div className="space-y-4">
+            <div
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+              className={cn(
+                "flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-16 transition-colors cursor-pointer",
+                isDragging ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/50"
+              )}
+              onClick={() => document.getElementById("file-input")?.click()}
+            >
+              <input
+                id="file-input"
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                className="hidden"
+                onChange={handleFileInput}
+              />
+              {loading ? (
+                <div className="text-center space-y-2">
+                  <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                  <p className="text-sm text-muted-foreground">Leyendo archivo...</p>
                 </div>
+              ) : (
+                <div className="text-center space-y-4">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                    <Upload className="h-8 w-8 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold text-foreground">Arrastrá tu archivo aquí</p>
+                    <p className="text-sm text-muted-foreground mt-1">o hacé click para seleccionar</p>
+                  </div>
+                  <div className="flex items-center gap-2 justify-center">
+                    <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">Excel .xlsx</span>
+                    <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">Excel .xls</span>
+                    <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">CSV</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Sample Excel download */}
+            <div className="rounded-xl border border-border bg-card p-4">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-lg font-semibold text-foreground">Arrastrá tu archivo aquí</p>
-                  <p className="text-sm text-muted-foreground mt-1">o hacé click para seleccionar</p>
+                  <p className="text-sm font-medium text-foreground">¿No tenés el Excel todavía?</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Descargá una plantilla con las columnas correctas para tu etiqueta</p>
                 </div>
-                <div className="flex items-center gap-2 justify-center">
-                  <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">Excel .xlsx</span>
-                  <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">Excel .xls</span>
-                  <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">CSV</span>
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 flex-shrink-0"
+                  onClick={(e) => { e.stopPropagation(); loadSampleTemplates() }}
+                  disabled={loadingSampleTemplates}
+                >
+                  {loadingSampleTemplates
+                    ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    : <Download className="h-4 w-4" />}
+                  Descargar plantilla Excel
+                </Button>
               </div>
-            )}
+
+              {showSamplePicker && (
+                <div className="mt-4 space-y-2 border-t border-border pt-4">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Elegí la plantilla de etiqueta:</p>
+                  {sampleTemplates.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No tenés plantillas creadas. <button onClick={() => router.push("/templates/new")} className="text-primary underline">Crear una →</button></p>
+                  ) : (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {sampleTemplates.map((t) => (
+                        <button
+                          key={t.id}
+                          onClick={() => downloadSampleExcel(t)}
+                          className="flex items-center gap-3 rounded-lg border border-border bg-background p-3 text-left hover:border-primary hover:bg-primary/5 transition-colors"
+                        >
+                          <FileSpreadsheet className="h-5 w-5 text-green-500 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{t.name}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">
+                              {(t.variables ?? []).length > 0
+                                ? (t.variables ?? []).join(", ")
+                                : "Sin variables"}
+                            </p>
+                          </div>
+                          <Download className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -265,7 +350,12 @@ export default function UploadPage() {
             {/* Quantity column */}
             <div className="rounded-xl border border-border bg-card p-5 space-y-3">
               <h3 className="text-sm font-semibold">Columna de cantidad</h3>
-              <p className="text-xs text-muted-foreground">¿Qué columna indica cuántas etiquetas imprimir por fila?</p>
+              <p className="text-xs text-muted-foreground">
+                ¿Qué columna indica cuántas etiquetas imprimir por fila?
+              </p>
+              <div className="rounded-lg bg-muted/50 border border-border px-3 py-2 text-xs text-muted-foreground">
+                💡 Ejemplo: si la fila dice <strong className="text-foreground">producto = Milanesas</strong> y <strong className="text-foreground">cantidad = 10</strong>, se imprimen <strong className="text-foreground">10 etiquetas</strong> de Milanesas seguidas. Si no seleccionás ninguna columna, se imprime 1 etiqueta por fila.
+              </div>
               <select
                 value={quantityColumn}
                 onChange={(e) => setQuantityColumn(e.target.value)}
@@ -290,28 +380,46 @@ export default function UploadPage() {
                 </div>
               ) : (
                 <div className="grid gap-2">
-                  {templates.map((t) => (
-                    <button
-                      key={t.id}
-                      onClick={() => setSelectedTemplate(t.id)}
-                      className={cn(
-                        "flex items-center gap-3 rounded-lg border p-3 text-left transition-colors",
-                        selectedTemplate === t.id
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary/50"
-                      )}
-                    >
-                      <div className={cn("h-4 w-4 rounded-full border-2 flex-shrink-0",
-                        selectedTemplate === t.id ? "border-primary bg-primary" : "border-muted-foreground"
-                      )} />
-                      <div>
-                        <p className="text-sm font-medium">{t.name}</p>
-                        {t.variables?.length > 0 && (
-                          <p className="text-xs text-muted-foreground">Variables: {t.variables.join(", ")}</p>
+                  {templates.map((t) => {
+                    const missing = (t.variables ?? []).filter((v) => !data?.columns.includes(v))
+                    const hasMissing = missing.length > 0
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => setSelectedTemplate(t.id)}
+                        className={cn(
+                          "flex items-start gap-3 rounded-lg border p-3 text-left transition-colors",
+                          selectedTemplate === t.id
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50"
                         )}
-                      </div>
-                    </button>
-                  ))}
+                      >
+                        <div className={cn("h-4 w-4 rounded-full border-2 flex-shrink-0 mt-0.5",
+                          selectedTemplate === t.id ? "border-primary bg-primary" : "border-muted-foreground"
+                        )} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{t.name}</p>
+                          {t.variables?.length > 0 && (
+                            <p className="text-xs text-muted-foreground">Variables: {t.variables.join(", ")}</p>
+                          )}
+                          {selectedTemplate === t.id && hasMissing && (
+                            <div className="mt-2 flex items-start gap-2 rounded-md bg-amber-500/10 border border-amber-500/30 px-2 py-1.5">
+                              <AlertCircle className="h-3.5 w-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
+                              <p className="text-xs text-amber-600 dark:text-amber-400">
+                                Columnas faltantes en el Excel: <strong>{missing.join(", ")}</strong>. Estas variables quedarán vacías en las etiquetas.
+                              </p>
+                            </div>
+                          )}
+                          {selectedTemplate === t.id && !hasMissing && t.variables?.length > 0 && (
+                            <div className="mt-2 flex items-center gap-2 rounded-md bg-green-500/10 border border-green-500/20 px-2 py-1.5">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
+                              <p className="text-xs text-green-600 dark:text-green-400">Todas las variables coinciden con el Excel.</p>
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
               )}
             </div>
