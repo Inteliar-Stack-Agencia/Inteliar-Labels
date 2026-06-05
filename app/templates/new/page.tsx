@@ -24,6 +24,8 @@ import {
   Calendar,
   Link2,
   Unlink2,
+  Minus,
+  Square,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { LabelElement, ElementType } from "@/lib/label-types"
@@ -31,11 +33,11 @@ import { resolveDateVars, DATE_SHORTCUTS } from "@/lib/date-vars"
 import { PRESET_TEMPLATES } from "@/lib/preset-templates"
 
 const PRESET_SIZES = [
-  { label: "100 × 50 mm (viandas)", width: 100, height: 50 },
+  { label: "80 × 40 mm (catering / vianda)", width: 80, height: 40 },
+  { label: "100 × 50 mm (almacén / logística)", width: 100, height: 50 },
+  { label: "100 × 150 mm (envío / caja)", width: 100, height: 150 },
+  { label: "50 × 30 mm (precio chico)", width: 50, height: 30 },
   { label: "100 × 100 mm (cuadrada)", width: 100, height: 100 },
-  { label: "80 × 40 mm (pequeña)", width: 80, height: 40 },
-  { label: "150 × 100 mm (grande)", width: 150, height: 100 },
-  { label: "60 × 40 mm (precio)", width: 60, height: 40 },
   { label: "Personalizado", width: 0, height: 0 },
 ]
 
@@ -46,8 +48,8 @@ export default function TemplateEditorPage() {
 
   const [step, setStep] = useState<"preset" | "editor">("preset")
   const [templateName, setTemplateName] = useState("Template sin título")
-  const [widthMm, setWidthMm] = useState(100)
-  const [heightMm, setHeightMm] = useState(50)
+  const [widthMm, setWidthMm] = useState(80)
+  const [heightMm, setHeightMm] = useState(40)
   const [selectedPreset, setSelectedPreset] = useState(0)
   const [cutBetweenLabels, setCutBetweenLabels] = useState(true)
   const [cutEveryN, setCutEveryN] = useState(1)
@@ -84,11 +86,14 @@ export default function TemplateEditorPage() {
     const newElement: LabelElement = {
       id: Date.now().toString(),
       type,
-      content: type === "text" ? "Nuevo texto" : type === "serial" ? "" : `{{variable_${elements.length + 1}}}`,
+      content: type === "text" ? "Nuevo texto" : type === "serial" || type === "line" || type === "rect" ? "" : `{{variable_${elements.length + 1}}}`,
       x: 20,
       y: 20,
       fontSize: type === "serial" ? 14 : 12,
       bold: false,
+      lineWidth: type === "line" ? widthMm - 8 : type === "rect" ? 20 : undefined,
+      lineHeight: type === "rect" ? 10 : undefined,
+      lineThickness: type === "line" || type === "rect" ? 0.5 : undefined,
       ...(type === "barcode" ? { barcodeType: "code128" as const } : {}),
       ...(type === "serial" ? { serialStart: 1, serialIncrement: 1, serialDigits: 4, serialPrefix: "", serialSuffix: "" } : {}),
     }
@@ -134,7 +139,6 @@ export default function TemplateEditorPage() {
         .upload(path, file, { upsert: true })
 
       if (uploadErr) {
-        // Si el bucket no existe, usamos URL local como fallback
         const localUrl = URL.createObjectURL(file)
         insertImageElement(localUrl, file.name)
       } else {
@@ -252,6 +256,8 @@ export default function TemplateEditorPage() {
     if (type === "qr") return QrCode
     if (type === "barcode") return Barcode
     if (type === "serial") return Hash
+    if (type === "line") return Minus
+    if (type === "rect") return Square
     return ImageIcon
   }
 
@@ -448,6 +454,12 @@ export default function TemplateEditorPage() {
               <Button variant="outline" size="sm" className="gap-2" onClick={() => addElement("serial")}>
                 <Hash className="h-4 w-4" /> Numeración
               </Button>
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => addElement("line")}>
+                <Minus className="h-4 w-4" /> Línea
+              </Button>
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => addElement("rect")}>
+                <Square className="h-4 w-4" /> Rectángulo
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -525,7 +537,20 @@ export default function TemplateEditorPage() {
                             </div>
                           )}
 
-                          {element.type === "image" && element.imageUrl ? (
+                          {element.type === "line" ? (
+                            <div style={{
+                              width: `${(element.lineWidth ?? widthMm - 8) * SCALE / 10}px`,
+                              height: `${Math.max(1, (element.lineThickness ?? 0.5) * SCALE / 10)}px`,
+                              backgroundColor: "#333",
+                            }} />
+                          ) : element.type === "rect" ? (
+                            <div style={{
+                              width: `${(element.lineWidth ?? 20) * SCALE / 10}px`,
+                              height: `${(element.lineHeight ?? 10) * SCALE / 10}px`,
+                              border: `${Math.max(1, (element.lineThickness ?? 0.5) * SCALE / 10)}px solid #333`,
+                              boxSizing: "border-box",
+                            }} />
+                          ) : element.type === "image" && element.imageUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={element.imageUrl}
@@ -642,8 +667,42 @@ export default function TemplateEditorPage() {
                 </div>
               )}
 
-              {/* Content field — hidden for images and serial */}
-              {selectedElementData.type !== "image" && selectedElementData.type !== "serial" && (
+              {/* Line / Rect config */}
+              {(selectedElementData.type === "line" || selectedElementData.type === "rect") && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-muted-foreground">Ancho (mm)</label>
+                      <input type="number" value={selectedElementData.lineWidth ?? 30}
+                        onChange={(e) => updateElement(selectedElementData.id, { lineWidth: Number(e.target.value) })}
+                        className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                        min={1}
+                      />
+                    </div>
+                    {selectedElementData.type === "rect" && (
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-muted-foreground">Alto (mm)</label>
+                        <input type="number" value={selectedElementData.lineHeight ?? 10}
+                          onChange={(e) => updateElement(selectedElementData.id, { lineHeight: Number(e.target.value) })}
+                          className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                          min={1}
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-muted-foreground">Grosor (mm)</label>
+                      <input type="number" value={selectedElementData.lineThickness ?? 0.5}
+                        onChange={(e) => updateElement(selectedElementData.id, { lineThickness: Number(e.target.value) })}
+                        className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                        min={0.3} max={5} step={0.1}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Content field — hidden for images, serial, line, rect */}
+              {selectedElementData.type !== "image" && selectedElementData.type !== "serial" && selectedElementData.type !== "line" && selectedElementData.type !== "rect" && (
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Contenido / Variable</label>
                   <input
@@ -762,7 +821,7 @@ export default function TemplateEditorPage() {
                     </div>
                   </div>
                 </div>
-              ) : selectedElementData.type !== "serial" ? (
+              ) : selectedElementData.type !== "serial" && selectedElementData.type !== "line" && selectedElementData.type !== "rect" ? (
                 <>
                   <div>
                     <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Tamaño de fuente (px)</label>
