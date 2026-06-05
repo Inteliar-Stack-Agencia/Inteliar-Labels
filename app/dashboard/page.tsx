@@ -5,9 +5,10 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Header } from "@/components/dashboard/header"
 import { KpiCard } from "@/components/dashboard/kpi-card"
 import { QuickActions } from "@/components/dashboard/quick-actions"
-import { Tag, Printer, FileStack, CheckCircle2, Clock, AlertCircle } from "lucide-react"
+import { Tag, Printer, FileStack, CheckCircle2, Clock, AlertCircle, ArrowRight, Sparkles } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
+import Link from "next/link"
 
 interface RecentJob {
   id: string
@@ -41,6 +42,7 @@ export default function DashboardPage() {
   const [totalTemplates, setTotalTemplates] = useState<number | null>(null)
   const [recentJobs, setRecentJobs] = useState<RecentJob[]>([])
   const [loading, setLoading] = useState(true)
+  const [isNewUser, setIsNewUser] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -90,6 +92,7 @@ export default function DashboardPage() {
         setTotalJobs(jobsCount ?? 0)
         setTotalTemplates(templatesCount ?? 0)
         setRecentJobs(recent ?? [])
+        setIsNewUser((templatesCount ?? 0) === 0 && (jobsCount ?? 0) === 0)
       } catch {
         // silent
       } finally {
@@ -108,6 +111,38 @@ export default function DashboardPage() {
       />
 
       <div className="p-6 space-y-6">
+        {/* Onboarding banner for new users */}
+        {!loading && isNewUser && (
+          <div className="rounded-xl border border-primary/30 bg-primary/5 p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                <Sparkles className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-foreground">¡Bienvenido a Inteliar Labels!</h3>
+                <p className="text-sm text-muted-foreground">Seguí estos pasos para imprimir tus primeras etiquetas</p>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {[
+                { step: "1", title: "Creá una plantilla", desc: "Diseñá el layout de tu etiqueta con el editor visual", href: "/templates/new" },
+                { step: "2", title: "Cargá tu Excel", desc: "Subí el archivo con los datos a imprimir por fila", href: "/upload" },
+                { step: "3", title: "Generá el ZPL", desc: "Descargá el archivo listo para enviar a tu impresora", href: "/imprimir" },
+              ].map((s) => (
+                <Link key={s.step} href={s.href}
+                  className="flex items-start gap-3 rounded-lg border border-primary/20 bg-background p-4 hover:border-primary hover:bg-primary/5 transition-colors group">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground flex-shrink-0">{s.step}</span>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-foreground">{s.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{s.desc}</p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 mt-0.5" />
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* KPI Cards */}
         <div className="grid gap-6 md:grid-cols-3">
           <KpiCard
