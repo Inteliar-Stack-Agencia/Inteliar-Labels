@@ -1,136 +1,115 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Header } from "@/components/dashboard/header"
 import { Button } from "@/components/ui/button"
 import {
   Calendar,
   Filter,
-  Download,
   CheckCircle2,
   XCircle,
-  FileStack,
   Printer,
   Tag,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { createClient } from "@/lib/supabase/client"
 
-interface HistoryEntry {
+interface CompletedJob {
   id: string
-  type: "print" | "template" | "upload"
-  action: string
-  details: string
-  timestamp: string
-  status?: "success" | "error"
-  user: string
+  name: string
+  total_labels: number
+  printed_labels: number
+  completed_at: string | null
+  created_at: string
+  status: string
 }
 
-const mockHistory: HistoryEntry[] = [
-  {
-    id: "1",
-    type: "print",
-    action: "Trabajo de impresión completado",
-    details: "150 etiquetas impresas con Etiqueta de Producto A",
-    timestamp: "2024-01-18 14:35",
-    status: "success",
-    user: "Juan Pérez",
-  },
-  {
-    id: "2",
-    type: "upload",
-    action: "Datos cargados",
-    details: "productos_lote_01.xlsx - 500 filas",
-    timestamp: "2024-01-18 14:30",
-    status: "success",
-    user: "Juan Pérez",
-  },
-  {
-    id: "3",
-    type: "template",
-    action: "Template creado",
-    details: "Nuevo template: Etiqueta de Envío v2",
-    timestamp: "2024-01-18 13:15",
-    status: "success",
-    user: "Ana García",
-  },
-  {
-    id: "4",
-    type: "print",
-    action: "Trabajo de impresión fallido",
-    details: "Conexión perdida con Zebra ZD420",
-    timestamp: "2024-01-18 12:30",
-    status: "error",
-    user: "Juan Pérez",
-  },
-  {
-    id: "5",
-    type: "print",
-    action: "Trabajo de impresión completado",
-    details: "200 etiquetas impresas con Etiqueta de Código de Barras",
-    timestamp: "2024-01-18 10:05",
-    status: "success",
-    user: "Ana García",
-  },
-  {
-    id: "6",
-    type: "template",
-    action: "Template modificado",
-    details: "Actualizado: Etiqueta de Producto A",
-    timestamp: "2024-01-17 16:00",
-    status: "success",
-    user: "Juan Pérez",
-  },
-  {
-    id: "7",
-    type: "print",
-    action: "Trabajo de impresión completado",
-    details: "320 etiquetas impresas con Etiqueta de Inventario",
-    timestamp: "2024-01-17 15:30",
-    status: "success",
-    user: "Ana García",
-  },
-  {
-    id: "8",
-    type: "upload",
-    action: "Datos cargados",
-    details: "actualizacion_inventario.csv - 1200 filas",
-    timestamp: "2024-01-17 14:00",
-    status: "success",
-    user: "Juan Pérez",
-  },
-]
-
-const typeIcons = {
-  print: Printer,
-  template: FileStack,
-  upload: Tag,
-}
-
-const typeColors = {
-  print: "bg-primary/10 text-primary",
-  template: "bg-chart-3/10 text-chart-3",
-  upload: "bg-success/10 text-success",
+function formatDateTime(dateStr: string) {
+  return new Date(dateStr).toLocaleString("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
 }
 
 export default function HistoryPage() {
   const [dateFilter, setDateFilter] = useState("all")
-  const [templateFilter, setTemplateFilter] = useState("all")
+  const [jobs, setJobs] = useState<CompletedJob[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadHistory()
+  }, [])
+
+  async function loadHistory() {
+    const supabase = createClient()
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase
+        .from("print_jobs")
+        .select("id, name, total_labels, printed_labels, completed_at, created_at, status")
+        .eq("user_id", user.id)
+        .eq("status", "completed")
+        .order("completed_at", { ascending: false })
+      setJobs(data ?? [])
+    } catch {
+      // silent
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const filteredJobs = jobs.filter((job) => {
+    if (dateFilter === "all") return true
+    const ref = job.completed_at ?? job.created_at
+    const date = new Date(ref)
+    const now = new Date()
+    if (dateFilter === "today") {
+      return date.toDateString() === now.toDateString()
+    }
+    if (dateFilter === "week") {
+      const weekAgo = new Date(now)
+      weekAgo.setDate(now.getDate() - 7)
+      return date >= weekAgo
+    }
+    if (dateFilter === "month") {
+      const monthAgo = new Date(now)
+      monthAgo.setMonth(now.getMonth() - 1)
+      return date >= monthAgo
+    }
+    return true
+  })
+
+  const totalLabels = filteredJobs.reduce((sum, j) => sum + (j.total_labels ?? 0), 0)
 
   return (
     <DashboardLayout>
       <Header
         title="Historial"
-        description="Registro completo de actividad"
-        actions={
-          <Button variant="outline" size="sm" className="gap-2">
-            <Download className="h-4 w-4" />
-            Exportar
-          </Button>
-        }
+        description="Registro de trabajos de impresión completados"
       />
 
       <div className="p-6">
+        {/* Stats */}
+        <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-sm text-muted-foreground">Trabajos completados</p>
+            <p className="mt-1 text-2xl font-semibold text-foreground">
+              {loading ? "…" : filteredJobs.length}
+            </p>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-sm text-muted-foreground">Etiquetas impresas</p>
+            <p className="mt-1 text-2xl font-semibold text-success">
+              {loading ? "…" : totalLabels.toLocaleString("es-AR")}
+            </p>
+          </div>
+        </div>
+
         {/* Filters */}
         <div className="mb-6 flex items-center gap-4">
           <div className="flex items-center gap-2">
@@ -147,99 +126,74 @@ export default function HistoryPage() {
             </select>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <select
-              value={templateFilter}
-              onChange={(e) => setTemplateFilter(e.target.value)}
-              className="h-9 rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              <option value="all">Todos los tipos</option>
-              <option value="print">Trabajos de impresión</option>
-              <option value="template">Templates</option>
-              <option value="upload">Cargas</option>
-            </select>
-          </div>
-
           <div className="ml-auto text-sm text-muted-foreground">
-            Mostrando {mockHistory.length} entradas
+            {loading ? "Cargando…" : `${filteredJobs.length} trabajos`}
           </div>
         </div>
 
         {/* Timeline */}
-        <div className="rounded-xl border border-border bg-card">
-          <div className="divide-y divide-border">
-            {mockHistory.map((entry, index) => {
-              const Icon = typeIcons[entry.type]
-              const isLast = index === mockHistory.length - 1
-
-              return (
-                <div key={entry.id} className="flex gap-4 p-6">
-                  {/* Timeline indicator */}
-                  <div className="flex flex-col items-center">
-                    <div
-                      className={cn(
-                        "flex h-10 w-10 items-center justify-center rounded-full",
-                        typeColors[entry.type]
-                      )}
-                    >
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    {!isLast && (
-                      <div className="mt-2 h-full w-px bg-border" />
-                    )}
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 pt-1">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-card-foreground">
-                            {entry.action}
-                          </p>
-                          {entry.status && (
-                            <span
-                              className={cn(
-                                "flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
-                                entry.status === "success"
-                                  ? "bg-success/10 text-success"
-                                  : "bg-destructive/10 text-destructive"
-                              )}
-                            >
-                              {entry.status === "success" ? (
-                                <CheckCircle2 className="h-3 w-3" />
-                              ) : (
-                                <XCircle className="h-3 w-3" />
-                              )}
-                              {entry.status === "success" ? "éxito" : "error"}
-                            </span>
-                          )}
-                        </div>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {entry.details}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-muted-foreground">
-                          {entry.timestamp}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          por {entry.user}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
+        {loading ? (
+          <div className="py-16 text-center text-sm text-muted-foreground">
+            Cargando historial…
           </div>
-        </div>
+        ) : filteredJobs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20 text-center">
+            <Printer className="mb-4 h-12 w-12 text-muted-foreground" />
+            <h3 className="text-lg font-semibold text-foreground">No hay trabajos completados</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Aquí aparecerán los trabajos una vez que se completen
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-border bg-card">
+            <div className="divide-y divide-border">
+              {filteredJobs.map((job, index) => {
+                const isLast = index === filteredJobs.length - 1
+                const dateStr = job.completed_at ?? job.created_at
 
-        {/* Load More */}
-        <div className="mt-6 flex justify-center">
-          <Button variant="outline">Cargar más</Button>
-        </div>
+                return (
+                  <div key={job.id} className="flex gap-4 p-6">
+                    {/* Timeline indicator */}
+                    <div className="flex flex-col items-center">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-success/10 text-success">
+                        <Printer className="h-5 w-5" />
+                      </div>
+                      {!isLast && (
+                        <div className="mt-2 h-full w-px bg-border" />
+                      )}
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 pt-1">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-card-foreground">
+                              {job.name}
+                            </p>
+                            <span className="flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
+                              <CheckCircle2 className="h-3 w-3" />
+                              completado
+                            </span>
+                          </div>
+                          <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
+                            <Tag className="h-3.5 w-3.5" />
+                            {job.total_labels} etiquetas impresas
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-muted-foreground">
+                            {formatDateTime(dateStr)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   )
