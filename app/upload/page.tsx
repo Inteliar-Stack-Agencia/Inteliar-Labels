@@ -122,7 +122,7 @@ export default function UploadPage() {
 
     const templateName = templates.find((t) => t.id === selectedTemplate)?.name || "Sin nombre"
 
-    const { error } = await supabase.from("print_jobs").insert({
+    const { data: job, error } = await supabase.from("print_jobs").insert({
       user_id: user.id,
       template_id: selectedTemplate,
       name: `${templateName} - ${data.fileName}`,
@@ -130,12 +130,25 @@ export default function UploadPage() {
       total_labels: totalLabels,
       printed_labels: 0,
       source_file: data.fileName,
-    })
+    }).select("id").single()
+
+    if (error || !job) { setLoading(false); return }
+
+    // Save Excel rows so job detail can render previews
+    const rowsToInsert = data.rows.map((row, i) => ({
+      job_id: job.id,
+      row_index: i,
+      row_data: row,
+      quantity: quantityColumn ? Math.max(1, Number(row[quantityColumn]) || 1) : 1,
+    }))
+
+    // Insert in batches of 500
+    for (let i = 0; i < rowsToInsert.length; i += 500) {
+      await supabase.from("print_job_rows").insert(rowsToInsert.slice(i, i + 500))
+    }
 
     setLoading(false)
-    if (!error) {
-      router.push("/jobs")
-    }
+    router.push(`/jobs/${job.id}`)
   }
 
   return (
