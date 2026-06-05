@@ -15,6 +15,7 @@ import {
   Tag,
   PrinterCheck,
   LogOut,
+  HelpCircle,
 } from "lucide-react"
 
 const navigation = [
@@ -25,6 +26,7 @@ const navigation = [
   { name: "Trabajos", href: "/jobs", icon: Printer },
   { name: "Historial", href: "/history", icon: Clock },
   { name: "Configuración", href: "/settings", icon: Settings },
+  { name: "Ayuda", href: "/ayuda", icon: HelpCircle },
 ]
 
 function getInitials(name: string, email: string): string {
