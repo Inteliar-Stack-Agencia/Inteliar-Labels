@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
@@ -64,6 +64,8 @@ export default function TemplateEditorPage() {
   const [selectedElement, setSelectedElement] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [showSizePanel, setShowSizePanel] = useState(true)
+  const dragRef = useRef<{ id: string; startX: number; startY: number; origX: number; origY: number } | null>(null)
+  const canvasRef = useRef<HTMLDivElement>(null)
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [showAiModal, setShowAiModal] = useState(false)
@@ -169,6 +171,33 @@ export default function TemplateEditorPage() {
     setElements((prev) => [...prev, newElement])
     setSelectedElement(newElement.id)
   }
+
+  const handleElementMouseDown = useCallback((e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
+    e.preventDefault()
+    setSelectedElement(id)
+    const el = elements.find((el) => el.id === id)
+    if (!el) return
+    dragRef.current = { id, startX: e.clientX, startY: e.clientY, origX: el.x, origY: el.y }
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!dragRef.current) return
+      const dx = (ev.clientX - dragRef.current.startX) * 10 / SCALE
+      const dy = (ev.clientY - dragRef.current.startY) * 10 / SCALE
+      const newX = Math.max(0, Math.round(dragRef.current.origX + dx))
+      const newY = Math.max(0, Math.round(dragRef.current.origY + dy))
+      setElements((prev) => prev.map((el) => el.id === dragRef.current!.id ? { ...el, x: newX, y: newY } : el))
+    }
+
+    const onMouseUp = () => {
+      dragRef.current = null
+      window.removeEventListener("mousemove", onMouseMove)
+      window.removeEventListener("mouseup", onMouseUp)
+    }
+
+    window.addEventListener("mousemove", onMouseMove)
+    window.addEventListener("mouseup", onMouseUp)
+  }, [elements, SCALE])
 
   const handleAiGenerate = async () => {
     if (!aiDescription.trim()) return
@@ -403,7 +432,8 @@ export default function TemplateEditorPage() {
                     </span>
                   </div>
                   <div
-                    className="relative border-2 border-dashed border-border bg-white shadow-lg"
+                    ref={canvasRef}
+                    className="relative border-2 border-dashed border-border bg-white shadow-lg select-none"
                     style={{ width: `${canvasW}px`, height: `${canvasH}px`, minWidth: "200px", minHeight: "100px" }}
                     onClick={() => setSelectedElement(null)}
                   >
@@ -419,9 +449,10 @@ export default function TemplateEditorPage() {
                       return (
                         <div
                           key={element.id}
-                          onClick={(e) => { e.stopPropagation(); setSelectedElement(element.id) }}
+                          onMouseDown={(e) => handleElementMouseDown(e, element.id)}
+                          onClick={(e) => e.stopPropagation()}
                           className={cn(
-                            "absolute cursor-pointer rounded border-2 transition-colors",
+                            "absolute cursor-grab active:cursor-grabbing rounded border-2 transition-colors",
                             selectedElement === element.id
                               ? "border-primary bg-primary/10"
                               : "border-transparent hover:border-border"
