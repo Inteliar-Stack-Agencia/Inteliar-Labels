@@ -1,326 +1,399 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, Suspense } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Button } from "@/components/ui/button"
+import { createClient } from "@/lib/supabase/client"
+import { generateZPL, downloadZPL } from "@/lib/zpl"
+import type { CanvasData } from "@/lib/label-types"
 import {
   ArrowLeft,
-  Printer,
   ChevronLeft,
   ChevronRight,
+  Download,
   Tag,
-  Wifi,
-  Monitor,
-  Check,
+  Type,
+  QrCode,
+  Barcode,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-interface PrinterOption {
+interface LabelElement {
   id: string
-  name: string
-  type: "network" | "local"
-  status: "online" | "offline"
+  type: "text" | "qr" | "barcode" | "image" | "serial" | "line" | "rect"
+  content: string
+  x: number
+  y: number
+  fontSize: number
+  bold: boolean
+  imageUrl?: string
+  imgWidth?: number
+  imgHeight?: number
+  lineWidth?: number
+  lineHeight?: number
+  lineThickness?: number
+  serialStart?: number
+  serialIncrement?: number
+  serialDigits?: number
+  serialPrefix?: string
+  serialSuffix?: string
 }
 
-const printers: PrinterOption[] = [
-  { id: "1", name: "Zebra ZD420", type: "network", status: "online" },
-  { id: "2", name: "Honeywell PC42", type: "network", status: "online" },
-  { id: "3", name: "Agente local de impresión", type: "local", status: "offline" },
-]
+interface Template {
+  name: string
+  width_mm: number
+  height_mm: number
+  canvas_data: CanvasData & { elements: LabelElement[] }
+}
 
-const mockLabels = [
-  { empresa: "Acme Corp", plato: "PRD-001", codigo: "ABC123" },
-  { empresa: "Acme Corp", plato: "PRD-002", codigo: "DEF456" },
-  { empresa: "Beta Inc", plato: "PRD-003", codigo: "GHI789" },
-]
+interface JobRow {
+  row_data: Record<string, string>
+  quantity: number
+}
 
-type PrintMethod = "network" | "local"
+interface PrintJob {
+  id: string
+  name: string
+  total_labels: number
+  template_id: string
+}
 
-export default function PreviewPage() {
-  const [currentLabel, setCurrentLabel] = useState(0)
-  const [selectedPrinter, setSelectedPrinter] = useState<string>("1")
-  const [printMethod, setPrintMethod] = useState<PrintMethod>("network")
-  const [isPrinting, setIsPrinting] = useState(false)
+const SCALE = 3
 
-  const totalLabels = 120 // From uploaded data with quantities
-  const label = mockLabels[currentLabel]
+function substituteVars(text: string, row: Record<string, string>): string {
+  return text.replace(/\{\{(\w+)\}\}/g, (_, key) => row[key] ?? `{{${key}}}`)
+}
 
-  const handlePrint = () => {
-    setIsPrinting(true)
-    setTimeout(() => {
-      setIsPrinting(false)
-    }, 2000)
+function LabelPreview({ template, row }: { template: Template; row: Record<string, string> }) {
+  const w = template.width_mm * SCALE
+  const h = template.height_mm * SCALE
+
+  return (
+    <div
+      className="relative shrink-0 border-2 border-border bg-white shadow-xl"
+      style={{ width: w, height: h }}
+    >
+      <div
+        className="absolute inset-0 opacity-[0.03]"
+        style={{
+          backgroundImage: `linear-gradient(to right, #000 1px, transparent 1px), linear-gradient(to bottom, #000 1px, transparent 1px)`,
+          backgroundSize: `${SCALE * 10}px ${SCALE * 10}px`,
+        }}
+      />
+      {template.canvas_data.elements.map((el) => {
+        const left = (el.x * SCALE) / 10
+        const top = (el.y * SCALE) / 10
+
+        if (el.type === "line") {
+          return (
+            <div
+              key={el.id}
+              className="absolute bg-gray-800"
+              style={{
+                left,
+                top,
+                width: ((el.lineWidth ?? 10) * SCALE) / 10,
+                height: Math.max(1, ((el.lineThickness ?? 1) * SCALE) / 10),
+              }}
+            />
+          )
+        }
+
+        if (el.type === "rect") {
+          const rw = ((el.lineWidth ?? 20) * SCALE) / 10
+          const rh = ((el.lineHeight ?? 10) * SCALE) / 10
+          const thick = Math.max(1, ((el.lineThickness ?? 1) * SCALE) / 10)
+          return (
+            <div
+              key={el.id}
+              className="absolute border border-gray-800"
+              style={{ left, top, width: rw, height: rh, borderWidth: thick }}
+            />
+          )
+        }
+
+        if (el.type === "image" && el.imageUrl) {
+          return (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={el.id}
+              src={el.imageUrl}
+              alt=""
+              className="absolute object-contain"
+              style={{
+                left,
+                top,
+                width: ((el.imgWidth ?? 30) * SCALE) / 10,
+                height: ((el.imgHeight ?? 20) * SCALE) / 10,
+              }}
+            />
+          )
+        }
+
+        const content = el.type === "serial"
+          ? `${el.serialPrefix ?? ""}${"0".repeat(el.serialDigits ?? 4)}${el.serialSuffix ?? ""}`
+          : substituteVars(el.content, row)
+
+        const Icon = el.type === "qr" ? QrCode : el.type === "barcode" ? Barcode : Type
+
+        return (
+          <div
+            key={el.id}
+            className="absolute flex items-center gap-0.5"
+            style={{ left, top }}
+          >
+            {el.type !== "text" && el.type !== "serial" && (
+              <Icon className="h-3 w-3 text-gray-400 shrink-0" />
+            )}
+            <span
+              className="text-gray-900 leading-tight whitespace-nowrap"
+              style={{
+                fontSize: `${Math.max(7, (el.fontSize * SCALE) / 3)}px`,
+                fontWeight: el.bold ? "bold" : "normal",
+              }}
+            >
+              {content}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function PreviewContent() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const jobId = searchParams.get("jobId")
+  const supabase = createClient()
+
+  const [job, setJob] = useState<PrintJob | null>(null)
+  const [template, setTemplate] = useState<Template | null>(null)
+  const [rows, setRows] = useState<JobRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [currentRow, setCurrentRow] = useState(0)
+  const [generatingZpl, setGeneratingZpl] = useState(false)
+
+  useEffect(() => {
+    if (!jobId) { router.push("/jobs"); return }
+
+    const load = async () => {
+      const { data: jobData } = await supabase
+        .from("print_jobs")
+        .select("id, name, total_labels, template_id")
+        .eq("id", jobId)
+        .single()
+
+      if (!jobData) { router.push("/jobs"); return }
+      setJob(jobData as PrintJob)
+
+      const { data: tmpl } = await supabase
+        .from("templates")
+        .select("name, width_mm, height_mm, canvas_data")
+        .eq("id", jobData.template_id)
+        .single()
+
+      if (tmpl) setTemplate(tmpl as Template)
+
+      const { data: rowData } = await supabase
+        .from("print_job_rows")
+        .select("row_data, quantity")
+        .eq("job_id", jobId)
+        .order("row_index", { ascending: true })
+
+      if (rowData && rowData.length > 0) {
+        setRows(rowData.map((r) => ({
+          row_data: r.row_data as Record<string, string>,
+          quantity: r.quantity ?? 1,
+        })))
+      }
+
+      setLoading(false)
+    }
+
+    load()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobId])
+
+  function handleDownloadZpl() {
+    if (!template || rows.length === 0) return
+    setGeneratingZpl(true)
+    try {
+      const zpl = generateZPL(
+        { width_mm: template.width_mm, height_mm: template.height_mm, canvas_data: template.canvas_data },
+        rows
+      )
+      downloadZPL(zpl, `${job?.name ?? "etiquetas"}.zpl`)
+    } finally {
+      setGeneratingZpl(false)
+    }
   }
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex h-screen items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (!job || !template) {
+    return (
+      <DashboardLayout>
+        <div className="flex h-screen flex-col items-center justify-center gap-4">
+          <p className="text-muted-foreground">No se encontró el trabajo.</p>
+          <Link href="/jobs"><Button variant="outline">Volver a trabajos</Button></Link>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  const row = rows[currentRow]
+  const totalRows = rows.length
 
   return (
     <DashboardLayout>
-      {/* Top Bar */}
+      {/* Top bar */}
       <div className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
         <div className="flex items-center gap-4">
           <Link
-            href="/upload"
-            className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            href={`/jobs/${jobId}`}
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
-            Volver a Cargar datos
+            Volver al trabajo
           </Link>
           <div className="h-6 w-px bg-border" />
-          <h1 className="text-lg font-semibold text-foreground">
-            Vista previa e impresión
-          </h1>
+          <h1 className="text-base font-semibold text-foreground truncate max-w-xs">{job.name}</h1>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-1.5 text-sm">
             <Tag className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium text-foreground">Total: {totalLabels} etiquetas</span>
+            <span className="font-medium">{job.total_labels} etiquetas</span>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={handleDownloadZpl}
+            disabled={generatingZpl || rows.length === 0}
+          >
+            <Download className="h-4 w-4" />
+            {generatingZpl ? "Generando..." : "Descargar ZPL"}
+          </Button>
         </div>
       </div>
 
+      {/* Main content */}
       <div className="flex h-[calc(100vh-4rem)]">
-        {/* Left - Label Preview */}
-        <div className="flex-1 bg-muted/30 p-8">
-          <div className="mx-auto max-w-xl">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-sm font-medium text-muted-foreground">
-                Vista previa de la etiqueta
-              </h2>
-              <div className="flex items-center gap-2">
+        {/* Left: label preview */}
+        <div className="flex-1 flex flex-col items-center justify-center bg-muted/30 p-8 gap-6">
+          {rows.length === 0 ? (
+            <div className="text-center space-y-2">
+              <p className="text-sm text-muted-foreground">No hay datos de filas para este trabajo.</p>
+              <Link href={`/jobs/${jobId}`}><Button variant="outline" size="sm">Volver</Button></Link>
+            </div>
+          ) : (
+            <>
+              {/* Navigation controls */}
+              <div className="flex items-center gap-4">
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => setCurrentLabel(Math.max(0, currentLabel - 1))}
-                  disabled={currentLabel === 0}
+                  onClick={() => setCurrentRow(Math.max(0, currentRow - 1))}
+                  disabled={currentRow === 0}
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <span className="min-w-[60px] text-center text-sm text-muted-foreground">
-                  {currentLabel + 1} de {mockLabels.length}
+                <span className="text-sm text-muted-foreground min-w-[100px] text-center">
+                  Fila {currentRow + 1} de {totalRows}
                 </span>
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() =>
-                    setCurrentLabel(Math.min(mockLabels.length - 1, currentLabel + 1))
-                  }
-                  disabled={currentLabel === mockLabels.length - 1}
+                  onClick={() => setCurrentRow(Math.min(totalRows - 1, currentRow + 1))}
+                  disabled={currentRow === totalRows - 1}
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
-            </div>
 
-            {/* Label Card */}
-            <div className="aspect-[4/3] rounded-xl border-2 border-border bg-background p-8 shadow-lg">
-              <div className="flex h-full flex-col justify-between">
-                {/* Header */}
-                <div>
-                  <p className="text-2xl font-bold text-foreground">
-                    {label.empresa}
-                  </p>
-                  <p className="mt-1 text-lg text-muted-foreground">
-                    {label.plato}
-                  </p>
+              {/* Label */}
+              {row && <LabelPreview template={template} row={row.row_data} />}
+
+              {/* Row info */}
+              {row && (
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <span>{template.width_mm} × {template.height_mm} mm</span>
+                  {row.quantity > 1 && (
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary font-medium">
+                      ×{row.quantity} copias
+                    </span>
+                  )}
                 </div>
-
-                {/* QR Code Placeholder */}
-                <div className="flex items-center justify-center">
-                  <div className="flex h-32 w-32 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted">
-                    <div className="grid grid-cols-4 gap-1">
-                      {[...Array(16)].map((_, i) => (
-                        <div
-                          key={i}
-                          className={cn(
-                            "h-5 w-5 rounded-sm",
-                            Math.random() > 0.5 ? "bg-foreground" : "bg-background"
-                          )}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Footer */}
-                <div className="text-right">
-                  <p className="font-mono text-lg font-semibold text-foreground">
-                    {label.codigo}
-                  </p>
-                  <div className="mt-2 h-8 w-full bg-gradient-to-r from-foreground via-background to-foreground" 
-                    style={{
-                      backgroundImage: `repeating-linear-gradient(90deg, var(--foreground) 0px, var(--foreground) 2px, transparent 2px, transparent 4px)`
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <p className="mt-4 text-center text-xs text-muted-foreground">
-              La vista previa muestra cómo se verá la etiqueta al imprimir
-            </p>
-          </div>
+              )}
+            </>
+          )}
         </div>
 
-        {/* Right - Print Options */}
-        <div className="w-96 border-l border-border bg-card">
-          <div className="border-b border-border px-6 py-4">
-            <h2 className="text-base font-semibold text-foreground">
-              Opciones de impresión
-            </h2>
+        {/* Right: row list */}
+        <div className="w-72 border-l border-border bg-card flex flex-col">
+          <div className="border-b border-border px-4 py-3">
+            <p className="text-sm font-semibold text-foreground">Filas del Excel</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{totalRows} filas</p>
           </div>
-
-          <div className="p-6 space-y-6">
-            {/* Print Method */}
-            <div>
-              <label className="mb-3 block text-sm font-medium text-foreground">
-                Método de impresión
-              </label>
-              <div className="grid grid-cols-2 gap-3">
+          <div className="flex-1 overflow-y-auto divide-y divide-border">
+            {rows.map((r, i) => {
+              const firstVal = Object.values(r.row_data)[0] ?? `Fila ${i + 1}`
+              const secondVal = Object.values(r.row_data)[1] ?? ""
+              return (
                 <button
-                  onClick={() => setPrintMethod("network")}
+                  key={i}
+                  onClick={() => setCurrentRow(i)}
                   className={cn(
-                    "flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all",
-                    printMethod === "network"
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-muted-foreground"
+                    "w-full flex items-center gap-3 px-4 py-3 text-left transition-colors",
+                    i === currentRow
+                      ? "bg-primary/5 border-l-2 border-l-primary"
+                      : "hover:bg-muted/50"
                   )}
                 >
-                  <Wifi className={cn(
-                    "h-6 w-6",
-                    printMethod === "network" ? "text-primary" : "text-muted-foreground"
-                  )} />
                   <span className={cn(
-                    "text-sm font-medium",
-                    printMethod === "network" ? "text-primary" : "text-muted-foreground"
+                    "flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold flex-shrink-0",
+                    i === currentRow ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                   )}>
-                    Red
+                    {i + 1}
                   </span>
-                </button>
-                <button
-                  onClick={() => setPrintMethod("local")}
-                  className={cn(
-                    "flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all",
-                    printMethod === "local"
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-muted-foreground"
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-foreground truncate">{firstVal}</p>
+                    {secondVal && <p className="text-[10px] text-muted-foreground truncate">{secondVal}</p>}
+                  </div>
+                  {r.quantity > 1 && (
+                    <span className="text-[10px] text-muted-foreground flex-shrink-0">×{r.quantity}</span>
                   )}
-                >
-                  <Monitor className={cn(
-                    "h-6 w-6",
-                    printMethod === "local" ? "text-primary" : "text-muted-foreground"
-                  )} />
-                  <span className={cn(
-                    "text-sm font-medium",
-                    printMethod === "local" ? "text-primary" : "text-muted-foreground"
-                  )}>
-                    Agente local
-                  </span>
                 </button>
-              </div>
-            </div>
-
-            {/* Printer Selection */}
-            <div>
-              <label className="mb-3 block text-sm font-medium text-foreground">
-                Seleccionar impresora
-              </label>
-              <div className="space-y-2">
-                {printers
-                  .filter((p) => p.type === printMethod || printMethod === "local" && p.type === "local")
-                  .map((printer) => (
-                    <button
-                      key={printer.id}
-                      onClick={() => setSelectedPrinter(printer.id)}
-                      className={cn(
-                        "flex w-full items-center gap-3 rounded-lg border-2 p-3 transition-all",
-                        selectedPrinter === printer.id
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-muted-foreground"
-                      )}
-                    >
-                      <Printer className={cn(
-                        "h-5 w-5",
-                        selectedPrinter === printer.id ? "text-primary" : "text-muted-foreground"
-                      )} />
-                      <div className="flex-1 text-left">
-                        <p className={cn(
-                          "text-sm font-medium",
-                          selectedPrinter === printer.id ? "text-foreground" : "text-muted-foreground"
-                        )}>
-                          {printer.name}
-                        </p>
-                      </div>
-                      <span
-                        className={cn(
-                          "flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
-                          printer.status === "online"
-                            ? "bg-success/10 text-success"
-                            : "bg-destructive/10 text-destructive"
-                        )}
-                      >
-                        <span className={cn(
-                          "h-1.5 w-1.5 rounded-full",
-                          printer.status === "online" ? "bg-success" : "bg-destructive"
-                        )} />
-                        {printer.status === "online" ? "en línea" : "fuera de línea"}
-                      </span>
-                    </button>
-                  ))}
-              </div>
-            </div>
-
-            {/* Summary */}
-            <div className="rounded-lg bg-muted p-4">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Etiquetas a imprimir</span>
-                <span className="font-medium text-foreground">{totalLabels}</span>
-              </div>
-              <div className="mt-2 flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Tiempo estimado</span>
-                <span className="font-medium text-foreground">~3 minutos</span>
-              </div>
-            </div>
-
-            {/* Print Button */}
-            <Button
-              size="lg"
-              className="w-full gap-2"
-              onClick={handlePrint}
-              disabled={isPrinting}
-            >
-              {isPrinting ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                  Imprimiendo...
-                </>
-              ) : (
-                <>
-                  <Printer className="h-4 w-4" />
-                  Imprimir las {totalLabels} etiquetas
-                </>
-              )}
-            </Button>
-
-            {isPrinting && (
-              <div className="rounded-lg border border-success bg-success/5 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-success/10">
-                    <Check className="h-4 w-4 text-success" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      Trabajo de impresión iniciado
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Mirá el progreso en Trabajos de impresión
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
+              )
+            })}
           </div>
         </div>
       </div>
     </DashboardLayout>
+  )
+}
+
+export default function PreviewPage() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="flex h-screen items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      </DashboardLayout>
+    }>
+      <PreviewContent />
+    </Suspense>
   )
 }
