@@ -1,6 +1,6 @@
 // Shared label element types used across editor, preview and ZPL generator
 
-export type ElementType = "text" | "qr" | "barcode" | "image" | "serial" | "line" | "rect"
+export type ElementType = "text" | "qr" | "barcode" | "image" | "serial" | "line" | "rect" | "ellipse"
 export type BarcodeType = "code128" | "ean13" | "ean8" | "code39" | "datamatrix"
 
 export interface LabelElement {
