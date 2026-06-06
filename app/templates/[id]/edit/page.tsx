@@ -25,6 +25,7 @@ import {
   Unlink2,
   Minus,
   Square,
+  Circle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { LabelElement, ElementType, BarcodeType } from "@/lib/label-types"
@@ -118,14 +119,14 @@ export default function TemplateEditPage() {
     const newElement: LabelElement = {
       id: Date.now().toString(),
       type,
-      content: type === "text" ? "Nuevo texto" : type === "serial" || type === "line" || type === "rect" ? "" : `{{variable_${elements.length + 1}}}`,
+      content: type === "text" ? "Nuevo texto" : type === "serial" || type === "line" || type === "rect" || type === "ellipse" ? "" : `{{variable_${elements.length + 1}}}`,
       x: 20,
       y: 20,
       fontSize: 12,
       bold: false,
-      lineWidth: type === "line" ? widthMm - 8 : type === "rect" ? 20 : undefined,
-      lineHeight: type === "rect" ? 10 : undefined,
-      lineThickness: type === "line" || type === "rect" ? 0.5 : undefined,
+      lineWidth: type === "line" ? widthMm - 8 : type === "rect" || type === "ellipse" ? 20 : undefined,
+      lineHeight: type === "rect" || type === "ellipse" ? 20 : undefined,
+      lineThickness: type === "line" || type === "rect" || type === "ellipse" ? 0.5 : undefined,
       ...(type === "serial" ? { serialStart: 1, serialIncrement: 1, serialDigits: 4, serialPrefix: "", serialSuffix: "" } : {}),
     }
     setElements([...elements, newElement])
@@ -244,7 +245,7 @@ export default function TemplateEditPage() {
       const dy = (ev.clientY - startY) * 10 / SCALE
       if (el.type === "line") {
         setElements(prev => prev.map(e => e.id === id ? { ...e, lineWidth: Math.max(2, Math.round(origLineW + dx)) } : e))
-      } else if (el.type === "rect") {
+      } else if (el.type === "rect" || el.type === "ellipse") {
         setElements(prev => prev.map(e => e.id === id ? { ...e, lineWidth: Math.max(2, Math.round(origLineW + dx)), lineHeight: Math.max(2, Math.round(origLineH + dy)) } : e))
       } else if (el.type === "image") {
         const newW = Math.max(5, Math.round(origImgW + dx))
@@ -325,6 +326,7 @@ export default function TemplateEditPage() {
     if (type === "serial") return Hash
     if (type === "line") return Minus
     if (type === "rect") return Square
+    if (type === "ellipse") return Circle
     return ImageIcon
   }
 
@@ -497,6 +499,9 @@ export default function TemplateEditPage() {
               <Button variant="outline" size="sm" className="gap-2" onClick={() => addElement("rect")}>
                 <Square className="h-4 w-4" /> Rectángulo
               </Button>
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => addElement("ellipse")}>
+                <Circle className="h-4 w-4" /> Elipse
+              </Button>
               <Button
                 variant="outline" size="sm" className="gap-2"
                 onClick={() => logoInputRef.current?.click()}
@@ -590,6 +595,19 @@ export default function TemplateEditPage() {
                                 <div onMouseDown={(e) => handleResizeMouseDown(e, element.id)} style={{ position: "absolute", right: -4, bottom: -4, width: 8, height: 8, background: "white", border: "2px solid hsl(var(--primary))", borderRadius: 2, cursor: "se-resize", zIndex: 10 }} />
                               )}
                             </div>
+                          ) : element.type === "ellipse" ? (
+                            <div style={{ position: "relative" }}>
+                              <div style={{
+                                width: `${(element.lineWidth ?? 20) * SCALE / 10}px`,
+                                height: `${(element.lineHeight ?? 20) * SCALE / 10}px`,
+                                border: `${Math.max(1, (element.lineThickness ?? 0.5) * SCALE / 10)}px solid #333`,
+                                borderRadius: "50%",
+                                boxSizing: "border-box",
+                              }} />
+                              {selectedElement === element.id && (
+                                <div onMouseDown={(e) => handleResizeMouseDown(e, element.id)} style={{ position: "absolute", right: -4, bottom: -4, width: 8, height: 8, background: "white", border: "2px solid hsl(var(--primary))", borderRadius: 2, cursor: "se-resize", zIndex: 10 }} />
+                              )}
+                            </div>
                           ) : element.type === "image" && element.imageUrl ? (
                             <div style={{ position: "relative" }}>
                               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -664,9 +682,11 @@ export default function TemplateEditPage() {
                 </div>
               )}
 
-              {(selectedElementData.type === "line" || selectedElementData.type === "rect") && (
+              {(selectedElementData.type === "line" || selectedElementData.type === "rect" || selectedElementData.type === "ellipse") && (
                 <div className="space-y-3">
-                  <p className="text-xs font-medium text-muted-foreground">{selectedElementData.type === "line" ? "Línea" : "Rectángulo"}</p>
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {selectedElementData.type === "line" ? "Línea" : selectedElementData.type === "ellipse" ? "Elipse / Círculo" : "Rectángulo"}
+                  </p>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="mb-1 block text-[10px] text-muted-foreground">Ancho (mm)</label>
@@ -676,10 +696,10 @@ export default function TemplateEditPage() {
                         min={1}
                       />
                     </div>
-                    {selectedElementData.type === "rect" && (
+                    {(selectedElementData.type === "rect" || selectedElementData.type === "ellipse") && (
                       <div>
                         <label className="mb-1 block text-[10px] text-muted-foreground">Alto (mm)</label>
-                        <input type="number" value={selectedElementData.lineHeight ?? 10}
+                        <input type="number" value={selectedElementData.lineHeight ?? 20}
                           onChange={(e) => updateElement(selectedElementData.id, { lineHeight: Number(e.target.value) })}
                           className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                           min={1}
@@ -736,7 +756,7 @@ export default function TemplateEditPage() {
                 </div>
               )}
 
-              {selectedElementData.type !== "image" && selectedElementData.type !== "serial" && selectedElementData.type !== "line" && selectedElementData.type !== "rect" && (
+              {selectedElementData.type !== "image" && selectedElementData.type !== "serial" && selectedElementData.type !== "line" && selectedElementData.type !== "rect" && selectedElementData.type !== "ellipse" && (
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Contenido / Variable</label>
                   <input
@@ -849,7 +869,7 @@ export default function TemplateEditPage() {
                     </div>
                   </div>
                 </div>
-              ) : selectedElementData.type !== "serial" && selectedElementData.type !== "line" && selectedElementData.type !== "rect" ? (
+              ) : selectedElementData.type !== "serial" && selectedElementData.type !== "line" && selectedElementData.type !== "rect" && selectedElementData.type !== "ellipse" ? (
                 <>
                   <div>
                     <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Tamaño de fuente (px)</label>
