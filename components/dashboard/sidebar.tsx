@@ -15,7 +15,9 @@ import {
   Tag,
   PrinterCheck,
   LogOut,
+  HelpCircle,
 } from "lucide-react"
+import { TrialBanner } from "./trial-banner"
 
 const navigation = [
   { name: "Panel", href: "/dashboard", icon: LayoutDashboard },
@@ -25,6 +27,7 @@ const navigation = [
   { name: "Trabajos", href: "/jobs", icon: Printer },
   { name: "Historial", href: "/history", icon: Clock },
   { name: "Configuración", href: "/settings", icon: Settings },
+  { name: "Ayuda", href: "/ayuda", icon: HelpCircle },
 ]
 
 function getInitials(name: string, email: string): string {
@@ -98,6 +101,8 @@ export function Sidebar() {
           )
         })}
       </nav>
+
+      <TrialBanner />
 
       <div className="border-t border-sidebar-border p-4">
         <div className="flex items-center gap-3">
