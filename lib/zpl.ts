@@ -77,6 +77,24 @@ function buildLabelZpl(
 
     } else if (el.type === "image") {
       fields.push(`^FO${x},${y}^A0N,14,10^FD[logo]^FS`)
+
+    } else if (el.type === "line") {
+      const lw = mmToDots(el.lineWidth ?? 30)
+      const thickness = mmToDots(el.lineThickness ?? 0.5)
+      // ^GB width, height, thickness — for a horizontal line height=thickness
+      fields.push(`^FO${x},${y}^GB${lw},${thickness},${thickness}^FS`)
+
+    } else if (el.type === "rect") {
+      const rw = mmToDots(el.lineWidth ?? 20)
+      const rh = mmToDots(el.lineHeight ?? 10)
+      const thickness = mmToDots(el.lineThickness ?? 0.5)
+      fields.push(`^FO${x},${y}^GB${rw},${rh},${thickness}^FS`)
+
+    } else if (el.type === "ellipse") {
+      const ew = mmToDots(el.lineWidth ?? 20)
+      const eh = mmToDots(el.lineHeight ?? 20)
+      const thickness = mmToDots(el.lineThickness ?? 0.5)
+      fields.push(`^FO${x},${y}^GE${ew},${eh},${thickness},B^FS`)
     }
   }
 
