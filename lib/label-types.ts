@@ -1,6 +1,6 @@
 // Shared label element types used across editor, preview and ZPL generator
 
-export type ElementType = "text" | "qr" | "barcode" | "image" | "serial"
+export type ElementType = "text" | "qr" | "barcode" | "image" | "serial" | "line" | "rect" | "ellipse"
 export type BarcodeType = "code128" | "ean13" | "ean8" | "code39" | "datamatrix"
 
 export interface LabelElement {
@@ -23,6 +23,10 @@ export interface LabelElement {
   serialDigits?: number
   serialPrefix?: string
   serialSuffix?: string
+  // line / rect
+  lineWidth?: number     // mm — total width of the shape
+  lineHeight?: number    // mm — height (use ~0.5 for a thin line)
+  lineThickness?: number // mm — border thickness (rect only)
 }
 
 export interface CanvasData {
