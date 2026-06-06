@@ -285,6 +285,13 @@ export default function JobDetailPage() {
         <div className="flex items-center gap-2">
           {rows.length > 0 && template && (
             <div className="flex items-center gap-2">
+              <Link
+                href={`/preview?jobId=${jobId}`}
+                className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-1.5 text-sm text-muted-foreground hover:border-primary hover:text-foreground transition-colors"
+              >
+                <ImageIcon className="h-4 w-4" />
+                Vista previa
+              </Link>
               <div className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1">
                 <span className="text-xs text-muted-foreground">Desde etiqueta</span>
                 <input
