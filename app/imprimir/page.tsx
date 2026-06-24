@@ -7,6 +7,8 @@ import { Header } from "@/components/dashboard/header"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
 import { generateZPL, downloadZPL } from "@/lib/zpl"
+import { sendToPrinterAgent } from "@/lib/printer-agent-client"
+import { PrinterAgentStatus } from "@/components/printer/agent-status"
 import type { CanvasData } from "@/lib/label-types"
 import {
   Plus,
@@ -16,6 +18,7 @@ import {
   ChevronRight,
   ChevronLeft,
   CheckCircle2,
+  XCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -45,6 +48,11 @@ export default function ImprimirPage() {
   const [saving, setSaving] = useState(false)
   const [loadingTemplates, setLoadingTemplates] = useState(true)
 
+  // Printer agent state
+  const [agentOnline, setAgentOnline] = useState(false)
+  const [printing, setPrinting] = useState(false)
+  const [printResult, setPrintResult] = useState<{ ok: boolean; message: string } | null>(null)
+
   useEffect(() => {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -63,7 +71,6 @@ export default function ImprimirPage() {
 
   const selectTemplate = (tmpl: Template) => {
     setSelectedTemplate(tmpl)
-    // Start with one empty row
     const emptyRow: DataRow = {
       id: Date.now().toString(),
       data: Object.fromEntries((tmpl.variables ?? []).map((v) => [v, ""])),
@@ -85,27 +92,42 @@ export default function ImprimirPage() {
     ])
   }
 
-  const removeRow = (id: string) => {
-    setRows((prev) => prev.filter((r) => r.id !== id))
-  }
+  const removeRow = (id: string) => setRows((prev) => prev.filter((r) => r.id !== id))
 
-  const updateCell = (rowId: string, key: string, value: string) => {
+  const updateCell = (rowId: string, key: string, value: string) =>
     setRows((prev) => prev.map((r) => r.id === rowId ? { ...r, data: { ...r.data, [key]: value } } : r))
-  }
 
-  const updateQty = (rowId: string, qty: number) => {
+  const updateQty = (rowId: string, qty: number) =>
     setRows((prev) => prev.map((r) => r.id === rowId ? { ...r, quantity: Math.max(1, qty) } : r))
-  }
 
   const totalLabels = rows.reduce((sum, r) => sum + r.quantity, 0)
 
-  const handleDownloadZPL = () => {
-    if (!selectedTemplate) return
-    const zpl = generateZPL(
+  const buildZPL = () => {
+    if (!selectedTemplate) return ""
+    return generateZPL(
       { width_mm: selectedTemplate.width_mm, height_mm: selectedTemplate.height_mm, canvas_data: selectedTemplate.canvas_data },
       rows.map((r) => ({ row_data: r.data, quantity: r.quantity }))
     )
-    downloadZPL(zpl, `${selectedTemplate.name}.zpl`)
+  }
+
+  const handleDownloadZPL = () => {
+    const zpl = buildZPL()
+    if (zpl && selectedTemplate) downloadZPL(zpl, `${selectedTemplate.name}.zpl`)
+  }
+
+  const handlePrintNow = async () => {
+    const zpl = buildZPL()
+    if (!zpl) return
+    setPrinting(true)
+    setPrintResult(null)
+    try {
+      const result = await sendToPrinterAgent(zpl, "zpl")
+      setPrintResult({ ok: true, message: result.message })
+    } catch (err) {
+      setPrintResult({ ok: false, message: (err as Error).message })
+    } finally {
+      setPrinting(false)
+    }
   }
 
   const handleSaveJob = async () => {
@@ -143,7 +165,7 @@ export default function ImprimirPage() {
     <DashboardLayout>
       <Header
         title="Imprimir etiquetas"
-        description="Cargá los datos a mano y descargá el archivo ZPL listo para imprimir"
+        description="Cargá los datos a mano e imprimí directo o descargá el ZPL"
       />
 
       <div className="p-6 space-y-6">
@@ -283,11 +305,7 @@ export default function ImprimirPage() {
               <Button variant="outline" size="sm" className="gap-2" onClick={addRow}>
                 <Plus className="h-4 w-4" /> Agregar fila
               </Button>
-              <Button
-                className="gap-2"
-                onClick={() => setStep(3)}
-                disabled={rows.length === 0}
-              >
+              <Button className="gap-2" onClick={() => setStep(3)} disabled={rows.length === 0}>
                 Continuar
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -347,14 +365,46 @@ export default function ImprimirPage() {
                 </table>
               </div>
 
+              {/* Printer agent status */}
+              <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Agente de impresión</p>
+                <PrinterAgentStatus onStatusChange={(online) => setAgentOnline(online)} />
+              </div>
+
+              {/* Print result */}
+              {printResult && (
+                <div className={cn(
+                  "flex items-center gap-3 rounded-lg border p-3 text-sm",
+                  printResult.ok
+                    ? "border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-400"
+                    : "border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400"
+                )}>
+                  {printResult.ok
+                    ? <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    : <XCircle className="h-4 w-4 shrink-0" />}
+                  {printResult.message}
+                  <button onClick={() => setPrintResult(null)} className="ml-auto opacity-60 hover:opacity-100">×</button>
+                </div>
+              )}
+
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button
                   size="lg"
                   className="gap-2 flex-1"
+                  onClick={handlePrintNow}
+                  disabled={!agentOnline || printing}
+                >
+                  <Printer className="h-5 w-5" />
+                  {printing ? "Enviando a impresora..." : `Imprimir ahora · ${totalLabels} etiquetas`}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="gap-2"
                   onClick={handleDownloadZPL}
                 >
                   <Download className="h-5 w-5" />
-                  Descargar ZPL e imprimir
+                  Descargar ZPL
                 </Button>
                 <Button
                   variant="outline"
@@ -363,14 +413,9 @@ export default function ImprimirPage() {
                   onClick={handleSaveJob}
                   disabled={saving}
                 >
-                  <Printer className="h-5 w-5" />
-                  {saving ? "Guardando..." : "Guardar como trabajo"}
+                  {saving ? "Guardando..." : "Guardar trabajo"}
                 </Button>
               </div>
-
-              <p className="text-xs text-muted-foreground text-center">
-                Abrí el archivo .zpl con tu software de impresora (BarTender, ZebraDesigner, o imprimí directo desde USB/red)
-              </p>
             </div>
           </div>
         )}
