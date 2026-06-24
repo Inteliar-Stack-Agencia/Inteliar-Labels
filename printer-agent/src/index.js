@@ -1,23 +1,24 @@
 import express from 'express';
 import cors from 'cors';
 import net from 'net';
+import { exec } from 'child_process';
+import { writeFileSync, unlinkSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 /**
  * Inteliar Printer Agent
  * Local bridge between the SaaS and thermal printers.
- *
- * Based on labelctl (mherrera53/labelctl) architecture:
- * - HTTP API on port 9638
- * - Receives ZPL or TSPL2 commands
- * - Sends to printer via TCP (network) or simulation mode
- * - Supports Honeywell PC42, TSC, Zebra printers
+ * Supports: TCP/IP (network) and USB (Windows Spooler)
  */
 
 const app = express();
 const PORT = process.env.AGENT_PORT || 9638;
 
+const PRINTER_TYPE = process.env.PRINTER_TYPE || 'tcp'; // 'tcp' | 'usb'
 const PRINTER_IP = process.env.PRINTER_IP || '127.0.0.1';
 const PRINTER_PORT = parseInt(process.env.PRINTER_PORT || '9100', 10);
+const PRINTER_NAME = process.env.PRINTER_NAME || 'Honeywell PC42t plus (203 dpi)';
 const SIMULATE = process.env.SIMULATE !== 'false'; // true by default in dev
 
 app.use(cors());
@@ -31,7 +32,13 @@ app.get('/status', (req, res) => {
   res.json({
     service: 'inteliar-printer-agent',
     status: 'running',
-    printer: { ip: PRINTER_IP, port: PRINTER_PORT, simulate: SIMULATE },
+    printer: {
+      type: PRINTER_TYPE,
+      ip: PRINTER_TYPE === 'tcp' ? PRINTER_IP : null,
+      port: PRINTER_TYPE === 'tcp' ? PRINTER_PORT : null,
+      name: PRINTER_TYPE === 'usb' ? PRINTER_NAME : null,
+      simulate: SIMULATE
+    },
     stats: { totalJobs: printCount, lastJob: lastPrintJob }
   });
 });
@@ -58,43 +65,34 @@ app.post('/print', async (req, res) => {
 
   try {
     if (SIMULATE) {
-      console.log(`[Agent] SIMULATION - ${labelCount} labels processed`);
+      console.log(`[Agent] SIMULATION - ${labelCount} labels`);
       console.log(`[Agent] Preview (first 500 chars):\n${data.substring(0, 500)}`);
 
-      lastPrintJob = {
-        timestamp: new Date().toISOString(),
-        labels: labelCount,
-        mode: 'simulate',
-        format,
-        bytes: data.length,
-        status: 'ok'
-      };
+      lastPrintJob = { timestamp: new Date().toISOString(), labels: labelCount, mode: 'simulate', format, bytes: data.length, status: 'ok' };
       printCount++;
       printLog.push(lastPrintJob);
 
-      return res.json({
-        success: true,
-        message: `Simulacion OK: ${labelCount} etiquetas (${format.toUpperCase()})`,
-        labels: labelCount,
-        mode: 'simulate',
-        format
-      });
+      return res.json({ success: true, message: `Simulacion OK: ${labelCount} etiquetas (${format.toUpperCase()})`, labels: labelCount, mode: 'simulate', format });
     }
 
     let printData = data;
     if (format === 'tspl') {
-      const tsplInit = '\x1b!R\r\nSET CUTTER OFF\r\n';
-      printData = tsplInit + data;
+      printData = '\x1b!R\r\nSET CUTTER OFF\r\n' + data;
     }
 
-    await sendToPrinter(printData);
+    const mode = PRINTER_TYPE === 'usb' ? 'usb' : 'tcp';
+    if (PRINTER_TYPE === 'usb') {
+      await sendToWindowsPrinter(printData, PRINTER_NAME);
+    } else {
+      await sendToTCP(printData);
+    }
 
     lastPrintJob = {
       timestamp: new Date().toISOString(),
       labels: labelCount,
-      mode: 'tcp',
+      mode,
       format,
-      printer: `${PRINTER_IP}:${PRINTER_PORT}`,
+      printer: PRINTER_TYPE === 'usb' ? PRINTER_NAME : `${PRINTER_IP}:${PRINTER_PORT}`,
       bytes: printData.length,
       status: 'ok'
     };
@@ -103,28 +101,17 @@ app.post('/print', async (req, res) => {
 
     res.json({
       success: true,
-      message: `Impreso: ${labelCount} etiquetas en ${PRINTER_IP}:${PRINTER_PORT} (${format.toUpperCase()})`,
+      message: `Impreso: ${labelCount} etiquetas (${format.toUpperCase()}) via ${mode.toUpperCase()}`,
       labels: labelCount,
-      mode: 'tcp',
+      mode,
       format
     });
   } catch (err) {
     console.error(`[Agent] Print error:`, err.message);
-    lastPrintJob = {
-      timestamp: new Date().toISOString(),
-      labels: labelCount,
-      format,
-      status: 'error',
-      error: err.message
-    };
+    lastPrintJob = { timestamp: new Date().toISOString(), labels: labelCount, format, status: 'error', error: err.message };
     printLog.push(lastPrintJob);
 
-    res.status(500).json({
-      success: false,
-      message: `Error de impresion: ${err.message}`,
-      labels: labelCount,
-      format
-    });
+    res.status(500).json({ success: false, message: `Error de impresion: ${err.message}`, labels: labelCount, format });
   }
 });
 
@@ -132,8 +119,79 @@ app.get('/log', (req, res) => {
   res.json(printLog.slice(-100).reverse());
 });
 
-// TCP printer communication (from labelctl batch.go networkRawPrint)
-function sendToPrinter(data) {
+// USB: send raw ZPL/TSPL to a Windows printer by name (no sharing required)
+function sendToWindowsPrinter(data, printerName) {
+  return new Promise((resolve, reject) => {
+    const tmpFile = join(tmpdir(), `inteliar_${Date.now()}.zpl`);
+    writeFileSync(tmpFile, data, 'binary');
+
+    const escaped = tmpFile.replace(/\\/g, '\\\\');
+    const printerEscaped = printerName.replace(/'/g, "''");
+
+    const psScript = `
+$bytes = [System.IO.File]::ReadAllBytes('${escaped}')
+$pName = '${printerEscaped}'
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public class WinSpool {
+    [DllImport("winspool.drv",CharSet=CharSet.Ansi,SetLastError=true)]
+    public static extern bool OpenPrinter(string n,out IntPtr h,IntPtr d);
+    [DllImport("winspool.drv",SetLastError=true)]
+    public static extern bool ClosePrinter(IntPtr h);
+    [DllImport("winspool.drv",CharSet=CharSet.Ansi,SetLastError=true)]
+    public static extern int StartDocPrinter(IntPtr h,int l,ref DOCINFO d);
+    [DllImport("winspool.drv",SetLastError=true)]
+    public static extern bool EndDocPrinter(IntPtr h);
+    [DllImport("winspool.drv",SetLastError=true)]
+    public static extern bool StartPagePrinter(IntPtr h);
+    [DllImport("winspool.drv",SetLastError=true)]
+    public static extern bool EndPagePrinter(IntPtr h);
+    [DllImport("winspool.drv",SetLastError=true)]
+    public static extern bool WritePrinter(IntPtr h,IntPtr b,int c,out int w);
+    [StructLayout(LayoutKind.Sequential,CharSet=CharSet.Ansi)]
+    public struct DOCINFO {
+        [MarshalAs(UnmanagedType.LPStr)] public string pDocName;
+        [MarshalAs(UnmanagedType.LPStr)] public string pOutputFile;
+        [MarshalAs(UnmanagedType.LPStr)] public string pDataType;
+    }
+}
+"@
+$h = [IntPtr]::Zero
+if (-not [WinSpool]::OpenPrinter($pName, [ref]$h, [IntPtr]::Zero)) { throw "No se pudo abrir la impresora: $pName" }
+$di = New-Object WinSpool+DOCINFO
+$di.pDocName = 'InteliarLabel'
+$di.pDataType = 'RAW'
+[WinSpool]::StartDocPrinter($h, 1, [ref]$di) | Out-Null
+[WinSpool]::StartPagePrinter($h) | Out-Null
+$ptr = [System.Runtime.InteropServices.Marshal]::AllocHGlobal($bytes.Length)
+[System.Runtime.InteropServices.Marshal]::Copy($bytes, 0, $ptr, $bytes.Length)
+$written = 0
+[WinSpool]::WritePrinter($h, $ptr, $bytes.Length, [ref]$written) | Out-Null
+[System.Runtime.InteropServices.Marshal]::FreeHGlobal($ptr)
+[WinSpool]::EndPagePrinter($h) | Out-Null
+[WinSpool]::EndDocPrinter($h) | Out-Null
+[WinSpool]::ClosePrinter($h) | Out-Null
+Write-Output "OK: $written bytes enviados a $pName"
+`;
+
+    exec(`powershell -NoProfile -ExecutionPolicy Bypass -Command "${psScript.replace(/"/g, '\\"')}"`,
+      { timeout: 15000 },
+      (err, stdout, stderr) => {
+        try { unlinkSync(tmpFile); } catch (_) {}
+        if (err) {
+          reject(new Error(`USB print failed: ${stderr || err.message}`));
+        } else {
+          console.log(`[Agent] USB print: ${stdout.trim()}`);
+          resolve();
+        }
+      }
+    );
+  });
+}
+
+// TCP: send raw ZPL/TSPL to network printer
+function sendToTCP(data) {
   return new Promise((resolve, reject) => {
     const client = new net.Socket();
     const timeout = setTimeout(() => {
@@ -143,23 +201,24 @@ function sendToPrinter(data) {
 
     client.connect(PRINTER_PORT, PRINTER_IP, () => {
       clearTimeout(timeout);
-      client.write(data, () => {
-        client.end();
-        resolve();
-      });
+      client.write(data, () => { client.end(); resolve(); });
     });
 
     client.on('error', (err) => {
       clearTimeout(timeout);
-      reject(new Error(`No se pudo conectar a ${PRINTER_IP}:${PRINTER_PORT} - ${err.message}`));
+      reject(new Error(`TCP error ${PRINTER_IP}:${PRINTER_PORT} - ${err.message}`));
     });
   });
 }
 
 app.listen(PORT, () => {
-  console.log(`[Printer Agent] Inteliar Printer Agent on http://localhost:${PORT}`);
+  console.log(`[Printer Agent] Running on http://localhost:${PORT}`);
   console.log(`[Printer Agent] Mode: ${SIMULATE ? 'SIMULATION' : 'PRODUCTION'}`);
   if (!SIMULATE) {
-    console.log(`[Printer Agent] Printer: ${PRINTER_IP}:${PRINTER_PORT}`);
+    if (PRINTER_TYPE === 'usb') {
+      console.log(`[Printer Agent] USB printer: ${PRINTER_NAME}`);
+    } else {
+      console.log(`[Printer Agent] TCP printer: ${PRINTER_IP}:${PRINTER_PORT}`);
+    }
   }
 });
