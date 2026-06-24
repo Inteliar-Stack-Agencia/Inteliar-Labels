@@ -4,7 +4,7 @@ import { resolveDateVars } from "./date-vars"
 
 const DOTS_PER_MM = 8 // 203 dpi ≈ 8 dots/mm
 // el.x, el.y, lineWidth, lineHeight, lineThickness, imgWidth, imgHeight
-// are stored in tenths-of-mm (0.1mm units) by the canvas editor (SCALE=3px/mm, stored as px*10/SCALE)
+// are stored in tenths-of-mm (0.1mm units) by the canvas editor (SCALE=3px/mm)
 const CANVAS_SCALE = 3 // screen px per mm — matches the editor's SCALE constant
 
 // Convert tenths-of-mm to printer dots
@@ -22,9 +22,14 @@ function fontSizeToDots(fontSize: number): number {
   return Math.round(fontSize * DOTS_PER_MM / CANVAS_SCALE)
 }
 
-// Allow spaces and any char inside {{ }} — user-defined variable names may have spaces
+// Substitute {{key}} tokens from data row.
+// Keys with spaces are supported. Tokens not found in row are kept as-is
+// so that resolveDateVars can handle date shortcuts like {{+3d}}, {{TODAY}}, etc.
 function substituteVars(text: string, row: Record<string, string>): string {
-  const withData = text.replace(/\{\{([^}]+)\}\}/g, (_, key) => row[key.trim()] ?? "")
+  const withData = text.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+    const trimmedKey = key.trim()
+    return trimmedKey in row ? (row[trimmedKey] ?? "") : match
+  })
   return resolveDateVars(withData)
 }
 
@@ -94,20 +99,20 @@ function buildLabelZpl(
       fields.push(`^FO${x},${y}^A0N,14,10^FD[logo]^FS`)
 
     } else if (el.type === "line") {
-      const lw = tenthMmToDots(el.lineWidth ?? (widthMm * 10 - 80)) // default: label width - 8mm
-      const thickness = Math.max(1, tenthMmToDots(el.lineThickness ?? 5)) // 0.5mm default
+      const lw = tenthMmToDots(el.lineWidth ?? (widthMm * 10 - 80))
+      const thickness = Math.max(1, tenthMmToDots(el.lineThickness ?? 5))
       fields.push(`^FO${x},${y}^GB${lw},${thickness},${thickness}^FS`)
 
     } else if (el.type === "rect") {
-      const rw = tenthMmToDots(el.lineWidth ?? 200)  // 20mm default
-      const rh = tenthMmToDots(el.lineHeight ?? 100) // 10mm default
-      const thickness = Math.max(1, tenthMmToDots(el.lineThickness ?? 5)) // 0.5mm default
+      const rw = tenthMmToDots(el.lineWidth ?? 200)
+      const rh = tenthMmToDots(el.lineHeight ?? 100)
+      const thickness = Math.max(1, tenthMmToDots(el.lineThickness ?? 5))
       fields.push(`^FO${x},${y}^GB${rw},${rh},${thickness}^FS`)
 
     } else if (el.type === "ellipse") {
-      const ew = tenthMmToDots(el.lineWidth ?? 200)  // 20mm default
-      const eh = tenthMmToDots(el.lineHeight ?? 200) // 20mm default
-      const thickness = Math.max(1, tenthMmToDots(el.lineThickness ?? 5)) // 0.5mm default
+      const ew = tenthMmToDots(el.lineWidth ?? 200)
+      const eh = tenthMmToDots(el.lineHeight ?? 200)
+      const thickness = Math.max(1, tenthMmToDots(el.lineThickness ?? 5))
       fields.push(`^FO${x},${y}^GE${ew},${eh},${thickness},B^FS`)
     }
   }
