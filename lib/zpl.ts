@@ -65,17 +65,28 @@ function buildLabelZpl(
     // el.x and el.y are in tenths-of-mm (0.1mm) — convert to printer dots
     const x = tenthMmToDots(el.x)
     const y = tenthMmToDots(el.y)
+    const align = el.textAlign ?? "left"
 
     if (el.type === "serial") {
       const val = serialValue(el, labelIndex)
-      fields.push(`^FO${x},${y}${fontSizeToZpl(el.fontSize)}^FD${val}^FS`)
+      if (align === "center" || align === "right") {
+        const justification = align === "center" ? "C" : "R"
+        fields.push(`^FO0,${y}^FB${w},1,0,${justification},0${fontSizeToZpl(el.fontSize)}^FD${val}^FS`)
+      } else {
+        fields.push(`^FO${x},${y}${fontSizeToZpl(el.fontSize)}^FD${val}^FS`)
+      }
       continue
     }
 
     const content = substituteVars(el.content, row)
 
     if (el.type === "text") {
-      fields.push(`^FO${x},${y}${fontSizeToZpl(el.fontSize)}^FD${content}^FS`)
+      if (align === "center" || align === "right") {
+        const justification = align === "center" ? "C" : "R"
+        fields.push(`^FO0,${y}^FB${w},1,0,${justification},0${fontSizeToZpl(el.fontSize)}^FD${content}^FS`)
+      } else {
+        fields.push(`^FO${x},${y}${fontSizeToZpl(el.fontSize)}^FD${content}^FS`)
+      }
 
     } else if (el.type === "barcode") {
       const barH = mmToDots(8)
