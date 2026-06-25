@@ -1,6 +1,6 @@
 {
   "name": "inteliar-printer-agent",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Agente local de impresion - Inteliar Labels",
   "main": "src/index.js",
