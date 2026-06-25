@@ -6,7 +6,7 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Header } from "@/components/dashboard/header"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
-import { generateZPL, downloadZPL } from "@/lib/zpl"
+import { generateZPL, downloadZPL, prepareImages } from "@/lib/zpl"
 import { sendToPrinterAgent } from "@/lib/printer-agent-client"
 import { PrinterAgentStatus } from "@/components/printer/agent-status"
 import type { CanvasData } from "@/lib/label-types"
@@ -102,21 +102,23 @@ export default function ImprimirPage() {
 
   const totalLabels = rows.reduce((sum, r) => sum + r.quantity, 0)
 
-  const buildZPL = () => {
+  const buildZPL = async () => {
     if (!selectedTemplate) return ""
+    const imageCache = await prepareImages(selectedTemplate.canvas_data)
     return generateZPL(
       { width_mm: selectedTemplate.width_mm, height_mm: selectedTemplate.height_mm, canvas_data: selectedTemplate.canvas_data },
-      rows.map((r) => ({ row_data: r.data, quantity: r.quantity }))
+      rows.map((r) => ({ row_data: r.data, quantity: r.quantity })),
+      { imageCache }
     )
   }
 
-  const handleDownloadZPL = () => {
-    const zpl = buildZPL()
+  const handleDownloadZPL = async () => {
+    const zpl = await buildZPL()
     if (zpl && selectedTemplate) downloadZPL(zpl, `${selectedTemplate.name}.zpl`)
   }
 
   const handlePrintNow = async () => {
-    const zpl = buildZPL()
+    const zpl = await buildZPL()
     if (!zpl) return
     setPrinting(true)
     setPrintResult(null)
