@@ -26,6 +26,9 @@ import {
   Minus,
   Square,
   Circle,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { LabelElement, ElementType, BarcodeType } from "@/lib/label-types"
@@ -210,12 +213,13 @@ export default function TemplateEditPage() {
     dragRef.current = { id, startX: e.clientX, startY: e.clientY, origX: el.x, origY: el.y }
 
     const onMouseMove = (ev: MouseEvent) => {
-      if (!dragRef.current) return
-      const dx = (ev.clientX - dragRef.current.startX) * 10 / SCALE
-      const dy = (ev.clientY - dragRef.current.startY) * 10 / SCALE
-      const newX = Math.max(0, Math.round(dragRef.current.origX + dx))
-      const newY = Math.max(0, Math.round(dragRef.current.origY + dy))
-      setElements((prev) => prev.map((el) => el.id === dragRef.current!.id ? { ...el, x: newX, y: newY } : el))
+      const drag = dragRef.current
+      if (!drag) return
+      const dx = (ev.clientX - drag.startX) * 10 / SCALE
+      const dy = (ev.clientY - drag.startY) * 10 / SCALE
+      const newX = Math.max(0, Math.round(drag.origX + dx))
+      const newY = Math.max(0, Math.round(drag.origY + dy))
+      setElements((prev) => prev.map((el) => el.id === drag.id ? { ...el, x: newX, y: newY } : el))
     }
 
     const onMouseUp = () => {
@@ -626,11 +630,12 @@ export default function TemplateEditPage() {
                               )}
                             </div>
                           ) : (
-                            <div className="flex items-center gap-1 px-1.5 py-1">
+                            <div className="flex items-center gap-1 px-1.5 py-1"
+                              style={element.textAlign && element.textAlign !== "left" ? { width: `${canvasW - element.x * SCALE / 10}px` } : undefined}>
                               <Icon className="h-3 w-3 text-gray-400 flex-shrink-0" />
                               <span
                                 className="text-gray-800"
-                                style={{ fontSize: `${element.fontSize}px`, fontWeight: element.bold ? "bold" : "normal" }}
+                                style={{ fontSize: `${element.fontSize}px`, fontWeight: element.bold ? "bold" : "normal", textAlign: element.textAlign || "left", display: "block", flex: 1 }}
                               >
                                 {element.type === "serial"
                                   ? `${element.serialPrefix ?? ""}${String(element.serialStart ?? 1).padStart(element.serialDigits ?? 4, "0")}${element.serialSuffix ?? ""}`
@@ -886,6 +891,22 @@ export default function TemplateEditPage() {
                         selectedElementData.bold ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary"
                       )}
                     >B</button>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Alineación</label>
+                    <div className="flex gap-1">
+                      {(["left", "center", "right"] as const).map((align) => {
+                        const Icon = align === "left" ? AlignLeft : align === "center" ? AlignCenter : AlignRight
+                        return (
+                          <button key={align} onClick={() => updateElement(selectedElementData.id, { textAlign: align })}
+                            className={cn("flex-1 flex items-center justify-center rounded border py-1.5 transition-colors",
+                              (selectedElementData.textAlign || "left") === align ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary"
+                            )}>
+                            <Icon className="h-3.5 w-3.5" />
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
                 </>
               ) : (
