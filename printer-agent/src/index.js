@@ -197,7 +197,7 @@ function sendToTCP(data) {
   });
 }
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log('');
   console.log('  ╔══════════════════════════════════════╗');
   console.log('  ║   Inteliar Printer Agent  v1.0       ║');
@@ -211,4 +211,23 @@ app.listen(PORT, () => {
   console.log('');
   console.log('  Agente listo. No cierres esta ventana.');
   console.log('');
+});
+
+server.on('error', (err) => {
+  console.log('');
+  if (err.code === 'EADDRINUSE') {
+    console.log('  ════════════════════════════════════════');
+    console.log(`  El agente YA ESTA CORRIENDO en el puerto ${PORT}.`);
+    console.log('  No necesitas abrirlo de nuevo: ya esta activo.');
+    console.log('');
+    console.log('  Si crees que es un error, cerra el otro agente');
+    console.log('  o reinicia la PC y volve a abrir este programa.');
+    console.log('  ════════════════════════════════════════');
+  } else {
+    console.log(`  Error al iniciar el agente: ${err.message}`);
+  }
+  console.log('');
+  console.log('  Presiona ENTER para cerrar...');
+  process.stdin.resume();
+  process.stdin.once('data', () => process.exit(1));
 });
