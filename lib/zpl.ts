@@ -2,19 +2,39 @@
 import type { LabelElement, CanvasData } from "./label-types"
 import { resolveDateVars } from "./date-vars"
 
-const DOTS_PER_MM = 8 // 203 dpi
+const DOTS_PER_MM = 8 // 203 dpi ≈ 8 dots/mm
+// el.x, el.y, lineWidth, lineHeight, lineThickness, imgWidth, imgHeight
+// are stored in tenths-of-mm (0.1mm units) by the canvas editor (SCALE=3px/mm)
+const CANVAS_SCALE = 3 // screen px per mm — matches the editor's SCALE constant
 
+// Convert tenths-of-mm to printer dots
+function tenthMmToDots(tenthMm: number): number {
+  return Math.round(tenthMm * DOTS_PER_MM / 10)
+}
+
+// Convert mm to printer dots (for fixed physical sizes like barcode height)
 function mmToDots(mm: number): number {
   return Math.round(mm * DOTS_PER_MM)
 }
 
+// fontSize is stored in screen pixels (displayed as ${fontSize}px in editor at CANVAS_SCALE px/mm)
+function fontSizeToDots(fontSize: number): number {
+  return Math.round(fontSize * DOTS_PER_MM / CANVAS_SCALE)
+}
+
+// Substitute {{key}} tokens from data row.
+// Keys with spaces are supported. Tokens not found in row are kept as-is
+// so that resolveDateVars can handle date shortcuts like {{+3d}}, {{TODAY}}, etc.
 function substituteVars(text: string, row: Record<string, string>): string {
-  const withData = text.replace(/\{\{(\w+)\}\}/g, (_, key) => row[key] ?? "")
+  const withData = text.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+    const trimmedKey = key.trim()
+    return trimmedKey in row ? (row[trimmedKey] ?? "") : match
+  })
   return resolveDateVars(withData)
 }
 
 function fontSizeToZpl(fontSize: number): string {
-  const h = Math.max(10, Math.round(fontSize * 3.5))
+  const h = Math.max(10, fontSizeToDots(fontSize))
   const w = Math.round(h * 0.6)
   return `^A0N,${h},${w}`
 }
@@ -42,19 +62,31 @@ function buildLabelZpl(
   const fields: string[] = []
 
   for (const el of canvasData.elements) {
-    const x = mmToDots(el.x)
-    const y = mmToDots(el.y)
+    // el.x and el.y are in tenths-of-mm (0.1mm) — convert to printer dots
+    const x = tenthMmToDots(el.x)
+    const y = tenthMmToDots(el.y)
+    const align = el.textAlign ?? "left"
 
     if (el.type === "serial") {
       const val = serialValue(el, labelIndex)
-      fields.push(`^FO${x},${y}${fontSizeToZpl(el.fontSize)}^FD${val}^FS`)
+      if (align === "center" || align === "right") {
+        const justification = align === "center" ? "C" : "R"
+        fields.push(`^FO0,${y}^FB${w},1,0,${justification},0${fontSizeToZpl(el.fontSize)}^FD${val}^FS`)
+      } else {
+        fields.push(`^FO${x},${y}${fontSizeToZpl(el.fontSize)}^FD${val}^FS`)
+      }
       continue
     }
 
     const content = substituteVars(el.content, row)
 
     if (el.type === "text") {
-      fields.push(`^FO${x},${y}${fontSizeToZpl(el.fontSize)}^FD${content}^FS`)
+      if (align === "center" || align === "right") {
+        const justification = align === "center" ? "C" : "R"
+        fields.push(`^FO0,${y}^FB${w},1,0,${justification},0${fontSizeToZpl(el.fontSize)}^FD${content}^FS`)
+      } else {
+        fields.push(`^FO${x},${y}${fontSizeToZpl(el.fontSize)}^FD${content}^FS`)
+      }
 
     } else if (el.type === "barcode") {
       const barH = mmToDots(8)
@@ -68,7 +100,6 @@ function buildLabelZpl(
       } else if (bt === "datamatrix") {
         fields.push(`^FO${x},${y}^BXN,4,200^FD${content}^FS`)
       } else {
-        // code128 default
         fields.push(`^FO${x},${y}^BCN,${barH},Y,N,N^FD${content || "000"}^FS`)
       }
 
@@ -79,21 +110,20 @@ function buildLabelZpl(
       fields.push(`^FO${x},${y}^A0N,14,10^FD[logo]^FS`)
 
     } else if (el.type === "line") {
-      const lw = mmToDots(el.lineWidth ?? 30)
-      const thickness = Math.max(1, mmToDots(el.lineThickness ?? 0.5))
-      // ^GB width, height, thickness — for a horizontal line height=thickness
+      const lw = tenthMmToDots(el.lineWidth ?? (widthMm * 10 - 80))
+      const thickness = Math.max(1, tenthMmToDots(el.lineThickness ?? 5))
       fields.push(`^FO${x},${y}^GB${lw},${thickness},${thickness}^FS`)
 
     } else if (el.type === "rect") {
-      const rw = mmToDots(el.lineWidth ?? 20)
-      const rh = mmToDots(el.lineHeight ?? 10)
-      const thickness = Math.max(1, mmToDots(el.lineThickness ?? 0.5))
+      const rw = tenthMmToDots(el.lineWidth ?? 200)
+      const rh = tenthMmToDots(el.lineHeight ?? 100)
+      const thickness = Math.max(1, tenthMmToDots(el.lineThickness ?? 5))
       fields.push(`^FO${x},${y}^GB${rw},${rh},${thickness}^FS`)
 
     } else if (el.type === "ellipse") {
-      const ew = mmToDots(el.lineWidth ?? 20)
-      const eh = mmToDots(el.lineHeight ?? 20)
-      const thickness = Math.max(1, mmToDots(el.lineThickness ?? 0.5))
+      const ew = tenthMmToDots(el.lineWidth ?? 200)
+      const eh = tenthMmToDots(el.lineHeight ?? 200)
+      const thickness = Math.max(1, tenthMmToDots(el.lineThickness ?? 5))
       fields.push(`^FO${x},${y}^GE${ew},${eh},${thickness},B^FS`)
     }
   }
@@ -124,7 +154,6 @@ export function generateZPL(
   const doCut = template.canvas_data.cutBetweenLabels !== false
   const startFrom = options.startFromLabel ?? 1
 
-  // Expand rows into flat label list
   const allLabels: Record<string, string>[] = []
   for (const { row_data, quantity } of rows) {
     for (let i = 0; i < Math.max(1, quantity); i++) {

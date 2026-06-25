@@ -1,0 +1,15 @@
+{
+  "name": "inteliar-printer-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Agente local de impresion - Bridge entre SaaS y impresora termica",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  }
+}

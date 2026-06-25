@@ -11,6 +11,7 @@ export interface LabelElement {
   y: number
   fontSize: number
   bold: boolean
+  textAlign?: "left" | "center" | "right"
   // image
   imageUrl?: string
   imgWidth?: number

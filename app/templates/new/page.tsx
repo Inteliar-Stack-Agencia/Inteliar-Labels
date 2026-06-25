@@ -27,6 +27,9 @@ import {
   Minus,
   Square,
   Circle,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { LabelElement, ElementType } from "@/lib/label-types"
@@ -569,7 +572,7 @@ export default function TemplateEditorPage() {
                               ? "border-primary bg-primary/10"
                               : "border-transparent hover:border-border"
                           )}
-                          style={{ left: `${element.x * SCALE / 10}px`, top: `${element.y * SCALE / 10}px` }}
+                          style={{ left: (element.textAlign === 'center' || element.textAlign === 'right') ? 0 : `${element.x * SCALE / 10}px`, top: `${element.y * SCALE / 10}px`, width: (element.textAlign === 'center' || element.textAlign === 'right') ? `${canvasW}px` : undefined }}
                         >
                           {selectedElement === element.id && (
                             <div className="absolute -top-5 left-0 flex items-center gap-1 rounded-t bg-primary px-1.5 py-0.5 text-[9px] font-medium text-primary-foreground whitespace-nowrap">
@@ -636,7 +639,7 @@ export default function TemplateEditorPage() {
                               <Icon className="h-3 w-3 text-gray-400 flex-shrink-0" />
                               <span
                                 className="text-gray-800"
-                                style={{ fontSize: `${element.fontSize}px`, fontWeight: element.bold ? "bold" : "normal" }}
+                                style={{ fontSize: `${element.fontSize}px`, fontWeight: element.bold ? "bold" : "normal", textAlign: element.textAlign || 'left', display: 'block', width: '100%' }}
                               >
                                 {element.type === "serial"
                                   ? `${element.serialPrefix ?? ""}${String(element.serialStart ?? 1).padStart(element.serialDigits ?? 4, "0")}${element.serialSuffix ?? ""}`
@@ -653,7 +656,7 @@ export default function TemplateEditorPage() {
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="text-center">
                           <Plus className="mx-auto h-6 w-6 text-gray-300" />
-                          <p className="mt-1 text-xs text-gray-400">Agregá elementos</p>
+                          <p className="mt-1 text-xs text-gray-400">Agregá elementos</p>
                         </div>
                       </div>
                     )}
@@ -907,6 +910,22 @@ export default function TemplateEditorPage() {
                         selectedElementData.bold ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary"
                       )}
                     >B</button>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Alineación</label>
+                    <div className="flex gap-1">
+                      {(["left", "center", "right"] as const).map((align) => {
+                        const Icon = align === "left" ? AlignLeft : align === "center" ? AlignCenter : AlignRight
+                        return (
+                          <button key={align} onClick={() => updateElement(selectedElementData.id, { textAlign: align })}
+                            className={cn("flex-1 flex items-center justify-center rounded border py-1.5 transition-colors",
+                              (selectedElementData.textAlign || "left") === align ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary"
+                            )}>
+                            <Icon className="h-3.5 w-3.5" />
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
                 </>
               ) : (

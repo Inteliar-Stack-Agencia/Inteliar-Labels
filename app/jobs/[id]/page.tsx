@@ -15,11 +15,12 @@ import {
   Type,
   QrCode,
   Barcode,
-  ImageIcon,
   Printer,
   Download,
 } from "lucide-react"
 import { generateZPL, downloadZPL, type GenerateZPLOptions } from "@/lib/zpl"
+import { sendToPrinterAgent } from "@/lib/printer-agent-client"
+import { PrinterAgentStatus } from "@/components/printer/agent-status"
 import { cn } from "@/lib/utils"
 
 interface LabelElement {
@@ -75,7 +76,6 @@ function LabelPreview({
       className="relative shrink-0 border border-border bg-white shadow-sm"
       style={{ width: w, height: h }}
     >
-      {/* Grid */}
       <div
         className="absolute inset-0 opacity-5"
         style={{
@@ -156,6 +156,11 @@ export default function JobDetailPage() {
   const [generatingZpl, setGeneratingZpl] = useState(false)
   const [startFromLabel, setStartFromLabel] = useState(1)
 
+  // Printer agent state
+  const [agentOnline, setAgentOnline] = useState(false)
+  const [printing, setPrinting] = useState(false)
+  const [printResult, setPrintResult] = useState<{ ok: boolean; message: string } | null>(null)
+
   useEffect(() => {
     const load = async () => {
       const { data: jobData, error } = await supabase
@@ -167,7 +172,6 @@ export default function JobDetailPage() {
       if (error || !jobData) { setNotFound(true); setLoading(false); return }
       setJob(jobData as PrintJob)
 
-      // Load template
       if (jobData.template_id) {
         const { data: tmpl } = await supabase
           .from("templates")
@@ -177,7 +181,6 @@ export default function JobDetailPage() {
         if (tmpl) setTemplate(tmpl as Template)
       }
 
-      // Load rows from print_job_rows if exists, else generate placeholder rows
       const { data: rowData } = await supabase
         .from("print_job_rows")
         .select("row_data, quantity")
@@ -187,7 +190,6 @@ export default function JobDetailPage() {
       if (rowData && rowData.length > 0) {
         setRows(rowData.map((r) => ({ row_data: r.row_data as Record<string, string>, quantity: r.quantity ?? 1 })))
       } else {
-        // Generate placeholder preview rows from template variables
         const { data: tmpl } = await supabase
           .from("templates")
           .select("variables")
@@ -211,20 +213,41 @@ export default function JobDetailPage() {
     setGeneratingZpl(true)
     try {
       const zpl = generateZPL(
-        {
-          width_mm: template.width_mm,
-          height_mm: template.height_mm,
-          canvas_data: template.canvas_data,
-        },
+        { width_mm: template.width_mm, height_mm: template.height_mm, canvas_data: template.canvas_data },
         rows,
         opts
       )
-      const suffix = opts.startFromLabel && opts.startFromLabel > 1
-        ? `-desde-${opts.startFromLabel}`
-        : ""
+      const suffix = opts.startFromLabel && opts.startFromLabel > 1 ? `-desde-${opts.startFromLabel}` : ""
       downloadZPL(zpl, `${job?.name ?? "etiquetas"}${suffix}.zpl`)
     } finally {
       setGeneratingZpl(false)
+    }
+  }
+
+  async function handlePrintNow() {
+    if (!template || rows.length === 0) return
+    setPrinting(true)
+    setPrintResult(null)
+    try {
+      const zpl = generateZPL(
+        { width_mm: template.width_mm, height_mm: template.height_mm, canvas_data: template.canvas_data },
+        rows,
+        { startFromLabel }
+      )
+      const result = await sendToPrinterAgent(zpl, "zpl")
+      setPrintResult({ ok: true, message: result.message })
+      // Auto-mark as completed on successful print
+      if (job?.status === "pending") {
+        await supabase
+          .from("print_jobs")
+          .update({ status: "completed", printed_labels: job.total_labels, completed_at: new Date().toISOString() })
+          .eq("id", jobId)
+        setJob((prev) => prev ? { ...prev, status: "completed", printed_labels: prev.total_labels } : prev)
+      }
+    } catch (err) {
+      setPrintResult({ ok: false, message: (err as Error).message })
+    } finally {
+      setPrinting(false)
     }
   }
 
@@ -232,11 +255,7 @@ export default function JobDetailPage() {
     setMarkingDone(true)
     await supabase
       .from("print_jobs")
-      .update({
-        status: "completed",
-        printed_labels: job?.total_labels ?? 0,
-        completed_at: new Date().toISOString(),
-      })
+      .update({ status: "completed", printed_labels: job?.total_labels ?? 0, completed_at: new Date().toISOString() })
       .eq("id", jobId)
     setJob((prev) => prev ? { ...prev, status: "completed", printed_labels: prev.total_labels } : prev)
     setMarkingDone(false)
@@ -266,11 +285,12 @@ export default function JobDetailPage() {
   const status = statusConfig[job.status] ?? statusConfig.pending
   const StatusIcon = status.icon
   const previewRows = rows.slice(0, visibleCount)
+  const canPrint = rows.length > 0 && !!template
 
   return (
     <DashboardLayout>
       {/* Top bar */}
-      <div className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
+      <div className="flex h-auto min-h-16 flex-wrap items-center justify-between gap-3 border-b border-border bg-card px-6 py-3">
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.push("/jobs")}
@@ -282,9 +302,15 @@ export default function JobDetailPage() {
           <div className="h-6 w-px bg-border" />
           <h1 className="text-lg font-semibold">{job.name}</h1>
         </div>
-        <div className="flex items-center gap-2">
-          {rows.length > 0 && template && (
-            <div className="flex items-center gap-2">
+
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Printer agent status */}
+          <PrinterAgentStatus
+            onStatusChange={(online) => setAgentOnline(online)}
+          />
+
+          {canPrint && (
+            <>
               <div className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1">
                 <span className="text-xs text-muted-foreground">Desde etiqueta</span>
                 <input
@@ -306,16 +332,42 @@ export default function JobDetailPage() {
                 <Download className="h-4 w-4" />
                 {generatingZpl ? "Generando..." : "Descargar ZPL"}
               </Button>
-            </div>
+              <Button
+                size="sm"
+                className="gap-2"
+                onClick={handlePrintNow}
+                disabled={!agentOnline || printing}
+              >
+                <Printer className="h-4 w-4" />
+                {printing ? "Enviando..." : "Imprimir ahora"}
+              </Button>
+            </>
           )}
+
           {job.status === "pending" && (
-            <Button size="sm" className="gap-2" onClick={markCompleted} disabled={markingDone}>
-              <Printer className="h-4 w-4" />
-              {markingDone ? "Guardando..." : "Marcar como impreso"}
+            <Button variant="outline" size="sm" className="gap-2" onClick={markCompleted} disabled={markingDone}>
+              <CheckCircle2 className="h-4 w-4" />
+              {markingDone ? "Guardando..." : "Marcar impreso"}
             </Button>
           )}
         </div>
       </div>
+
+      {/* Print result banner */}
+      {printResult && (
+        <div className={cn(
+          "flex items-center gap-3 border-b px-6 py-3 text-sm",
+          printResult.ok
+            ? "border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-400"
+            : "border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400"
+        )}>
+          {printResult.ok ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <XCircle className="h-4 w-4 shrink-0" />}
+          {printResult.message}
+          <button onClick={() => setPrintResult(null)} className="ml-auto opacity-60 hover:opacity-100">
+            ×
+          </button>
+        </div>
+      )}
 
       <div className="p-6 space-y-6">
         {/* Info cards */}
