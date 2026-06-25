@@ -568,7 +568,11 @@ export default function TemplateEditPage() {
                               ? "border-primary bg-primary/10"
                               : "border-transparent hover:border-border"
                           )}
-                          style={{ left: `${element.x * SCALE / 10}px`, top: `${element.y * SCALE / 10}px` }}
+                          style={
+                            element.type === "text" && element.textAlign && element.textAlign !== "left"
+                              ? { left: 0, top: `${element.y * SCALE / 10}px`, width: `${canvasW}px` }
+                              : { left: `${element.x * SCALE / 10}px`, top: `${element.y * SCALE / 10}px` }
+                          }
                         >
                           {selectedElement === element.id && (
                             <div className="absolute -top-5 left-0 flex items-center gap-1 rounded-t bg-primary px-1.5 py-0.5 text-[9px] font-medium text-primary-foreground whitespace-nowrap">
@@ -630,8 +634,7 @@ export default function TemplateEditPage() {
                               )}
                             </div>
                           ) : (
-                            <div className="flex items-center gap-1 px-1.5 py-1"
-                              style={element.textAlign && element.textAlign !== "left" ? { width: `${canvasW - element.x * SCALE / 10}px` } : undefined}>
+                            <div className="flex items-center gap-1 px-1.5 py-1" style={{ width: "100%" }}>
                               <Icon className="h-3 w-3 text-gray-400 flex-shrink-0" />
                               <span
                                 className="text-gray-800"
