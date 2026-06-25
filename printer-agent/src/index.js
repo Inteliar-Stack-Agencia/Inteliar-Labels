@@ -1,20 +1,37 @@
-import express from 'express';
-import cors from 'cors';
-import net from 'net';
-import { exec } from 'child_process';
-import { writeFileSync, unlinkSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
+const express = require('express');
+const cors = require('cors');
+const net = require('net');
+const { exec } = require('child_process');
+const { writeFileSync, unlinkSync, existsSync, readFileSync } = require('fs');
+const { tmpdir } = require('os');
+const { join, dirname } = require('path');
+
+// Read config from config.json next to the exe (or in cwd for dev)
+function loadConfig() {
+  const locations = [
+    join(dirname(process.execPath), 'config.json'),
+    join(process.cwd(), 'config.json'),
+  ];
+  for (const loc of locations) {
+    if (existsSync(loc)) {
+      try { return JSON.parse(readFileSync(loc, 'utf8')); } catch (_) {}
+    }
+  }
+  return {};
+}
+
+const cfg = loadConfig();
+
+const PORT        = cfg.agentPort    || process.env.AGENT_PORT    || 9638;
+const PRINTER_TYPE  = cfg.printerType  || process.env.PRINTER_TYPE  || 'usb';
+const PRINTER_IP    = cfg.printerIp    || process.env.PRINTER_IP    || '127.0.0.1';
+const PRINTER_PORT  = cfg.printerPort  || process.env.PRINTER_PORT  || 9100;
+const PRINTER_NAME  = cfg.printerName  || process.env.PRINTER_NAME  || 'Honeywell PC42t plus (203 dpi)';
+const SIMULATE      = cfg.simulate !== undefined
+  ? cfg.simulate
+  : process.env.SIMULATE !== 'false';
 
 const app = express();
-const PORT = process.env.AGENT_PORT || 9638;
-
-const PRINTER_TYPE = process.env.PRINTER_TYPE || 'tcp'; // 'tcp' | 'usb'
-const PRINTER_IP = process.env.PRINTER_IP || '127.0.0.1';
-const PRINTER_PORT = parseInt(process.env.PRINTER_PORT || '9100', 10);
-const PRINTER_NAME = process.env.PRINTER_NAME || 'Honeywell PC42t plus (203 dpi)';
-const SIMULATE = process.env.SIMULATE !== 'false';
-
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
@@ -31,26 +48,23 @@ app.get('/status', (req, res) => {
       ip: PRINTER_TYPE === 'tcp' ? PRINTER_IP : null,
       port: PRINTER_TYPE === 'tcp' ? PRINTER_PORT : null,
       name: PRINTER_TYPE === 'usb' ? PRINTER_NAME : null,
-      simulate: SIMULATE
+      simulate: SIMULATE,
     },
-    stats: { totalJobs: printCount, lastJob: lastPrintJob }
+    stats: { totalJobs: printCount, lastJob: lastPrintJob },
   });
 });
 
 app.post('/print', async (req, res) => {
   const { type, data } = req.body;
+  if (!data) return res.status(400).json({ success: false, message: 'No se recibio data' });
 
-  if (!data) {
-    return res.status(400).json({ success: false, message: 'No se recibio data' });
-  }
-
-  const isZPL = data.includes('^XA');
+  const isZPL  = data.includes('^XA');
   const isTSPL = data.includes('SIZE ') || data.includes('TEXT ') || data.includes('BARCODE ');
   const format = type || (isZPL ? 'zpl' : isTSPL ? 'tspl' : 'raw');
 
   let labelCount = 0;
-  if (format === 'zpl') labelCount = (data.match(/\^XA/g) || []).length;
-  else if (format === 'tspl') labelCount = (data.match(/PRINT\s+\d+/g) || []).length;
+  if (format === 'zpl')  labelCount = (data.match(/\^XA/g) || []).length;
+  if (format === 'tspl') labelCount = (data.match(/PRINT\s+\d+/g) || []).length;
 
   console.log(`[Agent] Job: ${labelCount} labels, ${format}, ${data.length} bytes`);
 
@@ -67,17 +81,17 @@ app.post('/print', async (req, res) => {
     let printData = data;
     if (format === 'tspl') printData = '\x1b!R\r\nSET CUTTER OFF\r\n' + data;
 
-    const mode = PRINTER_TYPE === 'usb' ? 'usb' : 'tcp';
     if (PRINTER_TYPE === 'usb') {
       await sendToWindowsPrinter(printData, PRINTER_NAME);
     } else {
       await sendToTCP(printData);
     }
 
+    const mode = PRINTER_TYPE === 'usb' ? 'usb' : 'tcp';
     lastPrintJob = {
       timestamp: new Date().toISOString(), labels: labelCount, mode, format,
       printer: PRINTER_TYPE === 'usb' ? PRINTER_NAME : `${PRINTER_IP}:${PRINTER_PORT}`,
-      bytes: printData.length, status: 'ok'
+      bytes: printData.length, status: 'ok',
     };
     printCount++;
     printLog.push(lastPrintJob);
@@ -95,12 +109,11 @@ app.get('/log', (req, res) => {
   res.json(printLog.slice(-100).reverse());
 });
 
-// USB: write PS1 script to temp file and run it (avoids inline escaping issues)
 function sendToWindowsPrinter(data, printerName) {
   return new Promise((resolve, reject) => {
     const id = Date.now();
     const dataFile = join(tmpdir(), `inteliar_${id}.zpl`);
-    const psFile = join(tmpdir(), `inteliar_${id}.ps1`);
+    const psFile   = join(tmpdir(), `inteliar_${id}.ps1`);
 
     writeFileSync(dataFile, data, 'binary');
 
@@ -108,9 +121,7 @@ function sendToWindowsPrinter(data, printerName) {
 $ErrorActionPreference = 'Stop'
 $dataFile = '${dataFile.replace(/\\/g, '\\\\')}'
 $printerName = '${printerName.replace(/'/g, "''")}'
-
 $bytes = [System.IO.File]::ReadAllBytes($dataFile)
-
 Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
@@ -137,7 +148,6 @@ public class WinSpool {
     }
 }
 "@
-
 $h = [IntPtr]::Zero
 if (-not [WinSpool]::OpenPrinter($printerName, [ref]$h, [IntPtr]::Zero)) {
     throw "No se pudo abrir la impresora: $printerName"
@@ -162,19 +172,14 @@ try {
 `;
 
     writeFileSync(psFile, psScript, 'utf8');
-
     exec(
       `powershell -NoProfile -ExecutionPolicy Bypass -File "${psFile}"`,
       { timeout: 20000 },
       (err, stdout, stderr) => {
         try { unlinkSync(dataFile); } catch (_) {}
         try { unlinkSync(psFile); } catch (_) {}
-        if (err) {
-          reject(new Error(stderr.trim() || err.message));
-        } else {
-          console.log(`[Agent] USB: ${stdout.trim()}`);
-          resolve();
-        }
+        if (err) reject(new Error(stderr.trim() || err.message));
+        else { console.log(`[Agent] USB: ${stdout.trim()}`); resolve(); }
       }
     );
   });
@@ -184,7 +189,7 @@ function sendToTCP(data) {
   return new Promise((resolve, reject) => {
     const client = new net.Socket();
     const timeout = setTimeout(() => { client.destroy(); reject(new Error(`Timeout ${PRINTER_IP}:${PRINTER_PORT}`)); }, 10000);
-    client.connect(PRINTER_PORT, PRINTER_IP, () => {
+    client.connect(Number(PRINTER_PORT), PRINTER_IP, () => {
       clearTimeout(timeout);
       client.write(data, () => { client.end(); resolve(); });
     });
@@ -193,10 +198,17 @@ function sendToTCP(data) {
 }
 
 app.listen(PORT, () => {
-  console.log(`[Printer Agent] Running on http://localhost:${PORT}`);
-  console.log(`[Printer Agent] Mode: ${SIMULATE ? 'SIMULATION' : 'PRODUCTION'}`);
+  console.log('');
+  console.log('  ╔══════════════════════════════════════╗');
+  console.log('  ║   Inteliar Printer Agent  v1.0       ║');
+  console.log('  ╚══════════════════════════════════════╝');
+  console.log(`  Puerto:    http://localhost:${PORT}`);
+  console.log(`  Modo:      ${SIMULATE ? 'SIMULACION (no imprime)' : 'PRODUCCION'}`);
   if (!SIMULATE) {
-    if (PRINTER_TYPE === 'usb') console.log(`[Printer Agent] USB printer: ${PRINTER_NAME}`);
-    else console.log(`[Printer Agent] TCP: ${PRINTER_IP}:${PRINTER_PORT}`);
+    if (PRINTER_TYPE === 'usb') console.log(`  Impresora: ${PRINTER_NAME}`);
+    else console.log(`  TCP:       ${PRINTER_IP}:${PRINTER_PORT}`);
   }
+  console.log('');
+  console.log('  Agente listo. No cierres esta ventana.');
+  console.log('');
 });
