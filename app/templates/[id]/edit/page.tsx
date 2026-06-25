@@ -32,7 +32,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { LabelElement, ElementType, BarcodeType } from "@/lib/label-types"
-import { resolveDateVars, DATE_SHORTCUTS } from "@/lib/date-vars"
+import { resolveDateVars, DATE_SHORTCUTS, isDateToken } from "@/lib/date-vars"
 
 const PRESET_SIZES = [
   { label: "80 × 40 mm (catering / vianda)", width: 80, height: 40 },
@@ -301,10 +301,11 @@ export default function TemplateEditPage() {
 
     const variables = elements
       .map((el) => {
-        const matches = el.content.match(/\{\{(\w+)\}\}/g)
-        return matches ? matches.map((m) => m.replace(/[{}]/g, "")) : []
+        const matches = el.content.match(/\{\{([^}]+)\}\}/g)
+        return matches ? matches.map((m) => m.replace(/[{}]/g, "").trim()) : []
       })
       .flat()
+      .filter((v) => !isDateToken(v))
       .filter((v, i, arr) => arr.indexOf(v) === i)
 
     const { error } = await supabase

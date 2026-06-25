@@ -13,6 +13,12 @@ function formatShortDate(d: Date): string {
   return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit" })
 }
 
+// True when `key` is a dynamic date/time token (hoy, hoy+3d, hora, mes, año...)
+// so it can be excluded from data-column substitution.
+export function isDateToken(key: string): boolean {
+  return /^(hoy|mañana|hora|mes|año)([+-]\d+d)?$/i.test(key.trim())
+}
+
 export function resolveDateVars(text: string, now: Date = new Date()): string {
   return text.replace(/\{\{(hoy|mañana|hora|mes|año)([+-]\d+[d])?\}\}/gi, (match, name, offset) => {
     const d = new Date(now)
