@@ -1,0 +1,55 @@
+name: Build Printer Agent
+
+on:
+  push:
+    paths:
+      - 'printer-agent/**'
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        working-directory: printer-agent
+        run: npm install
+
+      - name: Build Windows exe
+        working-directory: printer-agent
+        run: npx pkg . --target node18-win-x64 --output dist/InteliarPrinterAgent.exe
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: InteliarPrinterAgent-win
+          path: |
+            printer-agent/dist/InteliarPrinterAgent.exe
+            printer-agent/config.json
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: agent-v${{ github.run_number }}
+          name: "Printer Agent v${{ github.run_number }}"
+          body: |
+            ## Inteliar Printer Agent para Windows
+
+            ### Instalación
+            1. Descargá `InteliarPrinterAgent.exe` y `config.json`
+            2. Poné los dos archivos en la misma carpeta
+            3. Editá `config.json` con el nombre de tu impresora
+            4. Ejecutá `InteliarPrinterAgent.exe`
+            5. En la app web, usá `http://localhost:9638`
+          files: |
+            printer-agent/dist/InteliarPrinterAgent.exe
+            printer-agent/config.json
