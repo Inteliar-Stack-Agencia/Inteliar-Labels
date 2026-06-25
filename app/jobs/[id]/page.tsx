@@ -18,7 +18,7 @@ import {
   Printer,
   Download,
 } from "lucide-react"
-import { generateZPL, downloadZPL, type GenerateZPLOptions } from "@/lib/zpl"
+import { generateZPL, downloadZPL, prepareImages, type GenerateZPLOptions } from "@/lib/zpl"
 import { sendToPrinterAgent } from "@/lib/printer-agent-client"
 import { PrinterAgentStatus } from "@/components/printer/agent-status"
 import { cn } from "@/lib/utils"
@@ -208,14 +208,15 @@ export default function JobDetailPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId])
 
-  function handleDownloadZpl(opts: GenerateZPLOptions = {}) {
+  async function handleDownloadZpl(opts: GenerateZPLOptions = {}) {
     if (!template || rows.length === 0) return
     setGeneratingZpl(true)
     try {
+      const imageCache = await prepareImages(template.canvas_data)
       const zpl = generateZPL(
         { width_mm: template.width_mm, height_mm: template.height_mm, canvas_data: template.canvas_data },
         rows,
-        opts
+        { ...opts, imageCache }
       )
       const suffix = opts.startFromLabel && opts.startFromLabel > 1 ? `-desde-${opts.startFromLabel}` : ""
       downloadZPL(zpl, `${job?.name ?? "etiquetas"}${suffix}.zpl`)
@@ -229,10 +230,11 @@ export default function JobDetailPage() {
     setPrinting(true)
     setPrintResult(null)
     try {
+      const imageCache = await prepareImages(template.canvas_data)
       const zpl = generateZPL(
         { width_mm: template.width_mm, height_mm: template.height_mm, canvas_data: template.canvas_data },
         rows,
-        { startFromLabel }
+        { startFromLabel, imageCache }
       )
       const result = await sendToPrinterAgent(zpl, "zpl")
       setPrintResult({ ok: true, message: result.message })

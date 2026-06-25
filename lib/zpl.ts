@@ -1,6 +1,7 @@
 // ZPL generator for thermal label printers (Zebra, Honeywell, Sato, Citizen)
 import type { LabelElement, CanvasData } from "./label-types"
 import { resolveDateVars, isDateToken } from "./date-vars"
+import { imageToGFA } from "./zpl-image"
 
 const DOTS_PER_MM = 8 // 203 dpi ≈ 8 dots/mm
 // el.x, el.y, lineWidth, lineHeight, lineThickness, imgWidth, imgHeight
@@ -58,7 +59,8 @@ function buildLabelZpl(
   canvasData: CanvasData,
   row: Record<string, string>,
   labelIndex: number,
-  cut: boolean
+  cut: boolean,
+  imageCache: Record<string, string> = {}
 ): string {
   const w = mmToDots(widthMm)
   const h = mmToDots(heightMm)
@@ -110,7 +112,11 @@ function buildLabelZpl(
       fields.push(`^FO${x},${y}^BQN,2,4^FDMM,A${content || "0"}^FS`)
 
     } else if (el.type === "image") {
-      fields.push(`^FO${x},${y}^A0N,14,10^FD[logo]^FS`)
+      const gfa = imageCache[el.id]
+      if (gfa) {
+        fields.push(`^FO${x},${y}${gfa}^FS`)
+      }
+      // no fallback placeholder: if the image couldn't be converted, print nothing
 
     } else if (el.type === "line") {
       const lw = tenthMmToDots(el.lineWidth ?? (widthMm * 10 - 80))
@@ -146,6 +152,25 @@ function buildLabelZpl(
 
 export interface GenerateZPLOptions {
   startFromLabel?: number
+  imageCache?: Record<string, string>
+}
+
+// Pre-convert all image elements to ZPL ^GFA bitmaps (browser only).
+// Returns a map of element id -> ^GFA field, to be passed to generateZPL.
+export async function prepareImages(canvasData: CanvasData): Promise<Record<string, string>> {
+  const cache: Record<string, string> = {}
+  for (const el of canvasData.elements) {
+    if (el.type === "image" && el.imageUrl) {
+      const wDots = tenthMmToDots(el.imgWidth ?? 300)
+      const hDots = tenthMmToDots(el.imgHeight ?? 200)
+      try {
+        cache[el.id] = await imageToGFA(el.imageUrl, wDots, hDots)
+      } catch (e) {
+        console.error("[zpl] no se pudo convertir el logo:", e)
+      }
+    }
+  }
+  return cache
 }
 
 export function generateZPL(
@@ -176,7 +201,8 @@ export function generateZPL(
       template.canvas_data,
       labelsToPrint[i],
       globalIndex,
-      doCut && isLastInBatch
+      doCut && isLastInBatch,
+      options.imageCache ?? {}
     ))
   }
 
