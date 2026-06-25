@@ -33,7 +33,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { LabelElement, ElementType } from "@/lib/label-types"
-import { resolveDateVars, DATE_SHORTCUTS } from "@/lib/date-vars"
+import { resolveDateVars, DATE_SHORTCUTS, isDateToken } from "@/lib/date-vars"
 import { PRESET_TEMPLATES } from "@/lib/preset-templates"
 
 const PRESET_SIZES = [
@@ -272,10 +272,11 @@ export default function TemplateEditorPage() {
 
     const variables = elements
       .map((el) => {
-        const matches = el.content.match(/\{\{(\w+)\}\}/g)
-        return matches ? matches.map((m) => m.replace(/[{}]/g, "")) : []
+        const matches = el.content.match(/\{\{([^}]+)\}\}/g)
+        return matches ? matches.map((m) => m.replace(/[{}]/g, "").trim()) : []
       })
       .flat()
+      .filter((v) => !isDateToken(v))
       .filter((v, i, arr) => arr.indexOf(v) === i)
 
     const { error } = await supabase.from("templates").insert({

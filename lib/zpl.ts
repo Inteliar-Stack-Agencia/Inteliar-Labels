@@ -1,6 +1,6 @@
 // ZPL generator for thermal label printers (Zebra, Honeywell, Sato, Citizen)
 import type { LabelElement, CanvasData } from "./label-types"
-import { resolveDateVars } from "./date-vars"
+import { resolveDateVars, isDateToken } from "./date-vars"
 
 const DOTS_PER_MM = 8 // 203 dpi ≈ 8 dots/mm
 // el.x, el.y, lineWidth, lineHeight, lineThickness, imgWidth, imgHeight
@@ -28,6 +28,9 @@ function fontSizeToDots(fontSize: number): number {
 function substituteVars(text: string, row: Record<string, string>): string {
   const withData = text.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
     const trimmedKey = key.trim()
+    // Date tokens (hoy, hoy+3d, hora...) are always resolved by resolveDateVars,
+    // never overridden by a data column of the same name.
+    if (isDateToken(trimmedKey)) return match
     return trimmedKey in row ? (row[trimmedKey] ?? "") : match
   })
   return resolveDateVars(withData)
