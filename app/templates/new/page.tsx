@@ -73,7 +73,7 @@ export default function TemplateEditorPage() {
 
   const selectedElementData = elements.find((el) => el.id === selectedElement)
 
-  const SCALE = 3
+  const SCALE = 6
   const canvasW = widthMm * SCALE
   const canvasH = heightMm * SCALE
 
@@ -639,7 +639,7 @@ export default function TemplateEditorPage() {
                               <Icon className="h-3 w-3 text-gray-400 flex-shrink-0" />
                               <span
                                 className="text-gray-800"
-                                style={{ fontSize: `${element.fontSize}px`, fontWeight: element.bold ? "bold" : "normal", textAlign: element.textAlign || 'left', display: 'block', width: '100%' }}
+                                style={{ fontSize: `${element.fontSize * SCALE / 3}px`, fontWeight: element.bold ? "bold" : "normal", textAlign: element.textAlign || 'left', display: 'block', width: '100%' }}
                               >
                                 {element.type === "serial"
                                   ? `${element.serialPrefix ?? ""}${String(element.serialStart ?? 1).padStart(element.serialDigits ?? 4, "0")}${element.serialSuffix ?? ""}`
