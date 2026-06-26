@@ -561,7 +561,6 @@ export default function TemplateEditorPage() {
 
                     {/* Elements */}
                     {elements.filter(Boolean).map((element) => {
-                      const Icon = elementIcon(element.type)
                       return (
                         <div
                           key={element.id}
@@ -573,7 +572,7 @@ export default function TemplateEditorPage() {
                               ? "border-primary bg-primary/10"
                               : "border-transparent hover:border-border"
                           )}
-                          style={{ left: (element.textAlign === 'center' || element.textAlign === 'right') ? 0 : `${element.x * SCALE / 10}px`, top: `${element.y * SCALE / 10}px`, width: (element.textAlign === 'center' || element.textAlign === 'right') ? `${canvasW}px` : undefined }}
+                          style={{ left: (element.textAlign === 'center' || element.textAlign === 'right') ? 0 : `${element.x * SCALE / 10}px`, top: `${element.y * SCALE / 10}px`, width: (element.textAlign === 'center' || element.textAlign === 'right') ? `${canvasW}px` : undefined, paddingLeft: (element.textAlign === 'center' || element.textAlign === 'right') ? `${2 * SCALE}px` : undefined, paddingRight: (element.textAlign === 'center' || element.textAlign === 'right') ? `${2 * SCALE}px` : undefined }}
                         >
                           {selectedElement === element.id && (
                             <div className="absolute -top-5 left-0 flex items-center gap-1 rounded-t bg-primary px-1.5 py-0.5 text-[9px] font-medium text-primary-foreground whitespace-nowrap">
@@ -636,8 +635,7 @@ export default function TemplateEditorPage() {
                               )}
                             </div>
                           ) : (
-                            <div className="relative px-1.5 py-1">
-                              <Icon className="h-3 w-3 text-gray-400 flex-shrink-0 absolute left-0 top-1/2 -translate-y-1/2 opacity-40" />
+                            <div className="px-1.5 py-1">
                               <span
                                 className="text-gray-800"
                                 style={{ fontSize: `${element.fontSize * SCALE / 3}px`, fontWeight: element.bold ? "bold" : "normal", textAlign: element.textAlign || 'left', display: 'block', width: '100%' }}
