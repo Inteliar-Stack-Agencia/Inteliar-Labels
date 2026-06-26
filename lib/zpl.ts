@@ -164,6 +164,8 @@ function buildLabelZpl(
 
 export interface GenerateZPLOptions {
   startFromLabel?: number
+  // Inclusive 1-based index of the last label to print. Omit to print to the end.
+  endAtLabel?: number
   imageCache?: Record<string, string>
 }
 
@@ -201,7 +203,8 @@ export function generateZPL(
     }
   }
 
-  const labelsToPrint = allLabels.slice(startFrom - 1)
+  const endAt = options.endAtLabel ?? allLabels.length
+  const labelsToPrint = allLabels.slice(startFrom - 1, endAt)
   const zplBlocks: string[] = []
 
   for (let i = 0; i < labelsToPrint.length; i++) {

@@ -156,6 +156,7 @@ export default function JobDetailPage() {
   const [visibleCount, setVisibleCount] = useState(6)
   const [generatingZpl, setGeneratingZpl] = useState(false)
   const [startFromLabel, setStartFromLabel] = useState(1)
+  const [endAtLabel, setEndAtLabel] = useState<number | "">("")
 
   // Printer agent state
   const [agentOnline, setAgentOnline] = useState(false)
@@ -220,7 +221,10 @@ export default function JobDetailPage() {
         rows,
         { ...opts, imageCache }
       )
-      const suffix = opts.startFromLabel && opts.startFromLabel > 1 ? `-desde-${opts.startFromLabel}` : ""
+      const hasRange = (opts.startFromLabel && opts.startFromLabel > 1) || opts.endAtLabel
+      const from = opts.startFromLabel ?? 1
+      const to = opts.endAtLabel ?? (job?.total_labels ?? "")
+      const suffix = hasRange ? `-${from}_${to}` : ""
       downloadZPL(zpl, `${job?.name ?? "etiquetas"}${suffix}.zpl`)
     } finally {
       setGeneratingZpl(false)
@@ -236,15 +240,23 @@ export default function JobDetailPage() {
       const zpl = generateZPL(
         { width_mm: template.width_mm, height_mm: template.height_mm, canvas_data: template.canvas_data },
         rows,
-        { startFromLabel, imageCache }
+        { startFromLabel, endAtLabel: endAtLabel === "" ? undefined : endAtLabel, imageCache }
       )
       const result = await sendToPrinterAgent(zpl, "zpl", undefined, printerId)
-      setPrintResult({ ok: true, message: result.message ?? "Enviado a la impresora" })
-      // Auto-mark as completed on successful print
-      if (job?.status === "pending") {
+      const printedCount = result.labels ?? 0
+      const total = job?.total_labels ?? 0
+      const isFullRange = startFromLabel <= 1 && (endAtLabel === "" || endAtLabel >= total)
+      setPrintResult({
+        ok: true,
+        message: isFullRange
+          ? (result.message ?? "Enviado a la impresora")
+          : `Rango ${startFromLabel}–${endAtLabel === "" ? total : endAtLabel} enviado (${printedCount} etiquetas)`,
+      })
+      // Only auto-complete when the whole job was printed, not a partial range.
+      if (job?.status === "pending" && isFullRange) {
         await supabase
           .from("print_jobs")
-          .update({ status: "completed", printed_labels: job.total_labels, completed_at: new Date().toISOString() })
+          .update({ status: "completed", printed_labels: total, completed_at: new Date().toISOString() })
           .eq("id", jobId)
         setJob((prev) => prev ? { ...prev, status: "completed", printed_labels: prev.total_labels } : prev)
       }
@@ -326,21 +338,34 @@ export default function JobDetailPage() {
           {canPrint && (
             <>
               <div className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1">
-                <span className="text-xs text-muted-foreground">Desde etiqueta</span>
+                <span className="text-xs text-muted-foreground">Rango</span>
                 <input
                   type="number"
                   min={1}
                   max={job?.total_labels ?? 9999}
                   value={startFromLabel}
                   onChange={(e) => setStartFromLabel(Math.max(1, Number(e.target.value)))}
-                  className="w-14 bg-transparent text-center text-sm focus:outline-none"
+                  title="Desde etiqueta"
+                  className="w-12 bg-transparent text-center text-sm focus:outline-none"
                 />
+                <span className="text-xs text-muted-foreground">–</span>
+                <input
+                  type="number"
+                  min={startFromLabel}
+                  max={job?.total_labels ?? 9999}
+                  value={endAtLabel}
+                  placeholder={String(job?.total_labels ?? "")}
+                  onChange={(e) => setEndAtLabel(e.target.value === "" ? "" : Math.max(startFromLabel, Number(e.target.value)))}
+                  title="Hasta etiqueta (vacío = hasta el final)"
+                  className="w-12 bg-transparent text-center text-sm focus:outline-none placeholder:text-muted-foreground/50"
+                />
+                <span className="text-xs text-muted-foreground">de {job?.total_labels ?? "?"}</span>
               </div>
               <Button
                 variant="outline"
                 size="sm"
                 className="gap-2"
-                onClick={() => handleDownloadZpl({ startFromLabel })}
+                onClick={() => handleDownloadZpl({ startFromLabel, endAtLabel: endAtLabel === "" ? undefined : endAtLabel })}
                 disabled={generatingZpl}
               >
                 <Download className="h-4 w-4" />
