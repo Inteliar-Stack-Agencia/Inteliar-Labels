@@ -1,233 +1,462 @@
-const express = require('express');
-const cors = require('cors');
-const net = require('net');
-const { exec } = require('child_process');
-const { writeFileSync, unlinkSync, existsSync, readFileSync } = require('fs');
-const { tmpdir } = require('os');
-const { join, dirname } = require('path');
+/**
+ * Inteliar Printer Agent
+ * Multi-brand, multi-connection thermal printer bridge.
+ *
+ * Connection types: tcp | usb | serial | simulate
+ * Brands: Zebra (ZPL), Honeywell (ZPL/Autosense), TSC (TSPL2),
+ *         Citizen (ZPL/TSPL2), Sato (SBPL), Bixolon (ZPL/TSPL2)
+ *
+ * API:
+ *   GET  /status              — agent health + default printer
+ *   GET  /printers            — list all configured printers
+ *   POST /printers            — add or update a printer config
+ *   DELETE /printers/:id      — remove a printer
+ *   POST /printers/:id/test   — send test label
+ *   POST /printers/:id/default — set as default
+ *   GET  /discover/usb        — list USB/OS printers (Windows: Get-Printer, Linux: lpstat)
+ *   POST /print               — print to default printer
+ *   POST /print/:id           — print to specific printer
+ *   GET  /log                 — last 100 print jobs
+ */
 
-// Read config from config.json next to the exe (or in cwd for dev)
+import express from 'express'
+import cors from 'cors'
+import net from 'net'
+import fs from 'fs'
+import path from 'path'
+import { execFile, exec } from 'child_process'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const CONFIG_PATH = path.join(__dirname, '..', 'printers.json')
+const PORT = process.env.AGENT_PORT || 9638
+
+const app = express()
+app.use(cors())
+app.use(express.json({ limit: '50mb' }))
+
+// ── Config persistence ────────────────────────────────────────────────────────
+
 function loadConfig() {
-  const locations = [
-    join(dirname(process.execPath), 'config.json'),
-    join(process.cwd(), 'config.json'),
-  ];
-  for (const loc of locations) {
-    if (existsSync(loc)) {
-      try { return JSON.parse(readFileSync(loc, 'utf8')); } catch (_) {}
+  try {
+    if (fs.existsSync(CONFIG_PATH)) {
+      return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'))
     }
+  } catch (e) {
+    console.error('[Config] Error loading printers.json:', e.message)
   }
-  return {};
+  return { defaultPrinterId: null, printers: [] }
 }
 
-const cfg = loadConfig();
+function saveConfig(config) {
+  fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2))
+}
 
-const PORT        = cfg.agentPort    || process.env.AGENT_PORT    || 9638;
-const PRINTER_TYPE  = cfg.printerType  || process.env.PRINTER_TYPE  || 'usb';
-const PRINTER_IP    = cfg.printerIp    || process.env.PRINTER_IP    || '127.0.0.1';
-const PRINTER_PORT  = cfg.printerPort  || process.env.PRINTER_PORT  || 9100;
-const PRINTER_NAME  = cfg.printerName  || process.env.PRINTER_NAME  || 'Honeywell PC42t plus (203 dpi)';
-const SIMULATE      = cfg.simulate !== undefined
-  ? cfg.simulate
-  : process.env.SIMULATE !== 'false';
+let config = loadConfig()
 
-const app = express();
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
+// If no printers configured, add a default simulate entry
+if (config.printers.length === 0) {
+  config.printers.push({
+    id: 'default',
+    name: 'Simulador',
+    brand: 'generic',
+    connection: 'simulate',
+    language: 'zpl',
+  })
+  config.defaultPrinterId = 'default'
+  saveConfig(config)
+}
 
-let lastPrintJob = null;
-let printCount = 0;
-const printLog = [];
+// ── Print log ─────────────────────────────────────────────────────────────────
 
-app.get('/status', (req, res) => {
-  res.json({
-    service: 'inteliar-printer-agent',
-    status: 'running',
-    printer: {
-      type: PRINTER_TYPE,
-      ip: PRINTER_TYPE === 'tcp' ? PRINTER_IP : null,
-      port: PRINTER_TYPE === 'tcp' ? PRINTER_PORT : null,
-      name: PRINTER_TYPE === 'usb' ? PRINTER_NAME : null,
-      simulate: SIMULATE,
-    },
-    stats: { totalJobs: printCount, lastJob: lastPrintJob },
-  });
-});
+const printLog = []
 
-app.post('/print', async (req, res) => {
-  const { type, data } = req.body;
-  if (!data) return res.status(400).json({ success: false, message: 'No se recibio data' });
+function logJob(entry) {
+  printLog.push({ ...entry, timestamp: new Date().toISOString() })
+  if (printLog.length > 200) printLog.shift()
+}
 
-  const isZPL  = data.includes('^XA');
-  const isTSPL = data.includes('SIZE ') || data.includes('TEXT ') || data.includes('BARCODE ');
-  const format = type || (isZPL ? 'zpl' : isTSPL ? 'tspl' : 'raw');
+// ── Format detection ──────────────────────────────────────────────────────────
 
-  let labelCount = 0;
-  if (format === 'zpl')  labelCount = (data.match(/\^XA/g) || []).length;
-  if (format === 'tspl') labelCount = (data.match(/PRINT\s+\d+/g) || []).length;
+function detectFormat(data) {
+  if (data.includes('^XA') || data.includes('^xa')) return 'zpl'
+  if (/^SIZE\s/m.test(data) || /^PRINT\s/m.test(data)) return 'tspl'
+  if (/^!\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+/m.test(data)) return 'cpcl'
+  if (/^A\d{3};\d+;\d+/m.test(data)) return 'sbpl'
+  return 'raw'
+}
 
-  console.log(`[Agent] Job: ${labelCount} labels, ${format}, ${data.length} bytes`);
+function countLabels(data, format) {
+  if (format === 'zpl') return (data.match(/\^XA/gi) || []).length
+  if (format === 'tspl') return (data.match(/^PRINT\s+\d+/gm) || []).length
+  if (format === 'cpcl') return (data.match(/^FORM\b/gm) || []).length
+  return 1
+}
+
+// ── Language init sequences (sent before data to force mode) ─────────────────
+
+function prependInit(data, printer) {
+  const lang = printer.language || detectFormat(data)
+  if (lang === 'tspl') {
+    // ESC+!+R resets Honeywell/TSC to TSPL2 mode
+    return '\x1b!R\r\nSET CUTTER OFF\r\n' + data
+  }
+  if (lang === 'zpl') {
+    // ~JR resets ZPL-capable printers
+    return data
+  }
+  return data
+}
+
+// ── Connection: TCP/IP ────────────────────────────────────────────────────────
+
+function printViaTcp(data, printer) {
+  return new Promise((resolve, reject) => {
+    const host = printer.host || '127.0.0.1'
+    const port = printer.port || 9100
+    const timeout = setTimeout(() => {
+      client.destroy()
+      reject(new Error(`Timeout conectando a ${host}:${port}`))
+    }, 10000)
+
+    const client = new net.Socket()
+    client.connect(port, host, () => {
+      clearTimeout(timeout)
+      client.write(data, 'binary', () => {
+        client.end()
+        resolve()
+      })
+    })
+    client.on('error', (err) => {
+      clearTimeout(timeout)
+      reject(new Error(`TCP ${host}:${port} — ${err.message}`))
+    })
+  })
+}
+
+// ── Connection: Serial ────────────────────────────────────────────────────────
+
+async function printViaSerial(data, printer) {
+  let SerialPort
+  try {
+    const sp = await import('serialport')
+    SerialPort = sp.SerialPort
+  } catch {
+    throw new Error('Paquete serialport no instalado. Ejecute: npm install serialport')
+  }
+
+  return new Promise((resolve, reject) => {
+    const port = new SerialPort({
+      path: printer.serialPort || 'COM1',
+      baudRate: printer.baudRate || 9600,
+    }, (err) => {
+      if (err) return reject(new Error(`Serial ${printer.serialPort}: ${err.message}`))
+      port.write(Buffer.from(data, 'binary'), (writeErr) => {
+        port.close()
+        if (writeErr) return reject(new Error(`Serial write: ${writeErr.message}`))
+        resolve()
+      })
+    })
+    port.on('error', reject)
+  })
+}
+
+// ── Connection: USB (OS print queue) ─────────────────────────────────────────
+// Windows: sends raw bytes via PowerShell + WinSpool API
+// Linux/macOS: uses lpr -P <queue> -l (raw passthrough)
+
+const WINSPOOL_PS = `
+param([string]$printerName, [string]$dataBase64)
+$bytes = [System.Convert]::FromBase64String($dataBase64)
+Add-Type -TypeDefinition @"
+using System;using System.Runtime.InteropServices;
+public class WinSpool {
+  [DllImport("winspool.drv",CharSet=CharSet.Auto,SetLastError=true)]
+  public static extern bool OpenPrinter(string n,out IntPtr h,IntPtr d);
+  [DllImport("winspool.drv",CharSet=CharSet.Auto,SetLastError=true)]
+  public static extern bool ClosePrinter(IntPtr h);
+  [DllImport("winspool.drv",CharSet=CharSet.Auto,SetLastError=true)]
+  public static extern int StartDocPrinter(IntPtr h,int lv,ref DOCINFO d);
+  [DllImport("winspool.drv",CharSet=CharSet.Auto,SetLastError=true)]
+  public static extern bool EndDocPrinter(IntPtr h);
+  [DllImport("winspool.drv",CharSet=CharSet.Auto,SetLastError=true)]
+  public static extern bool StartPagePrinter(IntPtr h);
+  [DllImport("winspool.drv",CharSet=CharSet.Auto,SetLastError=true)]
+  public static extern bool EndPagePrinter(IntPtr h);
+  [DllImport("winspool.drv",CharSet=CharSet.Auto,SetLastError=true)]
+  public static extern bool WritePrinter(IntPtr h,byte[] buf,int cb,out int written);
+  [StructLayout(LayoutKind.Sequential)] public struct DOCINFO {
+    public string pDocName; public string pOutputFile; public string pDatatype;
+  }
+}
+"@ -ErrorAction Stop
+$h=[IntPtr]::Zero
+if(-not [WinSpool]::OpenPrinter($printerName,[ref]$h,[IntPtr]::Zero)){throw "OpenPrinter failed: $([System.Runtime.InteropServices.Marshal]::GetLastWin32Error())"}
+$di=New-Object WinSpool+DOCINFO; $di.pDocName="InteliarLabel"; $di.pOutputFile=$null; $di.pDatatype="RAW"
+[WinSpool]::StartDocPrinter($h,1,[ref]$di)|Out-Null
+[WinSpool]::StartPagePrinter($h)|Out-Null
+$written=0; [WinSpool]::WritePrinter($h,$bytes,$bytes.Length,[ref]$written)|Out-Null
+[WinSpool]::EndPagePrinter($h)|Out-Null
+[WinSpool]::EndDocPrinter($h)|Out-Null
+[WinSpool]::ClosePrinter($h)|Out-Null
+Write-Output "OK:$written"
+`
+
+function printViaUsb(data, printer) {
+  return new Promise((resolve, reject) => {
+    const platform = process.platform
+    const queueName = printer.usbQueue || printer.name
+
+    if (platform === 'win32') {
+      const b64 = Buffer.from(data, 'binary').toString('base64')
+      execFile('powershell', [
+        '-NoProfile', '-NonInteractive', '-Command', WINSPOOL_PS,
+        '-printerName', queueName,
+        '-dataBase64', b64,
+      ], { timeout: 15000 }, (err, stdout, stderr) => {
+        if (err) return reject(new Error(`USB WinSpool: ${stderr || err.message}`))
+        if (!stdout.includes('OK:')) return reject(new Error(`USB WinSpool: respuesta inesperada: ${stdout}`))
+        resolve()
+      })
+    } else {
+      // Linux / macOS: lpr with -l flag for raw passthrough
+      const child = exec(`lpr -P "${queueName}" -l`, { timeout: 15000 }, (err, _stdout, stderr) => {
+        if (err) return reject(new Error(`USB lpr: ${stderr || err.message}`))
+        resolve()
+      })
+      child.stdin.write(data, 'binary')
+      child.stdin.end()
+    }
+  })
+}
+
+// ── Dispatcher ────────────────────────────────────────────────────────────────
+
+async function doPrint(rawData, printer) {
+  const format = detectFormat(rawData)
+  const data = prependInit(rawData, printer)
+  const labels = countLabels(rawData, format)
+
+  const conn = printer.connection || 'simulate'
+  const start = Date.now()
 
   try {
-    if (SIMULATE) {
-      console.log(`[Agent] SIMULATION - ${labelCount} labels`);
-      console.log(data.substring(0, 500));
-      lastPrintJob = { timestamp: new Date().toISOString(), labels: labelCount, mode: 'simulate', format, bytes: data.length, status: 'ok' };
-      printCount++;
-      printLog.push(lastPrintJob);
-      return res.json({ success: true, message: `Simulacion OK: ${labelCount} etiquetas (${format.toUpperCase()})`, labels: labelCount, mode: 'simulate', format });
-    }
-
-    let printData = data;
-    if (format === 'tspl') printData = '\x1b!R\r\nSET CUTTER OFF\r\n' + data;
-
-    if (PRINTER_TYPE === 'usb') {
-      await sendToWindowsPrinter(printData, PRINTER_NAME);
+    if (conn === 'simulate') {
+      console.log(`[Agent][simulate] ${labels} etiquetas (${format}) — ${data.length} bytes`)
+      console.log(data.substring(0, 300))
+    } else if (conn === 'tcp') {
+      await printViaTcp(data, printer)
+    } else if (conn === 'usb') {
+      await printViaUsb(data, printer)
+    } else if (conn === 'serial') {
+      await printViaSerial(data, printer)
     } else {
-      await sendToTCP(printData);
+      throw new Error(`Tipo de conexión desconocido: ${conn}`)
     }
 
-    const mode = PRINTER_TYPE === 'usb' ? 'usb' : 'tcp';
-    lastPrintJob = {
-      timestamp: new Date().toISOString(), labels: labelCount, mode, format,
-      printer: PRINTER_TYPE === 'usb' ? PRINTER_NAME : `${PRINTER_IP}:${PRINTER_PORT}`,
-      bytes: printData.length, status: 'ok',
-    };
-    printCount++;
-    printLog.push(lastPrintJob);
-    res.json({ success: true, message: `Impreso: ${labelCount} etiquetas (${format.toUpperCase()}) via ${mode.toUpperCase()}`, labels: labelCount, mode, format });
+    const job = {
+      printer: printer.id,
+      printerName: printer.name,
+      labels,
+      format,
+      bytes: data.length,
+      mode: conn,
+      durationMs: Date.now() - start,
+      status: 'ok',
+    }
+    logJob(job)
+    return job
 
   } catch (err) {
-    console.error(`[Agent] Error:`, err.message);
-    lastPrintJob = { timestamp: new Date().toISOString(), labels: labelCount, format, status: 'error', error: err.message };
-    printLog.push(lastPrintJob);
-    res.status(500).json({ success: false, message: `Error: ${err.message}`, labels: labelCount, format });
-  }
-});
-
-app.get('/log', (req, res) => {
-  res.json(printLog.slice(-100).reverse());
-});
-
-function sendToWindowsPrinter(data, printerName) {
-  return new Promise((resolve, reject) => {
-    const id = Date.now();
-    const dataFile = join(tmpdir(), `inteliar_${id}.zpl`);
-    const psFile   = join(tmpdir(), `inteliar_${id}.ps1`);
-
-    writeFileSync(dataFile, data, 'binary');
-
-    const psScript = `
-$ErrorActionPreference = 'Stop'
-$dataFile = '${dataFile.replace(/\\/g, '\\\\')}'
-$printerName = '${printerName.replace(/'/g, "''")}'
-$bytes = [System.IO.File]::ReadAllBytes($dataFile)
-Add-Type -TypeDefinition @"
-using System;
-using System.Runtime.InteropServices;
-public class WinSpool {
-    [DllImport("winspool.drv", CharSet=CharSet.Ansi, SetLastError=true)]
-    public static extern bool OpenPrinter(string n, out IntPtr h, IntPtr d);
-    [DllImport("winspool.drv", SetLastError=true)]
-    public static extern bool ClosePrinter(IntPtr h);
-    [DllImport("winspool.drv", CharSet=CharSet.Ansi, SetLastError=true)]
-    public static extern int StartDocPrinter(IntPtr h, int l, ref DOCINFO d);
-    [DllImport("winspool.drv", SetLastError=true)]
-    public static extern bool EndDocPrinter(IntPtr h);
-    [DllImport("winspool.drv", SetLastError=true)]
-    public static extern bool StartPagePrinter(IntPtr h);
-    [DllImport("winspool.drv", SetLastError=true)]
-    public static extern bool EndPagePrinter(IntPtr h);
-    [DllImport("winspool.drv", SetLastError=true)]
-    public static extern bool WritePrinter(IntPtr h, IntPtr b, int c, out int w);
-    [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Ansi)]
-    public struct DOCINFO {
-        [MarshalAs(UnmanagedType.LPStr)] public string pDocName;
-        [MarshalAs(UnmanagedType.LPStr)] public string pOutputFile;
-        [MarshalAs(UnmanagedType.LPStr)] public string pDataType;
+    const job = {
+      printer: printer.id,
+      printerName: printer.name,
+      labels,
+      format,
+      bytes: data.length,
+      mode: conn,
+      durationMs: Date.now() - start,
+      status: 'error',
+      error: err.message,
     }
-}
-"@
-$h = [IntPtr]::Zero
-if (-not [WinSpool]::OpenPrinter($printerName, [ref]$h, [IntPtr]::Zero)) {
-    throw "No se pudo abrir la impresora: $printerName"
-}
-try {
-    $di = New-Object WinSpool+DOCINFO
-    $di.pDocName = 'InteliarLabel'
-    $di.pDataType = 'RAW'
-    [WinSpool]::StartDocPrinter($h, 1, [ref]$di) | Out-Null
-    [WinSpool]::StartPagePrinter($h) | Out-Null
-    $ptr = [System.Runtime.InteropServices.Marshal]::AllocHGlobal($bytes.Length)
-    [System.Runtime.InteropServices.Marshal]::Copy($bytes, 0, $ptr, $bytes.Length)
-    $written = 0
-    [WinSpool]::WritePrinter($h, $ptr, $bytes.Length, [ref]$written) | Out-Null
-    [System.Runtime.InteropServices.Marshal]::FreeHGlobal($ptr)
-    [WinSpool]::EndPagePrinter($h) | Out-Null
-    [WinSpool]::EndDocPrinter($h) | Out-Null
-    Write-Output "OK:$written"
-} finally {
-    [WinSpool]::ClosePrinter($h) | Out-Null
-}
-`;
-
-    writeFileSync(psFile, psScript, 'utf8');
-    exec(
-      `powershell -NoProfile -ExecutionPolicy Bypass -File "${psFile}"`,
-      { timeout: 20000 },
-      (err, stdout, stderr) => {
-        try { unlinkSync(dataFile); } catch (_) {}
-        try { unlinkSync(psFile); } catch (_) {}
-        if (err) reject(new Error(stderr.trim() || err.message));
-        else { console.log(`[Agent] USB: ${stdout.trim()}`); resolve(); }
-      }
-    );
-  });
-}
-
-function sendToTCP(data) {
-  return new Promise((resolve, reject) => {
-    const client = new net.Socket();
-    const timeout = setTimeout(() => { client.destroy(); reject(new Error(`Timeout ${PRINTER_IP}:${PRINTER_PORT}`)); }, 10000);
-    client.connect(Number(PRINTER_PORT), PRINTER_IP, () => {
-      clearTimeout(timeout);
-      client.write(data, () => { client.end(); resolve(); });
-    });
-    client.on('error', (err) => { clearTimeout(timeout); reject(new Error(`TCP ${PRINTER_IP}:${PRINTER_PORT} - ${err.message}`)); });
-  });
-}
-
-const server = app.listen(PORT, () => {
-  console.log('');
-  console.log('  ╔══════════════════════════════════════╗');
-  console.log('  ║   Inteliar Printer Agent  v1.0       ║');
-  console.log('  ╚══════════════════════════════════════╝');
-  console.log(`  Puerto:    http://localhost:${PORT}`);
-  console.log(`  Modo:      ${SIMULATE ? 'SIMULACION (no imprime)' : 'PRODUCCION'}`);
-  if (!SIMULATE) {
-    if (PRINTER_TYPE === 'usb') console.log(`  Impresora: ${PRINTER_NAME}`);
-    else console.log(`  TCP:       ${PRINTER_IP}:${PRINTER_PORT}`);
+    logJob(job)
+    throw err
   }
-  console.log('');
-  console.log('  Agente listo. No cierres esta ventana.');
-  console.log('');
-});
+}
 
-server.on('error', (err) => {
-  console.log('');
-  if (err.code === 'EADDRINUSE') {
-    console.log('  ════════════════════════════════════════');
-    console.log(`  El agente YA ESTA CORRIENDO en el puerto ${PORT}.`);
-    console.log('  No necesitas abrirlo de nuevo: ya esta activo.');
-    console.log('');
-    console.log('  Si crees que es un error, cerra el otro agente');
-    console.log('  o reinicia la PC y volve a abrir este programa.');
-    console.log('  ════════════════════════════════════════');
+// ── Routes ────────────────────────────────────────────────────────────────────
+
+app.get('/status', (_req, res) => {
+  const def = config.printers.find(p => p.id === config.defaultPrinterId)
+  res.json({
+    service: 'inteliar-printer-agent',
+    version: '2.0.0',
+    status: 'running',
+    defaultPrinter: def || null,
+    printerCount: config.printers.length,
+    totalJobs: printLog.length,
+    platform: process.platform,
+  })
+})
+
+app.get('/printers', (_req, res) => {
+  res.json(config.printers)
+})
+
+app.post('/printers', (req, res) => {
+  const p = req.body
+  if (!p.id || !p.name || !p.connection) {
+    return res.status(400).json({ error: 'Faltan campos requeridos: id, name, connection' })
+  }
+  const idx = config.printers.findIndex(x => x.id === p.id)
+  if (idx >= 0) {
+    config.printers[idx] = p
   } else {
-    console.log(`  Error al iniciar el agente: ${err.message}`);
+    config.printers.push(p)
+    if (config.printers.length === 1) config.defaultPrinterId = p.id
   }
-  console.log('');
-  console.log('  Presiona ENTER para cerrar...');
-  process.stdin.resume();
-  process.stdin.once('data', () => process.exit(1));
-});
+  saveConfig(config)
+  res.json({ success: true, printer: p })
+})
+
+app.delete('/printers/:id', (req, res) => {
+  const { id } = req.params
+  const before = config.printers.length
+  config.printers = config.printers.filter(p => p.id !== id)
+  if (config.defaultPrinterId === id) {
+    config.defaultPrinterId = config.printers[0]?.id || null
+  }
+  saveConfig(config)
+  res.json({ success: config.printers.length < before })
+})
+
+app.post('/printers/:id/default', (req, res) => {
+  const { id } = req.params
+  if (!config.printers.find(p => p.id === id)) {
+    return res.status(404).json({ error: 'Impresora no encontrada' })
+  }
+  config.defaultPrinterId = id
+  saveConfig(config)
+  res.json({ success: true, defaultPrinterId: id })
+})
+
+app.post('/printers/:id/test', async (req, res) => {
+  const printer = config.printers.find(p => p.id === req.params.id)
+  if (!printer) return res.status(404).json({ error: 'Impresora no encontrada' })
+
+  const lang = printer.language || 'zpl'
+  const testLabel = lang === 'tspl'
+    ? `SIZE 50 mm, 30 mm\r\nGAP 2 mm, 0\r\nCLS\r\nTEXT 10,10,"3",0,1,1,"Inteliar Test"\r\nPRINT 1\r\n`
+    : `^XA^PW400^LL240^FO20,20^A0N,30,24^FDInteliar Test^FS^FO20,60^A0N,20,16^FD${printer.name}^FS^PQ1^XZ`
+
+  try {
+    const job = await doPrint(testLabel, printer)
+    res.json({ success: true, job })
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+// Discover USB/OS print queues
+app.get('/discover/usb', (_req, res) => {
+  const platform = process.platform
+  if (platform === 'win32') {
+    exec('powershell -NoProfile -NonInteractive -Command "Get-Printer | Select-Object Name,DriverName,PortName | ConvertTo-Json"',
+      { timeout: 8000 }, (err, stdout) => {
+        if (err) return res.status(500).json({ error: err.message })
+        try {
+          const printers = JSON.parse(stdout)
+          res.json(Array.isArray(printers) ? printers : [printers])
+        } catch {
+          res.json([])
+        }
+      })
+  } else {
+    exec('lpstat -p 2>/dev/null || echo ""', { timeout: 5000 }, (err, stdout) => {
+      const printers = stdout.split('\n')
+        .filter(l => l.startsWith('printer '))
+        .map(l => ({ Name: l.split(' ')[1] }))
+      res.json(printers)
+    })
+  }
+})
+
+// Discover network printers (ping-scan common ports on local subnet)
+app.get('/discover/network', (req, res) => {
+  const subnet = req.query.subnet || '192.168.1'
+  const port = parseInt(req.query.port || '9100', 10)
+  const found = []
+  let pending = 0
+  let done = false
+
+  const check = (ip) => {
+    pending++
+    const s = new net.Socket()
+    s.setTimeout(800)
+    s.connect(port, ip, () => {
+      found.push({ ip, port, status: 'open' })
+      s.destroy()
+    })
+    s.on('error', () => s.destroy())
+    s.on('timeout', () => s.destroy())
+    s.on('close', () => {
+      pending--
+      if (pending === 0 && done) res.json(found)
+    })
+  }
+
+  for (let i = 1; i <= 254; i++) check(`${subnet}.${i}`)
+  done = true
+  if (pending === 0) res.json(found)
+})
+
+// Print to default printer
+app.post('/print', async (req, res) => {
+  const { data, printerId } = req.body
+  if (!data) return res.status(400).json({ error: 'Campo data requerido' })
+
+  const id = printerId || config.defaultPrinterId
+  const printer = config.printers.find(p => p.id === id)
+  if (!printer) return res.status(404).json({ error: `Impresora '${id}' no configurada` })
+
+  try {
+    const job = await doPrint(data, printer)
+    res.json({ success: true, ...job })
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+// Print to specific printer
+app.post('/print/:id', async (req, res) => {
+  const { data } = req.body
+  if (!data) return res.status(400).json({ error: 'Campo data requerido' })
+
+  const printer = config.printers.find(p => p.id === req.params.id)
+  if (!printer) return res.status(404).json({ error: 'Impresora no encontrada' })
+
+  try {
+    const job = await doPrint(data, printer)
+    res.json({ success: true, ...job })
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+app.get('/log', (_req, res) => {
+  res.json([...printLog].reverse().slice(0, 100))
+})
+
+// ── Start ─────────────────────────────────────────────────────────────────────
+
+app.listen(PORT, () => {
+  console.log(`[Printer Agent] Inteliar Printer Agent v2 — http://localhost:${PORT}`)
+  console.log(`[Printer Agent] Impresoras configuradas: ${config.printers.length}`)
+  config.printers.forEach(p => {
+    const detail = p.connection === 'tcp' ? ` ${p.host}:${p.port || 9100}`
+      : p.connection === 'usb' ? ` (${p.usbQueue || p.name})`
+      : p.connection === 'serial' ? ` ${p.serialPort}`
+      : ' (simulación)'
+    console.log(`  • [${p.id}] ${p.name} — ${p.connection}${detail}${p.id === config.defaultPrinterId ? ' ✓ default' : ''}`)
+  })
+})
