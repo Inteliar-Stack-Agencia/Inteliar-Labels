@@ -6,14 +6,20 @@ import { Header } from "@/components/dashboard/header"
 import { Button } from "@/components/ui/button"
 import {
   Calendar,
-  Filter,
   CheckCircle2,
   XCircle,
   Printer,
   Tag,
+  Activity,
+  RefreshCw,
+  Wifi,
+  Usb,
+  Cable,
+  FlaskConical,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
+import { getPrinterAgentLog, type AgentLogEntry } from "@/lib/printer-agent-client"
 
 interface CompletedJob {
   id: string
@@ -35,14 +41,47 @@ function formatDateTime(dateStr: string) {
   })
 }
 
+type HistoryView = "jobs" | "agent"
+
+function modeIcon(mode: string) {
+  if (mode === "tcp") return <Wifi className="h-4 w-4" />
+  if (mode === "usb") return <Usb className="h-4 w-4" />
+  if (mode === "serial") return <Cable className="h-4 w-4" />
+  return <FlaskConical className="h-4 w-4" />
+}
+
 export default function HistoryPage() {
+  const [view, setView] = useState<HistoryView>("jobs")
   const [dateFilter, setDateFilter] = useState("all")
   const [jobs, setJobs] = useState<CompletedJob[]>([])
   const [loading, setLoading] = useState(true)
 
+  // Agent log
+  const [agentLog, setAgentLog] = useState<AgentLogEntry[]>([])
+  const [loadingAgent, setLoadingAgent] = useState(false)
+  const [agentError, setAgentError] = useState<string | null>(null)
+
   useEffect(() => {
     loadHistory()
   }, [])
+
+  async function loadAgentLog() {
+    setLoadingAgent(true)
+    setAgentError(null)
+    try {
+      const log = await getPrinterAgentLog()
+      setAgentLog(log)
+    } catch (err) {
+      setAgentError(err instanceof Error ? err.message : "Agente no disponible")
+      setAgentLog([])
+    } finally {
+      setLoadingAgent(false)
+    }
+  }
+
+  useEffect(() => {
+    if (view === "agent") loadAgentLog()
+  }, [view])
 
   async function loadHistory() {
     const supabase = createClient()
@@ -94,6 +133,123 @@ export default function HistoryPage() {
       />
 
       <div className="p-6">
+        {/* View toggle */}
+        <div className="mb-6 inline-flex rounded-lg border border-border bg-card p-1">
+          <button
+            onClick={() => setView("jobs")}
+            className={cn(
+              "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              view === "jobs" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Tag className="h-4 w-4" />
+            Trabajos completados
+          </button>
+          <button
+            onClick={() => setView("agent")}
+            className={cn(
+              "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              view === "agent" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Activity className="h-4 w-4" />
+            Actividad del agente
+          </button>
+        </div>
+
+        {/* ── AGENT ACTIVITY VIEW ── */}
+        {view === "agent" ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Últimos trabajos enviados al agente local (en memoria, se reinicia al cerrar el agente)
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={loadAgentLog}
+                disabled={loadingAgent}
+              >
+                <RefreshCw className={cn("h-3.5 w-3.5", loadingAgent && "animate-spin")} />
+                Actualizar
+              </Button>
+            </div>
+
+            {loadingAgent ? (
+              <div className="py-16 text-center text-sm text-muted-foreground">Cargando actividad…</div>
+            ) : agentError ? (
+              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16 text-center">
+                <Activity className="mb-3 h-10 w-10 text-muted-foreground" />
+                <p className="text-sm text-foreground">Agente no disponible</p>
+                <p className="mt-1 text-xs text-muted-foreground">{agentError}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Iniciá el agente: <code className="rounded bg-muted px-1">cd printer-agent &amp;&amp; npm start</code>
+                </p>
+              </div>
+            ) : agentLog.length === 0 ? (
+              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16 text-center">
+                <Activity className="mb-3 h-10 w-10 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Sin actividad registrada todavía</p>
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-xl border border-border bg-card">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="border-b border-border bg-muted">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Fecha</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Impresora</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Conexión</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground">Etiquetas</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Formato</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {agentLog.map((entry, i) => (
+                        <tr key={i} className={cn(i % 2 === 0 ? "bg-background" : "bg-muted/20")}>
+                          <td className="px-4 py-2.5 whitespace-nowrap text-muted-foreground">
+                            {formatDateTime(entry.timestamp)}
+                          </td>
+                          <td className="px-4 py-2.5 font-medium text-foreground">
+                            {entry.printerName ?? entry.printer ?? "—"}
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <span className="flex items-center gap-1.5 text-muted-foreground">
+                              {modeIcon(entry.mode)}
+                              <span className="text-xs uppercase">{entry.mode}</span>
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5 text-center text-foreground">{entry.labels}</td>
+                          <td className="px-4 py-2.5">
+                            <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">
+                              {entry.format}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <div className="flex items-center justify-center">
+                              {entry.status === "ok" ? (
+                                <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                                  <CheckCircle2 className="h-3.5 w-3.5" /> OK
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400" title={entry.error}>
+                                  <XCircle className="h-3.5 w-3.5" /> Error
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+        <>
         {/* Stats */}
         <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
           <div className="rounded-lg border border-border bg-card p-4">
@@ -193,6 +349,8 @@ export default function HistoryPage() {
               })}
             </div>
           </div>
+        )}
+        </>
         )}
       </div>
     </DashboardLayout>

@@ -14,3 +14,7 @@ next.user-config.*
 node_modules/
 .next/
 .DS_Store
+
+# Printer agent runtime config & build artifacts
+printer-agent/printers.json
+printer-agent/dist/

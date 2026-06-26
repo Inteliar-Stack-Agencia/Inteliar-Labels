@@ -7,6 +7,7 @@ on:
       - '.github/workflows/build-agent.yml'
     branches:
       - main
+      - 'claude/**'
   workflow_dispatch:
 
 permissions:
@@ -21,23 +22,24 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
+      # Skip the optional native serialport build — not needed for the .exe.
+      # Serial support is loaded dynamically at runtime if the user installs it.
       - name: Install dependencies
         working-directory: printer-agent
-        run: npm install
+        run: npm install --omit=optional
 
+      # @yao-pkg/pkg is the maintained pkg fork that supports ESM + Node 20.
       - name: Build Windows exe
         working-directory: printer-agent
-        run: npx pkg . --target node18-win-x64 --output dist/InteliarPrinterAgent.exe
+        run: npm run build:win
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: InteliarPrinterAgent-win
-          path: |
-            printer-agent/dist/InteliarPrinterAgent.exe
-            printer-agent/config.json
+          path: printer-agent/dist/InteliarPrinterAgent.exe
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -46,14 +48,17 @@ jobs:
           tag_name: agent-v${{ github.run_number }}
           name: "Printer Agent v${{ github.run_number }}"
           body: |
-            ## Inteliar Printer Agent para Windows
+            ## Inteliar Printer Agent v2 para Windows
+
+            Agente local que conecta el SaaS con tus impresoras térmicas
+            (TCP/IP, USB, Serie). Soporta múltiples impresoras y marcas.
 
             ### Instalación
-            1. Descargá `InteliarPrinterAgent.exe` y `config.json`
-            2. Poné los dos archivos en la misma carpeta
-            3. Editá `config.json` con el nombre de tu impresora
-            4. Ejecutá `InteliarPrinterAgent.exe`
-            5. En la app web, usá `http://localhost:9638`
-          files: |
-            printer-agent/dist/InteliarPrinterAgent.exe
-            printer-agent/config.json
+            1. Descargá `InteliarPrinterAgent.exe`
+            2. Ejecutalo (doble clic). Queda escuchando en `http://localhost:9638`
+            3. En la app web → **Configuración → Impresoras**, agregá tu impresora
+               (la app detecta el agente automáticamente)
+
+            > No requiere instalar Node.js. La configuración se guarda en
+            > `printers.json`, junto al .exe.
+          files: printer-agent/dist/InteliarPrinterAgent.exe

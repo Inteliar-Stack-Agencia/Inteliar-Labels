@@ -128,9 +128,9 @@ export default function TemplateEditPage() {
       y: 20,
       fontSize: 12,
       bold: false,
-      lineWidth: type === "line" ? widthMm - 8 : type === "rect" || type === "ellipse" ? 20 : undefined,
-      lineHeight: type === "rect" || type === "ellipse" ? 20 : undefined,
-      lineThickness: type === "line" || type === "rect" || type === "ellipse" ? 0.5 : undefined,
+      lineWidth: type === "line" ? (widthMm - 8) * 10 : type === "rect" || type === "ellipse" ? 200 : undefined,
+      lineHeight: type === "rect" || type === "ellipse" ? 100 : undefined,
+      lineThickness: type === "line" || type === "rect" || type === "ellipse" ? 5 : undefined,
       ...(type === "serial" ? { serialStart: 1, serialIncrement: 1, serialDigits: 4, serialPrefix: "", serialSuffix: "" } : {}),
     }
     setElements([...elements, newElement])
@@ -198,8 +198,8 @@ export default function TemplateEditPage() {
       fontSize: 12,
       bold: false,
       imageUrl,
-      imgWidth: 30,
-      imgHeight: 20,
+      imgWidth: 200,
+      imgHeight: 150,
     }
     setElements((prev) => [...prev, newElement])
     setSelectedElement(newElement.id)
@@ -281,9 +281,12 @@ export default function TemplateEditPage() {
       })
       const data = await res.json()
       if (!res.ok) { setAiError(data.error || "Error generando plantilla"); return }
+      // AI returns x/y in mm; canvas stores in tenths-of-mm → multiply by 10
       const newElements: LabelElement[] = data.elements.map((el: LabelElement, i: number) => ({
         ...el,
         id: Date.now().toString() + i,
+        x: Math.round((el.x ?? 0) * 10),
+        y: Math.round((el.y ?? 0) * 10),
       }))
       setElements(newElements)
       if (data.widthMm) setWidthMm(data.widthMm)
@@ -723,28 +726,28 @@ export default function TemplateEditPage() {
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="mb-1 block text-[10px] text-muted-foreground">Ancho (mm)</label>
-                      <input type="number" value={selectedElementData.lineWidth ?? 30}
-                        onChange={(e) => updateElement(selectedElementData.id, { lineWidth: Number(e.target.value) })}
+                      <input type="number" value={+((selectedElementData.lineWidth ?? 200) / 10).toFixed(1)}
+                        onChange={(e) => updateElement(selectedElementData.id, { lineWidth: Math.round(Number(e.target.value) * 10) })}
                         className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                        min={1}
+                        min={0.5} step={0.5}
                       />
                     </div>
                     {(selectedElementData.type === "rect" || selectedElementData.type === "ellipse") && (
                       <div>
                         <label className="mb-1 block text-[10px] text-muted-foreground">Alto (mm)</label>
-                        <input type="number" value={selectedElementData.lineHeight ?? 20}
-                          onChange={(e) => updateElement(selectedElementData.id, { lineHeight: Number(e.target.value) })}
+                        <input type="number" value={+((selectedElementData.lineHeight ?? 100) / 10).toFixed(1)}
+                          onChange={(e) => updateElement(selectedElementData.id, { lineHeight: Math.round(Number(e.target.value) * 10) })}
                           className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                          min={1}
+                          min={0.5} step={0.5}
                         />
                       </div>
                     )}
                     <div>
                       <label className="mb-1 block text-[10px] text-muted-foreground">Grosor (mm)</label>
-                      <input type="number" value={selectedElementData.lineThickness ?? 0.5}
-                        onChange={(e) => updateElement(selectedElementData.id, { lineThickness: Number(e.target.value) })}
+                      <input type="number" value={+((selectedElementData.lineThickness ?? 5) / 10).toFixed(2)}
+                        onChange={(e) => updateElement(selectedElementData.id, { lineThickness: Math.round(Number(e.target.value) * 10) })}
                         className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                        min={0.3} max={5} step={0.1}
+                        min={0.1} max={10} step={0.1}
                       />
                     </div>
                   </div>
@@ -837,16 +840,18 @@ export default function TemplateEditPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Pos. X (mm)</label>
-                  <input type="number" value={selectedElementData.x}
-                    onChange={(e) => updateElement(selectedElementData.id, { x: Number(e.target.value) })}
+                  <input type="number" value={+(selectedElementData.x / 10).toFixed(1)}
+                    onChange={(e) => updateElement(selectedElementData.id, { x: Math.round(Number(e.target.value) * 10) })}
                     className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                    min={0} step={0.5}
                   />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Pos. Y (mm)</label>
-                  <input type="number" value={selectedElementData.y}
-                    onChange={(e) => updateElement(selectedElementData.id, { y: Number(e.target.value) })}
+                  <input type="number" value={+(selectedElementData.y / 10).toFixed(1)}
+                    onChange={(e) => updateElement(selectedElementData.id, { y: Math.round(Number(e.target.value) * 10) })}
                     className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                    min={0} step={0.5}
                   />
                 </div>
               </div>
@@ -870,27 +875,27 @@ export default function TemplateEditPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="mb-1 block text-[10px] text-muted-foreground">Ancho</label>
-                      <input type="number" value={selectedElementData.imgWidth ?? 30}
+                      <input type="number" value={+((selectedElementData.imgWidth ?? 200) / 10).toFixed(1)}
                         onChange={(e) => {
-                          const w = Number(e.target.value)
+                          const w = Math.round(Number(e.target.value) * 10)
                           if (lockAspect) {
-                            const ratio = (selectedElementData.imgHeight ?? 20) / (selectedElementData.imgWidth ?? 30)
+                            const ratio = (selectedElementData.imgHeight ?? 150) / (selectedElementData.imgWidth ?? 200)
                             updateElement(selectedElementData.id, { imgWidth: w, imgHeight: Math.round(w * ratio) })
                           } else {
                             updateElement(selectedElementData.id, { imgWidth: w })
                           }
                         }}
                         className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                        min={5}
+                        min={0.5} step={0.5}
                       />
                     </div>
                     <div>
                       <label className="mb-1 block text-[10px] text-muted-foreground">Alto</label>
-                      <input type="number" value={selectedElementData.imgHeight ?? 20}
+                      <input type="number" value={+((selectedElementData.imgHeight ?? 150) / 10).toFixed(1)}
                         onChange={(e) => {
-                          const h = Number(e.target.value)
+                          const h = Math.round(Number(e.target.value) * 10)
                           if (lockAspect) {
-                            const ratio = (selectedElementData.imgWidth ?? 30) / (selectedElementData.imgHeight ?? 20)
+                            const ratio = (selectedElementData.imgWidth ?? 200) / (selectedElementData.imgHeight ?? 150)
                             updateElement(selectedElementData.id, { imgHeight: h, imgWidth: Math.round(h * ratio) })
                           } else {
                             updateElement(selectedElementData.id, { imgHeight: h })
