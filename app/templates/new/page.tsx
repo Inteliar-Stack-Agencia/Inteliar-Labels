@@ -21,7 +21,6 @@ import {
   Sparkles,
   X,
   Hash,
-  Calendar,
   Link2,
   Unlink2,
   Minus,
@@ -30,11 +29,11 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
+  Calendar,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { LabelElement, ElementType } from "@/lib/label-types"
 import { resolveDateVars, DATE_SHORTCUTS, isDateToken } from "@/lib/date-vars"
-import { PRESET_TEMPLATES } from "@/lib/preset-templates"
 
 const PRESET_SIZES = [
   { label: "80 × 40 mm (catering / vianda)", width: 80, height: 40 },
@@ -45,13 +44,12 @@ const PRESET_SIZES = [
   { label: "Personalizado", width: 0, height: 0 },
 ]
 
-export default function TemplateEditorPage() {
+export default function NewTemplatePage() {
   const router = useRouter()
   const supabase = createClient()
   const logoInputRef = useRef<HTMLInputElement>(null)
 
-  const [step, setStep] = useState<"preset" | "editor">("preset")
-  const [templateName, setTemplateName] = useState("Template sin título")
+  const [templateName, setTemplateName] = useState("Nueva plantilla")
   const [widthMm, setWidthMm] = useState(80)
   const [heightMm, setHeightMm] = useState(40)
   const [selectedPreset, setSelectedPreset] = useState(0)
@@ -96,9 +94,9 @@ export default function TemplateEditorPage() {
       y: 20,
       fontSize: type === "serial" ? 14 : 12,
       bold: false,
-      lineWidth: type === "line" ? widthMm - 8 : type === "rect" || type === "ellipse" ? 20 : undefined,
-      lineHeight: type === "rect" || type === "ellipse" ? 20 : undefined,
-      lineThickness: type === "line" || type === "rect" || type === "ellipse" ? 0.5 : undefined,
+      lineWidth: type === "line" ? (widthMm - 8) * 10 : type === "rect" || type === "ellipse" ? 200 : undefined,
+      lineHeight: type === "rect" || type === "ellipse" ? 100 : undefined,
+      lineThickness: type === "line" || type === "rect" || type === "ellipse" ? 5 : undefined,
       ...(type === "barcode" ? { barcodeType: "code128" as const } : {}),
       ...(type === "serial" ? { serialStart: 1, serialIncrement: 1, serialDigits: 4, serialPrefix: "", serialSuffix: "" } : {}),
     }
@@ -168,8 +166,8 @@ export default function TemplateEditorPage() {
       fontSize: 12,
       bold: false,
       imageUrl,
-      imgWidth: 30,
-      imgHeight: 20,
+      imgWidth: 200,
+      imgHeight: 150,
     }
     setElements((prev) => [...prev, newElement])
     setSelectedElement(newElement.id)
@@ -210,24 +208,24 @@ export default function TemplateEditorPage() {
     if (!el) return
     const startX = e.clientX
     const startY = e.clientY
-    const origLineW = el.lineWidth ?? (el.type === "line" ? widthMm - 8 : 20)
-    const origLineH = el.lineHeight ?? 10
-    const origImgW = el.imgWidth ?? 30
-    const origImgH = el.imgHeight ?? 20
+    const origLineW = el.lineWidth ?? (el.type === "line" ? (widthMm - 8) * 10 : 200)
+    const origLineH = el.lineHeight ?? 100
+    const origImgW = el.imgWidth ?? 200
+    const origImgH = el.imgHeight ?? 150
 
     const onMouseMove = (ev: MouseEvent) => {
       const dx = (ev.clientX - startX) * 10 / SCALE
       const dy = (ev.clientY - startY) * 10 / SCALE
       if (el.type === "line") {
-        setElements(prev => prev.map(e => e.id === id ? { ...e, lineWidth: Math.max(2, Math.round(origLineW + dx)) } : e))
+        setElements(prev => prev.map(e => e.id === id ? { ...e, lineWidth: Math.max(10, Math.round(origLineW + dx)) } : e))
       } else if (el.type === "rect" || el.type === "ellipse") {
-        setElements(prev => prev.map(e => e.id === id ? { ...e, lineWidth: Math.max(2, Math.round(origLineW + dx)), lineHeight: Math.max(2, Math.round(origLineH + dy)) } : e))
+        setElements(prev => prev.map(e => e.id === id ? { ...e, lineWidth: Math.max(10, Math.round(origLineW + dx)), lineHeight: Math.max(10, Math.round(origLineH + dy)) } : e))
       } else if (el.type === "image") {
-        const newW = Math.max(5, Math.round(origImgW + dx))
+        const newW = Math.max(10, Math.round(origImgW + dx))
         setElements(prev => prev.map(e => {
           if (e.id !== id) return e
-          if (lockAspect) return { ...e, imgWidth: newW, imgHeight: Math.max(5, Math.round(newW * origImgH / origImgW)) }
-          return { ...e, imgWidth: newW, imgHeight: Math.max(5, Math.round(origImgH + dy)) }
+          if (lockAspect) return { ...e, imgWidth: newW, imgHeight: Math.max(10, Math.round(newW * origImgH / origImgW)) }
+          return { ...e, imgWidth: newW, imgHeight: Math.max(10, Math.round(origImgH + dy)) }
         }))
       }
     }
@@ -306,51 +304,6 @@ export default function TemplateEditorPage() {
     return ImageIcon
   }
 
-  // ── STEP 0: Preset picker ────────────────────────────────────────────────
-  if (step === "preset") {
-    return (
-      <DashboardLayout>
-        <div className="flex h-16 items-center border-b border-border bg-card px-6">
-          <Link href="/templates" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" />
-            Volver
-          </Link>
-          <h1 className="ml-4 text-lg font-semibold">Nueva plantilla</h1>
-        </div>
-        <div className="mx-auto max-w-2xl p-8">
-          <h2 className="mb-1 text-xl font-bold">¿Qué querés etiquetar?</h2>
-          <p className="mb-6 text-sm text-muted-foreground">Elegí una plantilla base y la personalizás en segundos</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {PRESET_TEMPLATES.filter(Boolean).map((preset) => (
-              <button
-                key={preset.id}
-                onClick={() => {
-                  setTemplateName(preset.name)
-                  setWidthMm(preset.widthMm)
-                  setHeightMm(preset.heightMm)
-                  setElements((preset.canvas?.elements ?? []).filter(Boolean).map((el, i) => ({ ...el, id: Date.now().toString() + i })))
-                  setCutBetweenLabels(preset.canvas?.cutBetweenLabels ?? true)
-                  setCutEveryN(preset.canvas?.cutEveryN ?? 1)
-                  const idx = PRESET_SIZES.findIndex((s) => s.width === preset.widthMm && s.height === preset.heightMm)
-                  setSelectedPreset(idx >= 0 ? idx : 5)
-                  setStep("editor")
-                }}
-                className="flex items-start gap-4 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-primary hover:bg-primary/5"
-              >
-                <span className="text-3xl">{preset.emoji}</span>
-                <div>
-                  <p className="font-semibold text-foreground">{preset.name}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{preset.description}</p>
-                  <p className="mt-1 text-[10px] text-muted-foreground">{preset.widthMm} × {preset.heightMm} mm</p>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      </DashboardLayout>
-    )
-  }
-
   return (
     <DashboardLayout>
       {/* Top Bar */}
@@ -384,7 +337,7 @@ export default function TemplateEditorPage() {
           </Button>
           <Button size="sm" className="gap-2" onClick={handleSave} disabled={saving}>
             <Save className="h-4 w-4" />
-            {saving ? "Guardando..." : "Guardar template"}
+            {saving ? "Guardando..." : "Crear plantilla"}
           </Button>
         </div>
       </div>
@@ -394,11 +347,9 @@ export default function TemplateEditorPage() {
         <div className="flex-1 overflow-auto bg-muted/30 p-8">
           <div className="mx-auto max-w-3xl space-y-6">
 
-            {/* Size Configuration Panel */}
             {showSizePanel && (
               <div className="rounded-xl border border-border bg-card p-5 space-y-4">
                 <h3 className="text-sm font-semibold text-foreground">Configuración de etiqueta</h3>
-
                 <div>
                   <label className="mb-2 block text-xs font-medium text-muted-foreground">Tamaño predefinido</label>
                   <div className="flex flex-wrap gap-2">
@@ -418,13 +369,10 @@ export default function TemplateEditorPage() {
                     ))}
                   </div>
                 </div>
-
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Ancho (mm)</label>
-                    <input
-                      type="number"
-                      value={widthMm}
+                    <input type="number" value={widthMm}
                       onChange={(e) => { setWidthMm(Number(e.target.value)); setSelectedPreset(5) }}
                       className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                       min={20} max={300}
@@ -432,9 +380,7 @@ export default function TemplateEditorPage() {
                   </div>
                   <div>
                     <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Alto (mm)</label>
-                    <input
-                      type="number"
-                      value={heightMm}
+                    <input type="number" value={heightMm}
                       onChange={(e) => { setHeightMm(Number(e.target.value)); setSelectedPreset(5) }}
                       className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                       min={10} max={300}
@@ -446,7 +392,6 @@ export default function TemplateEditorPage() {
                     </div>
                   </div>
                 </div>
-
                 <div className="rounded-lg border border-border p-3 space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
@@ -509,17 +454,13 @@ export default function TemplateEditorPage() {
                 <Circle className="h-4 w-4" /> Elipse
               </Button>
               <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
+                variant="outline" size="sm" className="gap-2"
                 onClick={() => logoInputRef.current?.click()}
                 disabled={uploadingLogo}
               >
-                {uploadingLogo ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                ) : (
-                  <Upload className="h-4 w-4" />
-                )}
+                {uploadingLogo
+                  ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  : <Upload className="h-4 w-4" />}
                 {uploadingLogo ? "Subiendo..." : "Logo / Imagen"}
               </Button>
               <input
@@ -571,125 +512,123 @@ export default function TemplateEditorPage() {
                     style={{ width: `${canvasW}px`, height: `${canvasH}px`, minWidth: "200px", minHeight: "100px" }}
                     onClick={() => setSelectedElement(null)}
                   >
-                    {/* Grid */}
                     <div className="absolute inset-0 opacity-10" style={{
                       backgroundImage: `linear-gradient(to right, #888 1px, transparent 1px), linear-gradient(to bottom, #888 1px, transparent 1px)`,
                       backgroundSize: `${SCALE * 10}px ${SCALE * 10}px`,
                     }} />
 
-                    {/* Elements */}
-                    {elements.filter(Boolean).map((element) => {
-                      return (
-                        <div
-                          key={element.id}
-                          onMouseDown={(e) => handleElementMouseDown(e, element.id)}
-                          onClick={(e) => e.stopPropagation()}
-                          className={cn(
-                            "absolute cursor-grab active:cursor-grabbing rounded border-2 transition-colors",
-                            selectedElement === element.id
-                              ? "border-primary bg-primary/10"
-                              : "border-transparent hover:border-border"
-                          )}
-                          style={{ left: (element.textAlign === 'center' || element.textAlign === 'right') ? 0 : `${element.x * SCALE / 10}px`, top: `${element.y * SCALE / 10}px`, width: (element.textAlign === 'center' || element.textAlign === 'right') ? `${canvasW}px` : undefined, paddingLeft: (element.textAlign === 'center' || element.textAlign === 'right') ? `${2 * SCALE}px` : undefined, paddingRight: (element.textAlign === 'center' || element.textAlign === 'right') ? `${2 * SCALE}px` : undefined }}
-                        >
-                          {selectedElement === element.id && (
-                            <div className="absolute -top-5 left-0 flex items-center gap-1 rounded-t bg-primary px-1.5 py-0.5 text-[9px] font-medium text-primary-foreground whitespace-nowrap">
-                              <GripVertical className="h-2.5 w-2.5" />
-                              {element.type.toUpperCase()}
-                            </div>
-                          )}
-
-                          {element.type === "line" ? (
-                            <div style={{ position: "relative" }}>
-                              <div style={{
-                                width: `${(element.lineWidth ?? widthMm - 8) * SCALE / 10}px`,
-                                height: `${Math.max(1, (element.lineThickness ?? 0.5) * SCALE / 10)}px`,
-                                backgroundColor: "#333",
-                              }} />
-                              {selectedElement === element.id && (
-                                <div onMouseDown={(e) => handleResizeMouseDown(e, element.id)} style={{ position: "absolute", right: -4, top: "50%", transform: "translateY(-50%)", width: 8, height: 8, background: "white", border: "2px solid hsl(var(--primary))", borderRadius: 2, cursor: "ew-resize", zIndex: 10 }} />
-                              )}
-                            </div>
-                          ) : element.type === "rect" ? (
-                            <div style={{ position: "relative" }}>
-                              <div style={{
-                                width: `${(element.lineWidth ?? 20) * SCALE / 10}px`,
-                                height: `${(element.lineHeight ?? 10) * SCALE / 10}px`,
-                                border: `${Math.max(1, (element.lineThickness ?? 0.5) * SCALE / 10)}px solid #333`,
-                                boxSizing: "border-box",
-                              }} />
-                              {selectedElement === element.id && (
-                                <div onMouseDown={(e) => handleResizeMouseDown(e, element.id)} style={{ position: "absolute", right: -4, bottom: -4, width: 8, height: 8, background: "white", border: "2px solid hsl(var(--primary))", borderRadius: 2, cursor: "se-resize", zIndex: 10 }} />
-                              )}
-                            </div>
-                          ) : element.type === "ellipse" ? (
-                            <div style={{ position: "relative" }}>
-                              <div style={{
-                                width: `${(element.lineWidth ?? 20) * SCALE / 10}px`,
-                                height: `${(element.lineHeight ?? 20) * SCALE / 10}px`,
-                                border: `${Math.max(1, (element.lineThickness ?? 0.5) * SCALE / 10)}px solid #333`,
-                                borderRadius: "50%",
-                                boxSizing: "border-box",
-                              }} />
-                              {selectedElement === element.id && (
-                                <div onMouseDown={(e) => handleResizeMouseDown(e, element.id)} style={{ position: "absolute", right: -4, bottom: -4, width: 8, height: 8, background: "white", border: "2px solid hsl(var(--primary))", borderRadius: 2, cursor: "se-resize", zIndex: 10 }} />
-                              )}
-                            </div>
-                          ) : element.type === "image" && element.imageUrl ? (
-                            <div style={{ position: "relative" }}>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={element.imageUrl}
-                                alt={element.content}
-                                style={{
-                                  width: `${(element.imgWidth ?? 30) * SCALE / 10}px`,
-                                  height: `${(element.imgHeight ?? 20) * SCALE / 10}px`,
-                                  objectFit: "contain",
-                                  display: "block",
-                                }}
-                              />
-                              {selectedElement === element.id && (
-                                <div onMouseDown={(e) => handleResizeMouseDown(e, element.id)} style={{ position: "absolute", right: -4, bottom: -4, width: 8, height: 8, background: "white", border: "2px solid hsl(var(--primary))", borderRadius: 2, cursor: "se-resize", zIndex: 10 }} />
-                              )}
-                            </div>
-                          ) : (
-                            <div className="px-1.5 py-1" style={{ width: "100%" }}>
-                              <span
-                                className="text-gray-800"
-                                style={{
-                                  fontSize: `${element.fontSize * SCALE / 3}px`,
-                                  fontWeight: element.bold ? "bold" : "normal",
-                                  textAlign: element.textAlign || "left",
-                                  display: "block",
-                                  width: "100%",
-                                  fontFamily: "'Arial Narrow', 'Liberation Sans Narrow', Arial, sans-serif",
-                                  letterSpacing: "-0.03em",
-                                  lineHeight: 1.1,
-                                }}
-                              >
-                                {element.type === "serial"
-                                  ? `${element.serialPrefix ?? ""}${String(element.serialStart ?? 1).padStart(element.serialDigits ?? 4, "0")}${element.serialSuffix ?? ""}`
-                                  : resolveDateVars(element.content ?? "")
-                                }
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
+                    {elements.filter(Boolean).map((element) => (
+                      <div
+                        key={element.id}
+                        onMouseDown={(e) => handleElementMouseDown(e, element.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        className={cn(
+                          "absolute cursor-grab active:cursor-grabbing rounded border-2 transition-colors",
+                          selectedElement === element.id
+                            ? "border-primary bg-primary/10"
+                            : "border-transparent hover:border-border"
+                        )}
+                        style={
+                          element.type === "text" && element.textAlign && element.textAlign !== "left"
+                            ? { left: 0, top: `${element.y * SCALE / 10}px`, width: `${canvasW}px`, paddingLeft: `${2 * SCALE}px`, paddingRight: `${2 * SCALE}px` }
+                            : { left: `${element.x * SCALE / 10}px`, top: `${element.y * SCALE / 10}px` }
+                        }
+                      >
+                        {selectedElement === element.id && (
+                          <div className="absolute -top-5 left-0 flex items-center gap-1 rounded-t bg-primary px-1.5 py-0.5 text-[9px] font-medium text-primary-foreground whitespace-nowrap">
+                            <GripVertical className="h-2.5 w-2.5" />
+                            {element.type.toUpperCase()}
+                          </div>
+                        )}
+                        {element.type === "line" ? (
+                          <div style={{ position: "relative" }}>
+                            <div style={{
+                              width: `${(element.lineWidth ?? (widthMm - 8) * 10) * SCALE / 10}px`,
+                              height: `${Math.max(1, (element.lineThickness ?? 5) * SCALE / 10)}px`,
+                              backgroundColor: "#333",
+                            }} />
+                            {selectedElement === element.id && (
+                              <div onMouseDown={(e) => handleResizeMouseDown(e, element.id)} style={{ position: "absolute", right: -4, top: "50%", transform: "translateY(-50%)", width: 8, height: 8, background: "white", border: "2px solid hsl(var(--primary))", borderRadius: 2, cursor: "ew-resize", zIndex: 10 }} />
+                            )}
+                          </div>
+                        ) : element.type === "rect" ? (
+                          <div style={{ position: "relative" }}>
+                            <div style={{
+                              width: `${(element.lineWidth ?? 200) * SCALE / 10}px`,
+                              height: `${(element.lineHeight ?? 100) * SCALE / 10}px`,
+                              border: `${Math.max(1, (element.lineThickness ?? 5) * SCALE / 10)}px solid #333`,
+                              boxSizing: "border-box",
+                            }} />
+                            {selectedElement === element.id && (
+                              <div onMouseDown={(e) => handleResizeMouseDown(e, element.id)} style={{ position: "absolute", right: -4, bottom: -4, width: 8, height: 8, background: "white", border: "2px solid hsl(var(--primary))", borderRadius: 2, cursor: "se-resize", zIndex: 10 }} />
+                            )}
+                          </div>
+                        ) : element.type === "ellipse" ? (
+                          <div style={{ position: "relative" }}>
+                            <div style={{
+                              width: `${(element.lineWidth ?? 200) * SCALE / 10}px`,
+                              height: `${(element.lineHeight ?? 200) * SCALE / 10}px`,
+                              border: `${Math.max(1, (element.lineThickness ?? 5) * SCALE / 10)}px solid #333`,
+                              borderRadius: "50%",
+                              boxSizing: "border-box",
+                            }} />
+                            {selectedElement === element.id && (
+                              <div onMouseDown={(e) => handleResizeMouseDown(e, element.id)} style={{ position: "absolute", right: -4, bottom: -4, width: 8, height: 8, background: "white", border: "2px solid hsl(var(--primary))", borderRadius: 2, cursor: "se-resize", zIndex: 10 }} />
+                            )}
+                          </div>
+                        ) : element.type === "image" && element.imageUrl ? (
+                          <div style={{ position: "relative" }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={element.imageUrl}
+                              alt={element.content}
+                              style={{
+                                width: `${(element.imgWidth ?? 200) * SCALE / 10}px`,
+                                height: `${(element.imgHeight ?? 150) * SCALE / 10}px`,
+                                objectFit: "contain",
+                                display: "block",
+                              }}
+                            />
+                            {selectedElement === element.id && (
+                              <div onMouseDown={(e) => handleResizeMouseDown(e, element.id)} style={{ position: "absolute", right: -4, bottom: -4, width: 8, height: 8, background: "white", border: "2px solid hsl(var(--primary))", borderRadius: 2, cursor: "se-resize", zIndex: 10 }} />
+                            )}
+                          </div>
+                        ) : (
+                          <div className="px-1.5 py-1" style={{ width: "100%" }}>
+                            <span
+                              className="text-gray-800"
+                              style={{
+                                fontSize: `${element.fontSize * SCALE / 3}px`,
+                                fontWeight: element.bold ? "bold" : "normal",
+                                textAlign: element.textAlign || "left",
+                                display: "block",
+                                width: "100%",
+                                fontFamily: "'Arial Narrow', 'Liberation Sans Narrow', Arial, sans-serif",
+                                letterSpacing: "-0.03em",
+                                lineHeight: 1.1,
+                              }}
+                            >
+                              {element.type === "serial"
+                                ? `${element.serialPrefix ?? ""}${String(element.serialStart ?? 1).padStart(element.serialDigits ?? 4, "0")}${element.serialSuffix ?? ""}`
+                                : resolveDateVars(element.content ?? "")}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
 
                     {elements.length === 0 && (
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="text-center">
                           <Plus className="mx-auto h-6 w-6 text-gray-300" />
-                          <p className="mt-1 text-xs text-gray-400">Agregá elementos</p>
+                          <p className="mt-1 text-xs text-gray-400">Agregá elementos arriba</p>
                         </div>
                       </div>
                     )}
                   </div>
                 </div>
                 <p className="mt-2 text-center text-[10px] text-muted-foreground">
-                  Usá {"{{variable}}"} para contenido dinámico desde Excel
+                  Usá {{"{{variable}}"}} para contenido dinámico desde Excel
                 </p>
               </div>
             </div>
@@ -771,28 +710,28 @@ export default function TemplateEditorPage() {
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="mb-1 block text-xs font-medium text-muted-foreground">Ancho (mm)</label>
-                      <input type="number" value={selectedElementData.lineWidth ?? 30}
-                        onChange={(e) => updateElement(selectedElementData.id, { lineWidth: Number(e.target.value) })}
+                      <input type="number" value={+((selectedElementData.lineWidth ?? 200) / 10).toFixed(1)}
+                        onChange={(e) => updateElement(selectedElementData.id, { lineWidth: Math.round(Number(e.target.value) * 10) })}
                         className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                        min={1}
+                        min={0.5} step={0.5}
                       />
                     </div>
                     {(selectedElementData.type === "rect" || selectedElementData.type === "ellipse") && (
                       <div>
                         <label className="mb-1 block text-xs font-medium text-muted-foreground">Alto (mm)</label>
-                        <input type="number" value={selectedElementData.lineHeight ?? 20}
-                          onChange={(e) => updateElement(selectedElementData.id, { lineHeight: Number(e.target.value) })}
+                        <input type="number" value={+((selectedElementData.lineHeight ?? 100) / 10).toFixed(1)}
+                          onChange={(e) => updateElement(selectedElementData.id, { lineHeight: Math.round(Number(e.target.value) * 10) })}
                           className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                          min={1}
+                          min={0.5} step={0.5}
                         />
                       </div>
                     )}
                     <div>
                       <label className="mb-1 block text-xs font-medium text-muted-foreground">Grosor (mm)</label>
-                      <input type="number" value={selectedElementData.lineThickness ?? 0.5}
-                        onChange={(e) => updateElement(selectedElementData.id, { lineThickness: Number(e.target.value) })}
+                      <input type="number" value={+((selectedElementData.lineThickness ?? 5) / 10).toFixed(2)}
+                        onChange={(e) => updateElement(selectedElementData.id, { lineThickness: Math.round(Number(e.target.value) * 10) })}
                         className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                        min={0.3} max={5} step={0.1}
+                        min={0.1} max={10} step={0.1}
                       />
                     </div>
                   </div>
@@ -845,7 +784,7 @@ export default function TemplateEditorPage() {
                       </select>
                     </div>
                   )}
-                  <p className="mt-1 text-[10px] text-muted-foreground">Usá {"{{nombre_columna}}"} para datos del Excel</p>
+                  <p className="mt-1 text-[10px] text-muted-foreground">Usá {{"{{nombre_columna}}"}} para datos del Excel</p>
                 </div>
               )}
 
@@ -853,16 +792,18 @@ export default function TemplateEditorPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Pos. X (mm)</label>
-                  <input type="number" value={selectedElementData.x}
-                    onChange={(e) => updateElement(selectedElementData.id, { x: Number(e.target.value) })}
+                  <input type="number" value={+(selectedElementData.x / 10).toFixed(1)}
+                    onChange={(e) => updateElement(selectedElementData.id, { x: Math.round(Number(e.target.value) * 10) })}
                     className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                    min={0} step={0.5}
                   />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Pos. Y (mm)</label>
-                  <input type="number" value={selectedElementData.y}
-                    onChange={(e) => updateElement(selectedElementData.id, { y: Number(e.target.value) })}
+                  <input type="number" value={+(selectedElementData.y / 10).toFixed(1)}
+                    onChange={(e) => updateElement(selectedElementData.id, { y: Math.round(Number(e.target.value) * 10) })}
                     className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                    min={0} step={0.5}
                   />
                 </div>
               </div>
@@ -886,35 +827,35 @@ export default function TemplateEditorPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="mb-1 block text-[10px] text-muted-foreground">Ancho</label>
-                      <input type="number" value={selectedElementData.imgWidth ?? 30}
+                      <label className="mb-1 block text-[10px] text-muted-foreground">Ancho (mm)</label>
+                      <input type="number" value={+((selectedElementData.imgWidth ?? 200) / 10).toFixed(1)}
                         onChange={(e) => {
-                          const w = Number(e.target.value)
+                          const w = Math.round(Number(e.target.value) * 10)
                           if (lockAspect) {
-                            const ratio = (selectedElementData.imgHeight ?? 20) / (selectedElementData.imgWidth ?? 30)
-                            updateElement(selectedElementData.id, { imgWidth: w, imgHeight: Math.round(w * ratio) })
+                            const ratio = (selectedElementData.imgHeight ?? 150) / (selectedElementData.imgWidth ?? 200)
+                            updateElement(selectedElementData.id, { imgWidth: w, imgHeight: Math.max(5, Math.round(w * ratio)) })
                           } else {
                             updateElement(selectedElementData.id, { imgWidth: w })
                           }
                         }}
                         className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                        min={5}
+                        min={0.5} step={0.5}
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[10px] text-muted-foreground">Alto</label>
-                      <input type="number" value={selectedElementData.imgHeight ?? 20}
+                      <label className="mb-1 block text-[10px] text-muted-foreground">Alto (mm)</label>
+                      <input type="number" value={+((selectedElementData.imgHeight ?? 150) / 10).toFixed(1)}
                         onChange={(e) => {
-                          const h = Number(e.target.value)
+                          const h = Math.round(Number(e.target.value) * 10)
                           if (lockAspect) {
-                            const ratio = (selectedElementData.imgWidth ?? 30) / (selectedElementData.imgHeight ?? 20)
-                            updateElement(selectedElementData.id, { imgHeight: h, imgWidth: Math.round(h * ratio) })
+                            const ratio = (selectedElementData.imgWidth ?? 200) / (selectedElementData.imgHeight ?? 150)
+                            updateElement(selectedElementData.id, { imgHeight: h, imgWidth: Math.max(5, Math.round(h * ratio)) })
                           } else {
                             updateElement(selectedElementData.id, { imgHeight: h })
                           }
                         }}
                         className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                        min={5}
+                        min={0.5} step={0.5}
                       />
                     </div>
                   </div>
@@ -986,7 +927,7 @@ export default function TemplateEditorPage() {
             </div>
           ) : (
             <div className="flex h-40 items-center justify-center">
-              <p className="text-sm text-muted-foreground text-center px-4">Selecioná un elemento para editar sus propiedades</p>
+              <p className="text-sm text-muted-foreground text-center px-4">Seleccioná un elemento para editar sus propiedades</p>
             </div>
           )}
 
