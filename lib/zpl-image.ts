@@ -58,7 +58,17 @@ export async function imageToGFA(url: string, wDots: number, hDots: number): Pro
   // White background so transparent areas stay white (unprinted)
   ctx.fillStyle = "#ffffff"
   ctx.fillRect(0, 0, bw, bh)
-  ctx.drawImage(img, 0, 0, bw, bh)
+
+  // Draw with "contain" to preserve native aspect ratio (matches the editor
+  // preview which uses objectFit:contain). Centered inside the box.
+  const natW = img.naturalWidth || bw
+  const natH = img.naturalHeight || bh
+  const scale = Math.min(bw / natW, bh / natH)
+  const drawW = natW * scale
+  const drawH = natH * scale
+  const offX = (bw - drawW) / 2
+  const offY = (bh - drawH) / 2
+  ctx.drawImage(img, offX, offY, drawW, drawH)
 
   const { data } = ctx.getImageData(0, 0, bw, bh)
 
