@@ -23,6 +23,15 @@ function fontSizeToDots(fontSize: number): number {
   return Math.round(fontSize * DOTS_PER_MM / CANVAS_SCALE)
 }
 
+// Strip accents and special chars that some Honeywell/Zebra printers mis-encode
+// even with ^CI28 active (firmware-dependent). Maps to plain ASCII equivalents.
+function toAsciiSafe(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "") // remove combining diacritics
+    .replace(/[^\x00-\x7F]/g, "?")  // replace any remaining non-ASCII with ?
+}
+
 // Substitute {{key}} tokens from data row.
 // Keys with spaces are supported. Tokens not found in row are kept as-is
 // so that resolveDateVars can handle date shortcuts like {{+3d}}, {{TODAY}}, etc.
@@ -76,22 +85,22 @@ function buildLabelZpl(
     const align = el.textAlign ?? "left"
 
     if (el.type === "serial") {
-      const val = serialValue(el, labelIndex)
+      const val = toAsciiSafe(serialValue(el, labelIndex))
       if (align === "center" || align === "right") {
         const justification = align === "center" ? "C" : "R"
-        fields.push(`^FO${margin},${y}^FB${blockW},1,0,${justification},0${fontSizeToZpl(el.fontSize)}^FD${val}^FS`)
+        fields.push(`^FO${margin},${y}${fontSizeToZpl(el.fontSize)}^FB${blockW},1,0,${justification},0^FD${val}^FS`)
       } else {
         fields.push(`^FO${x},${y}${fontSizeToZpl(el.fontSize)}^FD${val}^FS`)
       }
       continue
     }
 
-    const content = substituteVars(el.content, row)
+    const content = toAsciiSafe(substituteVars(el.content, row))
 
     if (el.type === "text") {
       if (align === "center" || align === "right") {
         const justification = align === "center" ? "C" : "R"
-        fields.push(`^FO${margin},${y}^FB${blockW},1,0,${justification},0${fontSizeToZpl(el.fontSize)}^FD${content}^FS`)
+        fields.push(`^FO${margin},${y}${fontSizeToZpl(el.fontSize)}^FB${blockW},1,0,${justification},0^FD${content}^FS`)
       } else {
         fields.push(`^FO${x},${y}${fontSizeToZpl(el.fontSize)}^FD${content}^FS`)
       }
