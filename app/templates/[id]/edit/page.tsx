@@ -638,7 +638,16 @@ export default function TemplateEditPage() {
                             <div className="px-1.5 py-1" style={{ width: "100%" }}>
                               <span
                                 className="text-gray-800"
-                                style={{ fontSize: `${element.fontSize * SCALE / 3}px`, fontWeight: element.bold ? "bold" : "normal", textAlign: element.textAlign || "left", display: "block", width: "100%" }}
+                                style={{
+                                  fontSize: `${element.fontSize * SCALE / 3}px`,
+                                  fontWeight: element.bold ? "bold" : "normal",
+                                  textAlign: element.textAlign || "left",
+                                  display: "block",
+                                  width: "100%",
+                                  fontFamily: "'Arial Narrow', 'Liberation Sans Narrow', Arial, sans-serif",
+                                  letterSpacing: "-0.03em",
+                                  lineHeight: 1.1,
+                                }}
                               >
                                 {element.type === "serial"
                                   ? `${element.serialPrefix ?? ""}${String(element.serialStart ?? 1).padStart(element.serialDigits ?? 4, "0")}${element.serialSuffix ?? ""}`
