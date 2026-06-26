@@ -8,6 +8,7 @@
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Sí | Cliente y servidor | Clave pública (anon) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Opcional | `POST /api/account/delete` | **Solo server-side.** Ver abajo |
 | `ANTHROPIC_API_KEY` | Opcional | `POST /api/ai/generate-template` | Necesaria para el editor IA de plantillas. Ver abajo |
+| `ADMIN_EMAILS` | Opcional | `app/admin` y `/api/admin/*` | Emails separados por coma que tienen acceso superadmin. Ver abajo |
 
 ### `SUPABASE_SERVICE_ROLE_KEY` — eliminación de cuenta
 
@@ -99,3 +100,34 @@ npm run build:win        # genera dist/InteliarPrinterAgent.exe
 2. Ejecutarlo (doble clic). No requiere instalación.
 3. En la web → **Configuración → Impresoras** → agregar la impresora.
    La configuración persiste en `printers.json`, junto al `.exe`.
+
+
+---
+
+### `ADMIN_EMAILS` — superadministrador
+
+La ruta `/admin` y las APIs `/api/admin/*` solo son accesibles para los emails listados en esta variable.
+
+#### Cómo cargarla
+
+1. En Vercel: **Project → Settings → Environment Variables**
+   - Name: `ADMIN_EMAILS`
+   - Value: `tu@email.com` (o varios separados por coma: `tu@email.com,otro@email.com`)
+   - Environments: Production
+2. Redeploy.
+3. Con tu cuenta logeada, entrá a `https://tu-app.vercel.app/admin`.
+
+> Si la variable no está configurada o el email no coincide, el panel muestra "Acceso denegado".
+
+#### Funcionalidades del superadmin
+
+- **Crear licencias** — genera claves `INTELIAR-XXXX-XXXX-XXXX` con un click
+- **Planes** — Mensual (vence en 30 días, 1 dispositivo) o De por vida (sin vencimiento, 3 dispositivos)
+- **Gestión** — cambiar estado (activa/suspendida/vencida), cambiar plan, extender 30 días
+- **Dispositivos** — ver qué PCs tienen activada cada licencia, desactivar individualmente
+- **Búsqueda** — filtrar por clave o email del cliente
+
+#### Endpoint público para el agente
+
+`POST /api/license/validate` — el printer agent llama a este endpoint en cada arranque.
+Body: `{ key, device_id, hostname }` → devuelve `{ valid, plan, status, message }`.
