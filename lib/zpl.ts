@@ -132,7 +132,7 @@ function buildLabelZpl(
 
     } else if (el.type === "line") {
       const lw = tenthMmToDots(el.lineWidth ?? (widthMm * 10 - 80))
-      const thickness = Math.max(1, tenthMmToDots(el.lineThickness ?? 5))
+      const thickness = Math.max(2, tenthMmToDots(el.lineThickness ?? 5))
       fields.push(`^FO${x},${y}^GB${lw},${thickness},${thickness}^FS`)
 
     } else if (el.type === "rect") {
