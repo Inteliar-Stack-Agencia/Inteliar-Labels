@@ -318,16 +318,16 @@ export default function TemplateEditorPage() {
           <h2 className="mb-1 text-xl font-bold">¿Qué querés etiquetar?</h2>
           <p className="mb-6 text-sm text-muted-foreground">Elegí una plantilla base y la personalizás en segundos</p>
           <div className="grid gap-3 sm:grid-cols-2">
-            {PRESET_TEMPLATES.map((preset) => (
+            {PRESET_TEMPLATES.filter(Boolean).map((preset) => (
               <button
                 key={preset.id}
                 onClick={() => {
                   setTemplateName(preset.name)
                   setWidthMm(preset.widthMm)
                   setHeightMm(preset.heightMm)
-                  setElements(preset.canvas.elements.map((el, i) => ({ ...el, id: Date.now().toString() + i })))
-                  setCutBetweenLabels(preset.canvas.cutBetweenLabels ?? true)
-                  setCutEveryN(preset.canvas.cutEveryN ?? 1)
+                  setElements((preset.canvas?.elements ?? []).filter(Boolean).map((el, i) => ({ ...el, id: Date.now().toString() + i })))
+                  setCutBetweenLabels(preset.canvas?.cutBetweenLabels ?? true)
+                  setCutEveryN(preset.canvas?.cutEveryN ?? 1)
                   const idx = PRESET_SIZES.findIndex((s) => s.width === preset.widthMm && s.height === preset.heightMm)
                   setSelectedPreset(idx >= 0 ? idx : 5)
                   setStep("editor")
@@ -560,7 +560,7 @@ export default function TemplateEditorPage() {
                     }} />
 
                     {/* Elements */}
-                    {elements.map((element) => {
+                    {elements.filter(Boolean).map((element) => {
                       const Icon = elementIcon(element.type)
                       return (
                         <div
@@ -971,7 +971,7 @@ export default function TemplateEditorPage() {
               <h3 className="text-sm font-semibold">Elementos ({elements.length})</h3>
             </div>
             <div className="divide-y divide-border">
-              {elements.map((element) => {
+              {elements.filter(Boolean).map((element) => {
                 const Icon = elementIcon(element.type)
                 return (
                   <button key={element.id} onClick={() => setSelectedElement(element.id)}
