@@ -183,12 +183,13 @@ export default function TemplateEditorPage() {
     dragRef.current = { id, startX: e.clientX, startY: e.clientY, origX: el.x, origY: el.y }
 
     const onMouseMove = (ev: MouseEvent) => {
-      if (!dragRef.current) return
-      const dx = (ev.clientX - dragRef.current.startX) * 10 / SCALE
-      const dy = (ev.clientY - dragRef.current.startY) * 10 / SCALE
-      const newX = Math.max(0, Math.round(dragRef.current.origX + dx))
-      const newY = Math.max(0, Math.round(dragRef.current.origY + dy))
-      setElements((prev) => prev.map((el) => el.id === dragRef.current!.id ? { ...el, x: newX, y: newY } : el))
+      const drag = dragRef.current
+      if (!drag) return
+      const dx = (ev.clientX - drag.startX) * 10 / SCALE
+      const dy = (ev.clientY - drag.startY) * 10 / SCALE
+      const newX = Math.max(0, Math.round(drag.origX + dx))
+      const newY = Math.max(0, Math.round(drag.origY + dy))
+      setElements((prev) => prev.map((el) => el.id === drag.id ? { ...el, x: newX, y: newY } : el))
     }
 
     const onMouseUp = () => {
