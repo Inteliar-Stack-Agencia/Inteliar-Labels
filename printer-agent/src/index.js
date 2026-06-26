@@ -26,10 +26,129 @@ import fs from 'fs'
 import path from 'path'
 import { execFile, exec } from 'child_process'
 import { fileURLToPath } from 'url'
+import { randomUUID } from 'crypto'
+import { createInterface } from 'readline'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const CONFIG_PATH = path.join(__dirname, '..', 'printers.json')
+const LICENSE_PATH = path.join(__dirname, '..', 'license.json')
 const PORT = process.env.AGENT_PORT || 9638
+
+// ── License ───────────────────────────────────────────────────────────────────
+
+// LICENSE_SERVER: set via env var, agent-config.json next to .exe, or fallback
+function getLicenseServer() {
+  if (process.env.LICENSE_SERVER) return process.env.LICENSE_SERVER
+  try {
+    const cfgPath = path.join(__dirname, '..', 'agent-config.json')
+    if (fs.existsSync(cfgPath)) {
+      const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'))
+      if (cfg.licenseServer) return cfg.licenseServer
+    }
+  } catch {}
+  return 'https://inteliar-labels.vercel.app'
+}
+const LICENSE_SERVER = getLicenseServer()
+
+function getDeviceId() {
+  try {
+    if (fs.existsSync(LICENSE_PATH)) {
+      const d = JSON.parse(fs.readFileSync(LICENSE_PATH, 'utf8'))
+      if (d.device_id) return d.device_id
+    }
+  } catch {}
+  const id = randomUUID()
+  saveLicense({ device_id: id })
+  return id
+}
+
+function loadLicense() {
+  try {
+    if (fs.existsSync(LICENSE_PATH)) return JSON.parse(fs.readFileSync(LICENSE_PATH, 'utf8'))
+  } catch {}
+  return {}
+}
+
+function saveLicense(data) {
+  const current = loadLicense()
+  fs.writeFileSync(LICENSE_PATH, JSON.stringify({ ...current, ...data }, null, 2))
+}
+
+async function validateLicense(key, deviceId) {
+  try {
+    const os = await import('os')
+    const res = await fetch(`${LICENSE_SERVER}/api/license/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, device_id: deviceId, hostname: os.default.hostname() }),
+      signal: AbortSignal.timeout(10000),
+    })
+    return await res.json()
+  } catch (e) {
+    return { valid: false, message: `Sin conexión al servidor: ${e.message}` }
+  }
+}
+
+function promptKey() {
+  return new Promise((resolve) => {
+    const rl = createInterface({ input: process.stdin, output: process.stdout })
+    process.stdout.write('\n╔══════════════════════════════════════════════╗\n')
+    process.stdout.write('║       Inteliar Printer Agent — Activación    ║\n')
+    process.stdout.write('╚══════════════════════════════════════════════╝\n')
+    process.stdout.write('\nIngresá tu clave de licencia (INTELIAR-XXXX-XXXX-XXXX):\n> ')
+    rl.once('line', (line) => { rl.close(); resolve(line.trim()) })
+  })
+}
+
+async function ensureLicense() {
+  const deviceId = getDeviceId()
+  const stored = loadLicense()
+  let key = stored.key
+
+  // No key stored → prompt
+  if (!key) {
+    key = await promptKey()
+    if (!key) { console.error('[Licencia] Clave requerida. Cerrando.'); process.exit(1) }
+  }
+
+  console.log('[Licencia] Validando clave...')
+  const result = await validateLicense(key, deviceId)
+
+  if (result.valid) {
+    saveLicense({ key, plan: result.plan, validated_at: new Date().toISOString() })
+    console.log(`[Licencia] ✓ Válida — Plan: ${result.plan === 'lifetime' ? 'De por vida' : 'Mensual'} (${result.devices_used}/${result.max_devices} dispositivos)`)
+    return true
+  }
+
+  // Invalid — clear key if it's a permanent rejection (not network error)
+  const permanent = result.message && !result.message.includes('Sin conexión')
+  if (permanent) {
+    saveLicense({ key: null })
+    console.error(`[Licencia] ✗ ${result.message}`)
+    // If limit or suspension, exit. If never validated before, exit. If previously validated, allow offline grace.
+    if (!stored.validated_at) {
+      console.error('[Licencia] No se pudo activar. Cerrando.')
+      process.exit(1)
+    }
+    console.warn('[Licencia] ⚠ Usando modo gracia offline (última validación: ' + stored.validated_at + ')')
+    return true
+  }
+
+  // Network error — if previously validated, allow offline grace period
+  if (stored.validated_at) {
+    const lastValidated = new Date(stored.validated_at)
+    const daysSince = (Date.now() - lastValidated.getTime()) / 86400000
+    if (daysSince <= 7) {
+      console.warn(`[Licencia] ⚠ Sin conexión — modo gracia offline (${Math.ceil(daysSince)}d / 7d). ${result.message}`)
+      return true
+    }
+    console.error(`[Licencia] ✗ Sin conexión por más de 7 días. Cerrando.`)
+    process.exit(1)
+  }
+
+  console.error(`[Licencia] ✗ ${result.message}\n[Licencia] Cerrando.`)
+  process.exit(1)
+}
 
 const app = express()
 app.use(cors())
@@ -449,14 +568,20 @@ app.get('/log', (_req, res) => {
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 
-app.listen(PORT, () => {
-  console.log(`[Printer Agent] Inteliar Printer Agent v2 — http://localhost:${PORT}`)
-  console.log(`[Printer Agent] Impresoras configuradas: ${config.printers.length}`)
-  config.printers.forEach(p => {
-    const detail = p.connection === 'tcp' ? ` ${p.host}:${p.port || 9100}`
-      : p.connection === 'usb' ? ` (${p.usbQueue || p.name})`
-      : p.connection === 'serial' ? ` ${p.serialPort}`
-      : ' (simulación)'
-    console.log(`  • [${p.id}] ${p.name} — ${p.connection}${detail}${p.id === config.defaultPrinterId ? ' ✓ default' : ''}`)
+async function start() {
+  await ensureLicense()
+
+  app.listen(PORT, () => {
+    console.log(`[Printer Agent] Inteliar Printer Agent v2 — http://localhost:${PORT}`)
+    console.log(`[Printer Agent] Impresoras configuradas: ${config.printers.length}`)
+    config.printers.forEach(p => {
+      const detail = p.connection === 'tcp' ? ` ${p.host}:${p.port || 9100}`
+        : p.connection === 'usb' ? ` (${p.usbQueue || p.name})`
+        : p.connection === 'serial' ? ` ${p.serialPort}`
+        : ' (simulación)'
+      console.log(`  • [${p.id}] ${p.name} — ${p.connection}${detail}${p.id === config.defaultPrinterId ? ' ✓ default' : ''}`)
+    })
   })
-})
+}
+
+start()
