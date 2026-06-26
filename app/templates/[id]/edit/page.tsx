@@ -103,7 +103,7 @@ export default function TemplateEditPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templateId])
 
-  const selectedElementData = elements.find((el) => el.id === selectedElement)
+  const selectedElementData = elements.find((el) => el?.id === selectedElement)
 
   const SCALE = 6
   const canvasW = widthMm * SCALE
@@ -137,11 +137,11 @@ export default function TemplateEditPage() {
   }
 
   const updateElement = (id: string, updates: Partial<LabelElement>) => {
-    setElements(elements.map((el) => (el.id === id ? { ...el, ...updates } : el)))
+    setElements(elements.filter(Boolean).map((el) => (el.id === id ? { ...el, ...updates } : el)))
   }
 
   const deleteElement = (id: string) => {
-    setElements(elements.filter((el) => el.id !== id))
+    setElements(elements.filter((el) => el && el.id !== id))
     if (selectedElement === id) setSelectedElement(null)
   }
 
@@ -208,7 +208,7 @@ export default function TemplateEditPage() {
     e.stopPropagation()
     e.preventDefault()
     setSelectedElement(id)
-    const el = elements.find((el) => el.id === id)
+    const el = elements.find((el) => el?.id === id)
     if (!el) return
     dragRef.current = { id, startX: e.clientX, startY: e.clientY, origX: el.x, origY: el.y }
 
@@ -235,7 +235,7 @@ export default function TemplateEditPage() {
   const handleResizeMouseDown = useCallback((e: React.MouseEvent, id: string) => {
     e.stopPropagation()
     e.preventDefault()
-    const el = elements.find((el) => el.id === id)
+    const el = elements.find((el) => el?.id === id)
     if (!el) return
     const startX = e.clientX
     const startY = e.clientY
@@ -300,8 +300,9 @@ export default function TemplateEditPage() {
     setSaving(true)
 
     const variables = elements
+      .filter(Boolean)
       .map((el) => {
-        const matches = el.content.match(/\{\{([^}]+)\}\}/g)
+        const matches = (el.content ?? "").match(/\{\{([^}]+)\}\}/g)
         return matches ? matches.map((m) => m.replace(/[{}]/g, "").trim()) : []
       })
       .flat()
@@ -556,7 +557,7 @@ export default function TemplateEditPage() {
                       backgroundSize: `${SCALE * 10}px ${SCALE * 10}px`,
                     }} />
 
-                    {elements.map((element) => {
+                    {elements.filter(Boolean).map((element) => {
                       return (
                         <div
                           key={element.id}
@@ -641,7 +642,7 @@ export default function TemplateEditPage() {
                               >
                                 {element.type === "serial"
                                   ? `${element.serialPrefix ?? ""}${String(element.serialStart ?? 1).padStart(element.serialDigits ?? 4, "0")}${element.serialSuffix ?? ""}`
-                                  : resolveDateVars(element.content)}
+                                  : resolveDateVars(element.content ?? "")}
                               </span>
                             </div>
                           )}
@@ -946,7 +947,7 @@ export default function TemplateEditPage() {
               <h3 className="text-sm font-semibold">Elementos ({elements.length})</h3>
             </div>
             <div className="divide-y divide-border">
-              {elements.map((element) => {
+              {elements.filter(Boolean).map((element) => {
                 const Icon = elementIcon(element.type)
                 return (
                   <button key={element.id} onClick={() => setSelectedElement(element.id)}

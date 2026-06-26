@@ -71,7 +71,7 @@ export default function TemplateEditorPage() {
   const [aiError, setAiError] = useState<string | null>(null)
   const [lockAspect, setLockAspect] = useState(true)
 
-  const selectedElementData = elements.find((el) => el.id === selectedElement)
+  const selectedElementData = elements.find((el) => el?.id === selectedElement)
 
   const SCALE = 6
   const canvasW = widthMm * SCALE
@@ -106,11 +106,11 @@ export default function TemplateEditorPage() {
   }
 
   const updateElement = (id: string, updates: Partial<LabelElement>) => {
-    setElements(elements.map((el) => (el.id === id ? { ...el, ...updates } : el)))
+    setElements(elements.filter(Boolean).map((el) => (el.id === id ? { ...el, ...updates } : el)))
   }
 
   const deleteElement = (id: string) => {
-    setElements(elements.filter((el) => el.id !== id))
+    setElements(elements.filter((el) => el && el.id !== id))
     if (selectedElement === id) setSelectedElement(null)
   }
 
@@ -178,17 +178,18 @@ export default function TemplateEditorPage() {
     e.stopPropagation()
     e.preventDefault()
     setSelectedElement(id)
-    const el = elements.find((el) => el.id === id)
+    const el = elements.find((el) => el?.id === id)
     if (!el) return
     dragRef.current = { id, startX: e.clientX, startY: e.clientY, origX: el.x, origY: el.y }
 
     const onMouseMove = (ev: MouseEvent) => {
-      if (!dragRef.current) return
-      const dx = (ev.clientX - dragRef.current.startX) * 10 / SCALE
-      const dy = (ev.clientY - dragRef.current.startY) * 10 / SCALE
-      const newX = Math.max(0, Math.round(dragRef.current.origX + dx))
-      const newY = Math.max(0, Math.round(dragRef.current.origY + dy))
-      setElements((prev) => prev.map((el) => el.id === dragRef.current!.id ? { ...el, x: newX, y: newY } : el))
+      const drag = dragRef.current
+      if (!drag) return
+      const dx = (ev.clientX - drag.startX) * 10 / SCALE
+      const dy = (ev.clientY - drag.startY) * 10 / SCALE
+      const newX = Math.max(0, Math.round(drag.origX + dx))
+      const newY = Math.max(0, Math.round(drag.origY + dy))
+      setElements((prev) => prev.map((el) => el.id === drag.id ? { ...el, x: newX, y: newY } : el))
     }
 
     const onMouseUp = () => {
@@ -204,7 +205,7 @@ export default function TemplateEditorPage() {
   const handleResizeMouseDown = useCallback((e: React.MouseEvent, id: string) => {
     e.stopPropagation()
     e.preventDefault()
-    const el = elements.find((el) => el.id === id)
+    const el = elements.find((el) => el?.id === id)
     if (!el) return
     const startX = e.clientX
     const startY = e.clientY
@@ -271,8 +272,9 @@ export default function TemplateEditorPage() {
     if (!user) { router.push("/auth/login"); return }
 
     const variables = elements
+      .filter(Boolean)
       .map((el) => {
-        const matches = el.content.match(/\{\{([^}]+)\}\}/g)
+        const matches = (el.content ?? "").match(/\{\{([^}]+)\}\}/g)
         return matches ? matches.map((m) => m.replace(/[{}]/g, "").trim()) : []
       })
       .flat()
@@ -642,7 +644,7 @@ export default function TemplateEditorPage() {
                               >
                                 {element.type === "serial"
                                   ? `${element.serialPrefix ?? ""}${String(element.serialStart ?? 1).padStart(element.serialDigits ?? 4, "0")}${element.serialSuffix ?? ""}`
-                                  : resolveDateVars(element.content)
+                                  : resolveDateVars(element.content ?? "")
                                 }
                               </span>
                             </div>
