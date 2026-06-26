@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { checkPrinterAgent, getPrinterAgentUrl } from "@/lib/printer-agent-client"
-import { Settings, X } from "lucide-react"
+import { checkPrinterAgent, getPrinterAgentUrl, type AgentStatus } from "@/lib/printer-agent-client"
+import { Settings, X, Printer } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface Props {
@@ -12,8 +12,7 @@ interface Props {
 
 export function PrinterAgentStatus({ onStatusChange, className }: Props) {
   const [online, setOnline] = useState<boolean | null>(null)
-  const [simulate, setSimulate] = useState(true)
-  const [printerIp, setPrinterIp] = useState<string | null>(null)
+  const [status, setStatus] = useState<AgentStatus | null>(null)
   const [agentUrl, setAgentUrl] = useState(getPrinterAgentUrl())
   const [editingUrl, setEditingUrl] = useState(false)
   const [urlInput, setUrlInput] = useState(agentUrl)
@@ -22,11 +21,12 @@ export function PrinterAgentStatus({ onStatusChange, className }: Props) {
     try {
       const s = await checkPrinterAgent(url)
       setOnline(true)
-      setSimulate(s.printer.simulate)
-      setPrinterIp(s.printer.ip)
-      onStatusChange?.(true, s.printer.simulate)
+      setStatus(s)
+      const isSimulate = s.defaultPrinter?.connection === 'simulate' || s.printer?.simulate === true
+      onStatusChange?.(true, isSimulate)
     } catch {
       setOnline(false)
+      setStatus(null)
       onStatusChange?.(false, true)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -47,6 +47,20 @@ export function PrinterAgentStatus({ onStatusChange, className }: Props) {
     check(urlInput)
   }
 
+  const defaultPrinter = status?.defaultPrinter
+  const isSimulate = defaultPrinter?.connection === 'simulate' || status?.printer?.simulate === true
+  const printerLabel = defaultPrinter
+    ? defaultPrinter.connection === 'tcp'
+      ? `${defaultPrinter.name} · ${defaultPrinter.host}:${defaultPrinter.port ?? 9100}`
+      : defaultPrinter.connection === 'usb'
+      ? `${defaultPrinter.name} · USB`
+      : defaultPrinter.connection === 'serial'
+      ? `${defaultPrinter.name} · ${defaultPrinter.serialPort}`
+      : `${defaultPrinter.name} · Simulación`
+    : status?.printer?.ip
+    ? status.printer.ip
+    : 'Sin impresora'
+
   return (
     <div className={cn("space-y-1.5", className)}>
       <div className="flex items-center gap-1.5">
@@ -56,7 +70,9 @@ export function PrinterAgentStatus({ onStatusChange, className }: Props) {
             online === null
               ? "bg-muted text-muted-foreground"
               : online
-              ? "bg-green-500/10 text-green-700 dark:text-green-400"
+              ? isSimulate
+                ? "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400"
+                : "bg-green-500/10 text-green-700 dark:text-green-400"
               : "bg-red-500/10 text-red-700 dark:text-red-400"
           )}
         >
@@ -66,16 +82,16 @@ export function PrinterAgentStatus({ onStatusChange, className }: Props) {
               online === null
                 ? "animate-pulse bg-muted-foreground"
                 : online
-                ? "bg-green-500"
+                ? isSimulate ? "bg-yellow-500" : "bg-green-500"
                 : "bg-red-500"
             )}
           />
           {online === null
             ? "Verificando agente..."
             : online
-            ? simulate
-              ? "Agente activo · Modo simulación"
-              : `Agente activo · ${printerIp}`
+            ? isSimulate
+              ? `Simulación · ${printerLabel}`
+              : `Conectado · ${printerLabel}`
             : "Agente offline"}
         </span>
         <button
@@ -85,6 +101,17 @@ export function PrinterAgentStatus({ onStatusChange, className }: Props) {
         >
           {editingUrl ? <X className="h-3.5 w-3.5" /> : <Settings className="h-3.5 w-3.5" />}
         </button>
+        {online && (
+          <a
+            href={`${agentUrl.replace(/\/$/, '')}/printers`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded p-1 text-muted-foreground hover:text-foreground"
+            title="Ver impresoras configuradas"
+          >
+            <Printer className="h-3.5 w-3.5" />
+          </a>
+        )}
       </div>
 
       {editingUrl && (
@@ -115,11 +142,17 @@ export function PrinterAgentStatus({ onStatusChange, className }: Props) {
         </p>
       )}
 
-      {online && simulate && (
+      {online && isSimulate && (
         <p className="text-xs text-muted-foreground">
-          En modo simulación no se envía a la impresora. Configurá{" "}
-          <code className="rounded bg-muted px-1 py-0.5 text-[10px]">SIMULATE=false</code>{" "}
-          en <code className="rounded bg-muted px-1 py-0.5 text-[10px]">printer-agent/.env</code>
+          En simulación no se envía a la impresora.{" "}
+          <a
+            href={`${agentUrl.replace(/\/$/, '')}/printers`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-foreground"
+          >
+            Configurar impresora real →
+          </a>
         </p>
       )}
     </div>
