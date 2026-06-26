@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client"
 import { generateZPL, downloadZPL, prepareImages } from "@/lib/zpl"
 import { sendToPrinterAgent } from "@/lib/printer-agent-client"
 import { PrinterAgentStatus } from "@/components/printer/agent-status"
+import { PrinterSelector } from "@/components/printer/printer-selector"
 import type { CanvasData } from "@/lib/label-types"
 import {
   Plus,
@@ -52,6 +53,7 @@ export default function ImprimirPage() {
   const [agentOnline, setAgentOnline] = useState(false)
   const [printing, setPrinting] = useState(false)
   const [printResult, setPrintResult] = useState<{ ok: boolean; message: string } | null>(null)
+  const [printerId, setPrinterId] = useState<string | undefined>(undefined)
 
   useEffect(() => {
     const load = async () => {
@@ -123,8 +125,8 @@ export default function ImprimirPage() {
     setPrinting(true)
     setPrintResult(null)
     try {
-      const result = await sendToPrinterAgent(zpl, "zpl")
-      setPrintResult({ ok: true, message: result.message })
+      const result = await sendToPrinterAgent(zpl, "zpl", undefined, printerId)
+      setPrintResult({ ok: true, message: result.message ?? "Enviado a la impresora" })
     } catch (err) {
       setPrintResult({ ok: false, message: (err as Error).message })
     } finally {
@@ -371,6 +373,12 @@ export default function ImprimirPage() {
               <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Agente de impresión</p>
                 <PrinterAgentStatus onStatusChange={(online) => setAgentOnline(online)} />
+                <PrinterSelector
+                  online={agentOnline}
+                  value={printerId}
+                  onChange={(id) => setPrinterId(id)}
+                  disabled={printing}
+                />
               </div>
 
               {/* Print result */}

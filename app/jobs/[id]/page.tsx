@@ -21,6 +21,7 @@ import {
 import { generateZPL, downloadZPL, prepareImages, type GenerateZPLOptions } from "@/lib/zpl"
 import { sendToPrinterAgent } from "@/lib/printer-agent-client"
 import { PrinterAgentStatus } from "@/components/printer/agent-status"
+import { PrinterSelector } from "@/components/printer/printer-selector"
 import { cn } from "@/lib/utils"
 
 interface LabelElement {
@@ -98,8 +99,8 @@ function LabelPreview({
               style={{
                 left,
                 top,
-                width: (el.imgWidth ?? 30) * SCALE / 10,
-                height: (el.imgHeight ?? 20) * SCALE / 10,
+                width: (el.imgWidth ?? 200) * SCALE / 10,
+                height: (el.imgHeight ?? 150) * SCALE / 10,
               }}
             />
           )
@@ -160,6 +161,7 @@ export default function JobDetailPage() {
   const [agentOnline, setAgentOnline] = useState(false)
   const [printing, setPrinting] = useState(false)
   const [printResult, setPrintResult] = useState<{ ok: boolean; message: string } | null>(null)
+  const [printerId, setPrinterId] = useState<string | undefined>(undefined)
 
   useEffect(() => {
     const load = async () => {
@@ -236,8 +238,8 @@ export default function JobDetailPage() {
         rows,
         { startFromLabel, imageCache }
       )
-      const result = await sendToPrinterAgent(zpl, "zpl")
-      setPrintResult({ ok: true, message: result.message })
+      const result = await sendToPrinterAgent(zpl, "zpl", undefined, printerId)
+      setPrintResult({ ok: true, message: result.message ?? "Enviado a la impresora" })
       // Auto-mark as completed on successful print
       if (job?.status === "pending") {
         await supabase
@@ -310,6 +312,16 @@ export default function JobDetailPage() {
           <PrinterAgentStatus
             onStatusChange={(online) => setAgentOnline(online)}
           />
+
+          {canPrint && agentOnline && (
+            <PrinterSelector
+              online={agentOnline}
+              value={printerId}
+              onChange={(id) => setPrinterId(id)}
+              disabled={printing}
+              className="min-w-[12rem]"
+            />
+          )}
 
           {canPrint && (
             <>
