@@ -7,6 +7,7 @@
 | `NEXT_PUBLIC_SUPABASE_URL` | Sí | Cliente y servidor | URL del proyecto Supabase |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Sí | Cliente y servidor | Clave pública (anon) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Opcional | `POST /api/account/delete` | **Solo server-side.** Ver abajo |
+| `ANTHROPIC_API_KEY` | Opcional | `POST /api/ai/generate-template` | Necesaria para el editor IA de plantillas. Ver abajo |
 
 ### `SUPABASE_SERVICE_ROLE_KEY` — eliminación de cuenta
 
@@ -34,6 +35,27 @@ el **usuario de autenticación** (el login en Supabase Auth) hace falta la
 > ⚠️ La service-role key saltea las políticas RLS. Nunca la pongas en código
 > cliente ni en variables `NEXT_PUBLIC_*`. Solo se lee dentro de
 > `app/api/account/delete/route.ts`, que corre en el servidor.
+
+---
+
+### `ANTHROPIC_API_KEY` — editor IA de plantillas
+
+El botón ✨ en el editor de plantillas llama a `POST /api/ai/generate-template`,
+que usa el SDK de Anthropic para generar elementos posicionados automáticamente.
+Sin esta key el endpoint devuelve error 500 y el modal no genera nada.
+
+#### Cómo cargarla
+
+1. En [console.anthropic.com](https://console.anthropic.com) → **API Keys** → crear una clave (`sk-ant-...`).
+2. En Vercel: **Project → Settings → Environment Variables**
+   - Name: `ANTHROPIC_API_KEY`
+   - Value: *(la key copiada)*
+   - Environments: Production (y Preview si querés probar antes)
+   - **Sin** el prefijo `NEXT_PUBLIC_` → nunca se expone al navegador.
+3. Redeploy.
+
+> El modelo usado es `claude-haiku-4-5` (rápido y económico para generación de layouts).
+> Si la key tiene saldo suficiente, la generación tarda ~2-3 segundos.
 
 ---
 
