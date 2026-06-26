@@ -636,8 +636,8 @@ export default function TemplateEditorPage() {
                               )}
                             </div>
                           ) : (
-                            <div className="flex items-center gap-1 px-1.5 py-1">
-                              <Icon className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                            <div className="relative px-1.5 py-1">
+                              <Icon className="h-3 w-3 text-gray-400 flex-shrink-0 absolute left-0 top-1/2 -translate-y-1/2 opacity-40" />
                               <span
                                 className="text-gray-800"
                                 style={{ fontSize: `${element.fontSize * SCALE / 3}px`, fontWeight: element.bold ? "bold" : "normal", textAlign: element.textAlign || 'left', display: 'block', width: '100%' }}
