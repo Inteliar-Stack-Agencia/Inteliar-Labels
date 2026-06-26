@@ -628,7 +628,7 @@ export default function NewTemplatePage() {
                   </div>
                 </div>
                 <p className="mt-2 text-center text-[10px] text-muted-foreground">
-                  Usá {{"{{variable}}"}} para contenido dinámico desde Excel
+                  Usá {"{{variable}}"} para contenido dinámico desde Excel
                 </p>
               </div>
             </div>
@@ -784,7 +784,7 @@ export default function NewTemplatePage() {
                       </select>
                     </div>
                   )}
-                  <p className="mt-1 text-[10px] text-muted-foreground">Usá {{"{{nombre_columna}}"}} para datos del Excel</p>
+                  <p className="mt-1 text-[10px] text-muted-foreground">Usá {"{{nombre_columna}}"} para datos del Excel</p>
                 </div>
               )}
 

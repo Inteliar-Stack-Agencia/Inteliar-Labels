@@ -124,6 +124,10 @@ export default function SettingsPage() {
   // --- Account state ---
   const [userEmail, setUserEmail] = useState("")
   const [signingOut, setSigningOut] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteText, setDeleteText] = useState("")
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     loadAccountData()
@@ -260,6 +264,21 @@ export default function SettingsPage() {
       router.push("/auth/login")
     } catch {
       setSigningOut(false)
+    }
+  }
+
+  async function handleDeleteAccount() {
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      const res = await fetch("/api/account/delete", { method: "POST" })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? "No se pudo eliminar la cuenta")
+      // Session is already cleared server-side; send the user out.
+      router.push("/auth/login")
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Error desconocido")
+      setDeleting(false)
     }
   }
 
@@ -871,6 +890,7 @@ export default function SettingsPage() {
                     variant="outline"
                     size="sm"
                     className="mt-4 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    onClick={() => { setShowDeleteConfirm(true); setDeleteText(""); setDeleteError(null) }}
                   >
                     Eliminar cuenta
                   </Button>
@@ -880,6 +900,61 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Delete account confirmation modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-xl border border-destructive/50 bg-card p-6 shadow-xl">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
+                <Trash2 className="h-5 w-5 text-destructive" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground">Eliminar cuenta</h3>
+            </div>
+            <p className="mt-4 text-sm text-muted-foreground">
+              Esta acción es <strong className="text-foreground">permanente</strong>. Se borrarán
+              tus impresoras, plantillas y trabajos de impresión. No se puede deshacer.
+            </p>
+            <p className="mt-3 text-sm text-foreground">
+              Escribí <code className="rounded bg-muted px-1.5 py-0.5 text-destructive">ELIMINAR</code> para confirmar:
+            </p>
+            <input
+              type="text"
+              value={deleteText}
+              onChange={(e) => setDeleteText(e.target.value)}
+              placeholder="ELIMINAR"
+              className="mt-2 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-destructive"
+              autoFocus
+            />
+            {deleteError && (
+              <p className="mt-2 flex items-center gap-1.5 text-xs text-destructive">
+                <XCircle className="h-3.5 w-3.5" />
+                {deleteError}
+              </p>
+            )}
+            <div className="mt-5 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                size="sm"
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={deleteText !== "ELIMINAR" || deleting}
+                onClick={handleDeleteAccount}
+              >
+                {deleting
+                  ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />Eliminando…</>
+                  : "Eliminar definitivamente"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   )
 }
