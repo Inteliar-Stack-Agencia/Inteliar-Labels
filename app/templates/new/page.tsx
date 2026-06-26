@@ -70,10 +70,11 @@ export default function TemplateEditorPage() {
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
   const [lockAspect, setLockAspect] = useState(true)
+  const [realSize, setRealSize] = useState(false)
 
   const selectedElementData = elements.find((el) => el?.id === selectedElement)
 
-  const SCALE = 6
+  const SCALE = realSize ? 96 / 25.4 : 6
   const canvasW = widthMm * SCALE
   const canvasH = heightMm * SCALE
 
@@ -541,7 +542,22 @@ export default function TemplateEditorPage() {
               <div>
                 <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
                   <span>{widthMm} mm</span>
-                  <span className="text-[10px] bg-muted px-2 py-0.5 rounded">Vista previa a escala</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] bg-muted px-2 py-0.5 rounded">
+                      {realSize ? "Tamaño real (aprox.)" : "Vista previa a escala"}
+                    </span>
+                    <button
+                      onClick={() => setRealSize(!realSize)}
+                      className={cn(
+                        "text-[10px] px-2 py-0.5 rounded border transition-colors",
+                        realSize
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border hover:border-primary"
+                      )}
+                    >
+                      {realSize ? "Volver a escala" : "Tamaño real"}
+                    </button>
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <div className="flex flex-col justify-center">
