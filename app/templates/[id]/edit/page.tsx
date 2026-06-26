@@ -557,7 +557,6 @@ export default function TemplateEditPage() {
                     }} />
 
                     {elements.map((element) => {
-                      const Icon = elementIcon(element.type)
                       return (
                         <div
                           key={element.id}
@@ -571,7 +570,7 @@ export default function TemplateEditPage() {
                           )}
                           style={
                             element.type === "text" && element.textAlign && element.textAlign !== "left"
-                              ? { left: 0, top: `${element.y * SCALE / 10}px`, width: `${canvasW}px` }
+                              ? { left: 0, top: `${element.y * SCALE / 10}px`, width: `${canvasW}px`, paddingLeft: `${2 * SCALE}px`, paddingRight: `${2 * SCALE}px` }
                               : { left: `${element.x * SCALE / 10}px`, top: `${element.y * SCALE / 10}px` }
                           }
                         >
@@ -635,8 +634,7 @@ export default function TemplateEditPage() {
                               )}
                             </div>
                           ) : (
-                            <div className="relative px-1.5 py-1" style={{ width: "100%" }}>
-                              <Icon className="h-3 w-3 text-gray-400 flex-shrink-0 absolute left-0 top-1/2 -translate-y-1/2 opacity-40" />
+                            <div className="px-1.5 py-1" style={{ width: "100%" }}>
                               <span
                                 className="text-gray-800"
                                 style={{ fontSize: `${element.fontSize * SCALE / 3}px`, fontWeight: element.bold ? "bold" : "normal", textAlign: element.textAlign || "left", display: "block", width: "100%" }}

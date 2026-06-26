@@ -64,6 +64,9 @@ function buildLabelZpl(
 ): string {
   const w = mmToDots(widthMm)
   const h = mmToDots(heightMm)
+  // Inner margin so centered/right text never touches or exceeds the label edge
+  const margin = mmToDots(2)
+  const blockW = Math.max(1, w - 2 * margin)
   const fields: string[] = []
 
   for (const el of canvasData.elements) {
@@ -76,7 +79,7 @@ function buildLabelZpl(
       const val = serialValue(el, labelIndex)
       if (align === "center" || align === "right") {
         const justification = align === "center" ? "C" : "R"
-        fields.push(`^FO0,${y}^FB${w},1,0,${justification},0${fontSizeToZpl(el.fontSize)}^FD${val}^FS`)
+        fields.push(`^FO${margin},${y}^FB${blockW},1,0,${justification},0${fontSizeToZpl(el.fontSize)}^FD${val}^FS`)
       } else {
         fields.push(`^FO${x},${y}${fontSizeToZpl(el.fontSize)}^FD${val}^FS`)
       }
@@ -88,7 +91,7 @@ function buildLabelZpl(
     if (el.type === "text") {
       if (align === "center" || align === "right") {
         const justification = align === "center" ? "C" : "R"
-        fields.push(`^FO0,${y}^FB${w},1,0,${justification},0${fontSizeToZpl(el.fontSize)}^FD${content}^FS`)
+        fields.push(`^FO${margin},${y}^FB${blockW},1,0,${justification},0${fontSizeToZpl(el.fontSize)}^FD${content}^FS`)
       } else {
         fields.push(`^FO${x},${y}${fontSizeToZpl(el.fontSize)}^FD${content}^FS`)
       }
