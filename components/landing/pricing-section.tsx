@@ -1,85 +1,76 @@
 import { Button } from "@/components/ui/button"
 import { Check, ArrowRight } from "lucide-react"
 
+// Checkout links — create a payment link in MercadoPago/Stripe and set these env vars.
+// Falls back to a contact email if not configured.
+const MONTHLY_URL = process.env.NEXT_PUBLIC_CHECKOUT_MONTHLY_URL || "mailto:inteliarstack.ia@gmail.com?subject=Quiero%20el%20plan%20Mensual"
+const LIFETIME_URL = process.env.NEXT_PUBLIC_CHECKOUT_LIFETIME_URL || "mailto:inteliarstack.ia@gmail.com?subject=Quiero%20el%20plan%20De%20por%20vida"
+
 const plans = [
   {
-    name: "Starter",
+    name: "Mensual",
     price: "US$10",
     period: "/mes",
-    description: "Ideal para operaciones chicas que empiezan con impresión masiva.",
+    description: "Ideal para arrancar. Pagás mes a mes y cancelás cuando quieras.",
     features: [
-      "1 impresora conectada",
+      "1 dispositivo conectado",
       "Etiquetas ilimitadas",
-      "Soporte Excel y CSV",
-      "10 templates de etiquetas",
+      "Diseñador visual + IA",
+      "Plantillas predeterminadas",
+      "Importación de Excel y CSV",
       "Soporte por email",
     ],
-    cta: "Empezá la prueba gratis",
+    cta: "Comprar plan Mensual",
+    href: MONTHLY_URL,
     popular: false,
   },
   {
-    name: "Professional",
-    price: "US$25",
-    period: "/mes",
-    description: "Para negocios que crecen y necesitan más potencia y flexibilidad.",
+    name: "De por vida",
+    price: "US$300",
+    period: "pago único",
+    description: "Pagás una vez y es tuyo para siempre. Sin renovaciones.",
     features: [
-      "5 impresoras conectadas",
+      "Hasta 3 dispositivos",
       "Etiquetas ilimitadas",
-      "Cola de impresión prioritaria",
-      "Templates ilimitados",
-      "Diseño personalizado de templates",
-      "Acceso a API",
+      "Diseñador visual + IA",
+      "Plantillas predeterminadas",
+      "Importación de Excel y CSV",
+      "Todas las actualizaciones futuras",
       "Soporte prioritario",
     ],
-    cta: "Empezá la prueba gratis",
+    cta: "Comprar de por vida",
+    href: LIFETIME_URL,
     popular: true,
-  },
-  {
-    name: "Enterprise",
-    price: "Personalizado",
-    period: "",
-    description: "Para operaciones grandes con necesidades avanzadas y múltiples sedes.",
-    features: [
-      "Impresoras ilimitadas",
-      "Soporte multi-sede",
-      "Automatización avanzada",
-      "SSO y SAML",
-      "Account manager dedicado",
-      "SLA garantizado",
-      "Opción on-premise",
-    ],
-    cta: "Contactar a Ventas",
-    popular: false,
   },
 ]
 
 export function PricingSection() {
   return (
     <section id="pricing" className="py-24 px-4 sm:px-6">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-12">
           <p className="text-sm font-medium text-primary mb-3 uppercase tracking-wide">Precios</p>
           <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 text-balance">
-            Precios simples. Cancelá cuando quieras.
+            Elegí el plan que mejor te queda
           </h2>
           <p className="text-lg text-muted-foreground">
-            Empezá gratis por 14 días. Sin tarjeta de crédito. Mejorá tu plan cuando estés listo.
+            Activás tu licencia al instante. La clave te llega por email apenas pagás.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
+        <div className="grid md:grid-cols-2 gap-6 lg:gap-8 max-w-3xl mx-auto">
           {plans.map((plan, index) => (
             <div
               key={index}
               className={`relative bg-card border rounded-2xl p-6 sm:p-8 ${
                 plan.popular
-                  ? "border-primary shadow-xl scale-105 z-10"
+                  ? "border-primary shadow-xl md:scale-105 z-10"
                   : "border-border"
               }`}
             >
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-primary text-primary-foreground text-sm font-medium rounded-full">
-                  Más popular
+                  Mejor valor
                 </div>
               )}
 
@@ -101,25 +92,28 @@ export function PricingSection() {
                 ))}
               </ul>
 
-              <Button
-                className={`w-full h-11 gap-2 group ${
-                  plan.popular ? "" : "bg-foreground hover:bg-foreground/90"
-                }`}
-                variant={plan.popular ? "default" : "secondary"}
-              >
-                {plan.cta}
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-              </Button>
+              <a href={plan.href} target={plan.href.startsWith("http") ? "_blank" : undefined} rel="noopener noreferrer">
+                <Button
+                  className={`w-full h-11 gap-2 group ${
+                    plan.popular ? "" : "bg-foreground hover:bg-foreground/90"
+                  }`}
+                  variant={plan.popular ? "default" : "secondary"}
+                >
+                  {plan.cta}
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </Button>
+              </a>
             </div>
           ))}
         </div>
 
         <div className="mt-12 text-center">
           <p className="text-sm text-muted-foreground">
-            Todos los planes incluyen 14 días de prueba gratis. Sin tarjeta de crédito.{" "}
-            <a href="#" className="text-primary hover:underline">
-              Comparar todas las funcionalidades
-            </a>
+            ¿Dudas antes de comprar?{" "}
+            <a href="mailto:inteliarstack.ia@gmail.com" className="text-primary hover:underline">
+              Escribinos
+            </a>{" "}
+            y te ayudamos a elegir.
           </p>
         </div>
       </div>
