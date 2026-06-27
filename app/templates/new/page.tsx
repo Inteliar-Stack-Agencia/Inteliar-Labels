@@ -809,6 +809,23 @@ export default function NewTemplatePage() {
                     className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                     placeholder="Texto o {{variable}}"
                   />
+                  {/* Common variable chips for text + barcode */}
+                  {(selectedElementData.type === "text" || selectedElementData.type === "barcode") && (
+                    <div className="mt-2">
+                      <p className="mb-1 text-[10px] text-muted-foreground flex items-center gap-1"><Hash className="h-3 w-3" /> Variables comunes:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {["producto", "precio", "sku", "codigo", "lote", "cantidad", "empresa"].map((v) => (
+                          <button
+                            key={v}
+                            onClick={() => updateElement(selectedElementData.id, { content: (selectedElementData.content ?? "") + `{{${v}}}` })}
+                            className="rounded border border-border px-2 py-0.5 text-[10px] hover:border-primary hover:text-primary transition-colors"
+                          >
+                            {`{{${v}}}`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {/* Date shortcuts for text */}
                   {selectedElementData.type === "text" && (
                     <div className="mt-2">
