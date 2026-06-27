@@ -9,7 +9,7 @@ El usuario te describe la etiqueta que necesita y vos generás un JSON con los e
 Reglas:
 - Las posiciones x, y son en milímetros desde la esquina superior izquierda
 - Los textos con variables usan la sintaxis {{nombre_variable}} (minúsculas, sin espacios, guión bajo)
-- Tipos de elemento: "text", "barcode", "qr"
+- Tipos de elemento: "text", "barcode", "qr" (no existe "logo" ni "image"; ignoralo o reemplazá por un texto de empresa)
 - fontSize en puntos (10-24 típico, 16-20 para títulos)
 - El campo "content" es el texto o variable que muestra el elemento
 - Distribuí los elementos de forma lógica sin superposiciones
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     const userMessage = `Diseñá una etiqueta térmica de ${widthMm ?? 100}mm x ${heightMm ?? 50}mm para: ${description}`
 
     const message = await client.messages.create({
-      model: "claude-haiku-4-5",
+      model: "claude-haiku-4-5-20251001",
       max_tokens: 1024,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: userMessage }],
