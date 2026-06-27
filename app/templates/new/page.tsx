@@ -100,6 +100,7 @@ export default function NewTemplatePage() {
     lote: "L-2024-001",
     precio: "1.250",
     codigo: "7790001234567",
+    sku: "REM-AZ-M-001",
     tracking: "ILA000123456AR",
     destinatario: "María López",
     direccion: "Av. Corrientes 1234",

@@ -70,6 +70,24 @@ export const PRESET_TEMPLATES: PresetTemplate[] = [
     },
   },
   {
+    id: "product-sku",
+    name: "Producto con SKU",
+    description: "Nombre, SKU, código de barras del SKU y precio — ideal para inventario",
+    emoji: "📋",
+    widthMm: 50,
+    heightMm: 30,
+    canvas: {
+      cutBetweenLabels: true,
+      cutEveryN: 1,
+      elements: [
+        { id: "1", type: "text", content: "{{producto}}", x: 30, y: 20, fontSize: 10, bold: true },
+        { id: "2", type: "text", content: "SKU: {{sku}}", x: 30, y: 90, fontSize: 8, bold: false },
+        { id: "3", type: "text", content: "${{precio}}", x: 320, y: 80, fontSize: 13, bold: true },
+        { id: "4", type: "barcode", content: "{{sku}}", x: 30, y: 150, fontSize: 7, bold: false, barcodeType: "code128" },
+      ],
+    },
+  },
+  {
     id: "shipping",
     name: "Etiqueta de envío",
     description: "Destinatario, remitente, código 2D y seguimiento — estilo courier",
