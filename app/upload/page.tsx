@@ -47,6 +47,7 @@ export default function UploadPage() {
   const [savedLists, setSavedLists] = useState<{ id: string; name: string; file_name: string | null; row_count: number; columns: string[]; rows: Record<string, string>[]; created_at: string }[]>([])
   const [savingList, setSavingList] = useState(false)
   const [excludedRows, setExcludedRows] = useState<Set<number>>(new Set())
+  const [suggestedMatch, setSuggestedMatch] = useState<{ name: string; matched: number; total: number } | null>(null)
 
   useEffect(() => {
     loadSavedLists()
@@ -87,7 +88,7 @@ export default function UploadPage() {
         if (cantCol) setQuantityColumn(cantCol)
 
         setStep(2)
-        loadTemplates()
+        loadTemplates(columns)
       } catch {
         setError("No se pudo leer el archivo. Asegurate de subir un Excel (.xlsx, .xls) o CSV válido.")
       }
@@ -97,7 +98,7 @@ export default function UploadPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const loadTemplates = async () => {
+  const loadTemplates = async (columns?: string[]) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     const { data: tmpl } = await supabase
@@ -105,7 +106,29 @@ export default function UploadPage() {
       .select("id, name, variables")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
-    if (tmpl) setTemplates(tmpl)
+    if (!tmpl) return
+    setTemplates(tmpl)
+
+    // Auto-suggest the template whose variables best match the Excel columns
+    if (columns && columns.length > 0) {
+      const cols = columns.map((c) => c.toLowerCase().trim())
+      let best: { id: string; name: string; matched: number; total: number } | null = null
+      for (const t of tmpl) {
+        const vars = (t.variables ?? []).map((v) => v.toLowerCase().trim())
+        if (vars.length === 0) continue
+        const matched = vars.filter((v) => cols.includes(v)).length
+        if (!best || matched > best.matched) {
+          best = { id: t.id, name: t.name, matched, total: vars.length }
+        }
+      }
+      // Only suggest if at least one variable matches
+      if (best && best.matched > 0) {
+        setSelectedTemplate(best.id)
+        setSuggestedMatch({ name: best.name, matched: best.matched, total: best.total })
+      } else {
+        setSuggestedMatch(null)
+      }
+    }
   }
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -211,7 +234,7 @@ export default function UploadPage() {
     )
     if (cantCol) setQuantityColumn(cantCol)
     setStep(2)
-    loadTemplates()
+    loadTemplates(list.columns)
   }
 
   const deleteSavedList = async (id: string) => {
@@ -484,6 +507,14 @@ export default function UploadPage() {
 
             <div className="rounded-xl border border-border bg-card p-5 space-y-3">
               <h3 className="text-sm font-semibold">Plantilla de etiqueta</h3>
+              {suggestedMatch && (
+                <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
+                  <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
+                  <p className="text-foreground">
+                    Sugerimos <strong>{suggestedMatch.name}</strong> — coincide con {suggestedMatch.matched} de {suggestedMatch.total} variables de tu Excel. Ya la seleccionamos, podés cambiarla.
+                  </p>
+                </div>
+              )}
               {templates.length === 0 ? (
                 <div className="rounded-lg bg-muted p-4 text-center">
                   <p className="text-sm text-muted-foreground">No tenés plantillas creadas.</p>
