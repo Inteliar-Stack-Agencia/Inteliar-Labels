@@ -26,6 +26,8 @@ import {
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 import { PRESET_TEMPLATES } from "@/lib/preset-templates"
+import { usePlanLimits } from "@/lib/use-plan-limits"
+import { Lock } from "lucide-react"
 
 interface Template {
   id: string
@@ -49,6 +51,7 @@ export default function TemplatesPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [templates, setTemplates] = useState<Template[]>([])
   const [loading, setLoading] = useState(true)
+  const planLimits = usePlanLimits()
   const importInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -195,17 +198,45 @@ export default function TemplatesPage() {
               <Download className="h-4 w-4" />
               Backup
             </Button>
-            <Link href="/templates/new">
-              <Button size="sm" className="gap-2">
-                <Plus className="h-4 w-4" />
-                Nueva plantilla
-              </Button>
-            </Link>
+            {planLimits.canCreateTemplate ? (
+              <Link href="/templates/new">
+                <Button size="sm" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Nueva plantilla
+                </Button>
+              </Link>
+            ) : (
+              <a href="/#pricing">
+                <Button size="sm" className="gap-2 bg-amber-500 hover:bg-amber-600 text-white">
+                  <Lock className="h-4 w-4" />
+                  Límite alcanzado · Ver planes
+                </Button>
+              </a>
+            )}
           </div>
         }
       />
 
       <div className="p-6">
+        {/* Free plan usage banner */}
+        {!planLimits.loading && planLimits.plan === "free" && (
+          <div className={cn(
+            "mb-4 flex items-center justify-between gap-4 rounded-lg border px-4 py-3 text-sm",
+            planLimits.canCreateTemplate
+              ? "border-border bg-muted/40 text-muted-foreground"
+              : "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+          )}>
+            <span>
+              Plan gratuito · {planLimits.templatesUsed}/{planLimits.templatesMax} plantillas usadas
+            </span>
+            {!planLimits.canCreateTemplate && (
+              <a href="/#pricing" className="font-medium underline underline-offset-2 whitespace-nowrap">
+                Actualizar plan
+              </a>
+            )}
+          </div>
+        )}
+
         {/* View Toggle */}
         <div className="mb-6 flex items-center justify-between">
           <p className="text-sm text-muted-foreground">

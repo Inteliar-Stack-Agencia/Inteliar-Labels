@@ -22,6 +22,7 @@ import {
   XCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { usePlanLimits } from "@/lib/use-plan-limits"
 
 interface Template {
   id: string
@@ -55,6 +56,7 @@ export default function ImprimirPage() {
   const [printResult, setPrintResult] = useState<{ ok: boolean; message: string } | null>(null)
   const [retryStatus, setRetryStatus] = useState<string | null>(null)
   const [printerId, setPrinterId] = useState<string | undefined>(undefined)
+  const planLimits = usePlanLimits()
 
   useEffect(() => {
     const load = async () => {
@@ -414,12 +416,19 @@ export default function ImprimirPage() {
                 </div>
               )}
 
+              {!planLimits.loading && !planLimits.canPrint && (
+                <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
+                  Alcanzaste el límite de {planLimits.labelsMax} etiquetas/mes del plan gratuito.{" "}
+                  <a href="/#pricing" className="font-medium underline underline-offset-2">Actualizá tu plan</a> para seguir imprimiendo.
+                </div>
+              )}
+
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button
                   size="lg"
                   className="gap-2 flex-1"
                   onClick={handlePrintNow}
-                  disabled={!agentOnline || printing}
+                  disabled={!agentOnline || printing || (!planLimits.loading && !planLimits.canPrint)}
                 >
                   <Printer className="h-5 w-5" />
                   {printing ? "Enviando a impresora..." : `Imprimir ahora · ${totalLabels} etiquetas`}

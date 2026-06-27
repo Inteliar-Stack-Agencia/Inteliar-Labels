@@ -5,7 +5,8 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Header } from "@/components/dashboard/header"
 import { KpiCard } from "@/components/dashboard/kpi-card"
 import { QuickActions } from "@/components/dashboard/quick-actions"
-import { Tag, Printer, FileStack, CheckCircle2, Clock, AlertCircle } from "lucide-react"
+import { Tag, Printer, FileStack, CheckCircle2, Clock, AlertCircle, Rocket, X } from "lucide-react"
+import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 
@@ -41,6 +42,7 @@ export default function DashboardPage() {
   const [totalTemplates, setTotalTemplates] = useState<number | null>(null)
   const [recentJobs, setRecentJobs] = useState<RecentJob[]>([])
   const [loading, setLoading] = useState(true)
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -90,6 +92,12 @@ export default function DashboardPage() {
         setTotalJobs(jobsCount ?? 0)
         setTotalTemplates(templatesCount ?? 0)
         setRecentJobs(recent ?? [])
+
+        // Show onboarding if user has no templates and no jobs yet
+        if ((templatesCount ?? 0) === 0 && (jobsCount ?? 0) === 0) {
+          const dismissed = localStorage.getItem("onboarding_dismissed")
+          if (!dismissed) setShowOnboarding(true)
+        }
       } catch {
         // silent
       } finally {
@@ -108,6 +116,52 @@ export default function DashboardPage() {
       />
 
       <div className="p-6 space-y-6">
+
+        {/* Onboarding banner */}
+        {showOnboarding && (
+          <div className="relative rounded-xl border border-primary/30 bg-primary/5 p-5">
+            <button
+              onClick={() => { setShowOnboarding(false); localStorage.setItem("onboarding_dismissed", "1") }}
+              className="absolute right-3 top-3 rounded p-1 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <div className="flex items-start gap-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 flex-shrink-0">
+                <Rocket className="h-5 w-5 text-primary" />
+              </div>
+              <div className="space-y-3 flex-1">
+                <div>
+                  <p className="font-semibold text-foreground">Bienvenido a Inteliar Labels</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">Seguí estos pasos para imprimir tu primera etiqueta:</p>
+                </div>
+                <ol className="space-y-1.5 text-sm text-foreground">
+                  <li className="flex items-center gap-2">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground font-bold flex-shrink-0">1</span>
+                    <Link href="/templates/new" className="text-primary hover:underline font-medium">Creá una plantilla</Link>
+                    <span className="text-muted-foreground">— definí el diseño de la etiqueta</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground font-bold flex-shrink-0">2</span>
+                    <Link href="/upload" className="text-primary hover:underline font-medium">Cargá tu Excel</Link>
+                    <span className="text-muted-foreground">— subí la lista de datos a imprimir</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground font-bold flex-shrink-0">3</span>
+                    <Link href="/settings" className="text-primary hover:underline font-medium">Configurá tu impresora</Link>
+                    <span className="text-muted-foreground">— conectá el agente de impresión</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground font-bold flex-shrink-0">4</span>
+                    <Link href="/imprimir" className="text-primary hover:underline font-medium">Imprimí</Link>
+                    <span className="text-muted-foreground">— seleccioná plantilla y lanzá el trabajo</span>
+                  </li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* KPI Cards */}
         <div className="grid gap-6 md:grid-cols-3">
           <KpiCard

@@ -24,6 +24,11 @@ import {
   Loader2,
   ChevronDown,
   ChevronRight,
+  Key,
+  Copy,
+  ShieldCheck,
+  AlertTriangle,
+  Clock,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
@@ -40,7 +45,7 @@ import {
   type PrinterConfig,
 } from "@/lib/printer-agent-client"
 
-type SettingsTab = "printers" | "account"
+type SettingsTab = "printers" | "license" | "account"
 
 type ConnectionType = "tcp" | "usb" | "serial" | "simulate"
 type Language = "zpl" | "tspl" | "cpcl" | "sbpl" | "auto"
@@ -129,6 +134,23 @@ export default function SettingsPage() {
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
+  // --- License state ---
+  interface LicenseRow {
+    key: string
+    plan: string
+    status: string
+    expires_at: string | null
+    created_at: string
+    max_devices: number
+    activations: { device_id: string; hostname: string; last_seen: string }[]
+  }
+  const [license, setLicense] = useState<LicenseRow | null>(null)
+  const [licenseLoading, setLicenseLoading] = useState(false)
+  const [licenseKey, setLicenseKey] = useState("")
+  const [licenseError, setLicenseError] = useState<string | null>(null)
+  const [licenseActivating, setLicenseActivating] = useState(false)
+  const [keyCopied, setKeyCopied] = useState(false)
+
   useEffect(() => {
     loadAccountData()
   }, [])
@@ -136,7 +158,55 @@ export default function SettingsPage() {
   async function loadAccountData() {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (user) setUserEmail(user.email ?? "")
+    if (user) {
+      setUserEmail(user.email ?? "")
+      loadLicense(supabase, user.id)
+    }
+  }
+
+  async function loadLicense(supabase: ReturnType<typeof createClient>, userId: string) {
+    setLicenseLoading(true)
+    try {
+      const { data } = await supabase
+        .from("licenses")
+        .select("key, plan, status, expires_at, created_at, max_devices, activations")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      setLicense(data ?? null)
+    } finally {
+      setLicenseLoading(false)
+    }
+  }
+
+  async function handleActivateLicense() {
+    const key = licenseKey.trim().toUpperCase()
+    if (!key) return
+    setLicenseActivating(true)
+    setLicenseError(null)
+    try {
+      const res = await fetch("/api/license/activate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, deviceId: "web", hostname: "web" }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setLicenseError(data.error ?? "Error activando"); return }
+      setLicenseKey("")
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) await loadLicense(supabase, user.id)
+    } finally {
+      setLicenseActivating(false)
+    }
+  }
+
+  function copyKey() {
+    if (!license?.key) return
+    navigator.clipboard.writeText(license.key)
+    setKeyCopied(true)
+    setTimeout(() => setKeyCopied(false), 2000)
   }
 
   const loadPrinters = useCallback(async () => {
@@ -306,6 +376,18 @@ export default function SettingsPage() {
             >
               <Printer className="h-4 w-4" />
               Impresoras
+            </button>
+            <button
+              onClick={() => setActiveTab("license")}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                activeTab === "license"
+                  ? "bg-muted text-foreground"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              )}
+            >
+              <Key className="h-4 w-4" />
+              Licencia
             </button>
             <button
               onClick={() => setActiveTab("account")}
@@ -829,6 +911,123 @@ export default function SettingsPage() {
             )}
 
             {/* ── ACCOUNT TAB ── */}
+            {activeTab === "license" && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground">Licencia</h2>
+                  <p className="text-sm text-muted-foreground">Tu plan y clave de activación</p>
+                </div>
+
+                {licenseLoading ? (
+                  <div className="flex items-center gap-2 text-muted-foreground py-8">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-sm">Cargando licencia…</span>
+                  </div>
+                ) : license ? (
+                  <>
+                    {/* Status card */}
+                    <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "flex h-10 w-10 items-center justify-center rounded-full",
+                            license.status === "active" ? "bg-emerald-500/10" : "bg-amber-500/10"
+                          )}>
+                            {license.status === "active"
+                              ? <ShieldCheck className="h-5 w-5 text-emerald-500" />
+                              : <AlertTriangle className="h-5 w-5 text-amber-500" />
+                            }
+                          </div>
+                          <div>
+                            <p className="font-semibold text-foreground capitalize">
+                              Plan {license.plan === "monthly" ? "Mensual" : license.plan === "lifetime" ? "De por vida" : license.plan}
+                            </p>
+                            <p className={cn("text-sm", license.status === "active" ? "text-emerald-500" : "text-amber-500")}>
+                              {license.status === "active" ? "Activa" : license.status === "expired" ? "Vencida" : "Suspendida"}
+                            </p>
+                          </div>
+                        </div>
+                        {license.expires_at && (
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Clock className="h-3.5 w-3.5" />
+                            Vence {new Date(license.expires_at).toLocaleDateString("es-AR")}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="border-t border-border pt-4">
+                        <p className="text-xs text-muted-foreground mb-1.5">Clave de licencia</p>
+                        <div className="flex items-center gap-2">
+                          <code className="flex-1 rounded-lg bg-muted px-3 py-2 text-sm font-mono tracking-wider">
+                            {license.key}
+                          </code>
+                          <button
+                            onClick={copyKey}
+                            className="rounded-lg border border-border p-2 text-muted-foreground hover:text-foreground transition-colors"
+                            title="Copiar clave"
+                          >
+                            {keyCopied ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {Array.isArray(license.activations) && license.activations.length > 0 && (
+                        <div className="border-t border-border pt-4">
+                          <p className="text-xs text-muted-foreground mb-2">
+                            Dispositivos activados ({license.activations.length}/{license.max_devices})
+                          </p>
+                          <div className="space-y-1.5">
+                            {license.activations.map((a) => (
+                              <div key={a.device_id} className="flex items-center justify-between text-sm">
+                                <span className="text-foreground">{a.hostname || a.device_id}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(a.last_seen).toLocaleDateString("es-AR")}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  /* No license — show activation form */
+                  <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                        <Key className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground">Sin licencia activa</p>
+                        <p className="text-sm text-muted-foreground">Ingresá tu clave para activar</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={licenseKey}
+                        onChange={(e) => setLicenseKey(e.target.value)}
+                        placeholder="INTELIAR-XXXX-XXXX-XXXX"
+                        className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm font-mono tracking-wider uppercase placeholder:normal-case placeholder:tracking-normal"
+                      />
+                      {licenseError && <p className="text-xs text-destructive">{licenseError}</p>}
+                      <Button
+                        onClick={handleActivateLicense}
+                        disabled={!licenseKey.trim() || licenseActivating}
+                        className="gap-2"
+                      >
+                        {licenseActivating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Key className="h-4 w-4" />}
+                        Activar licencia
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      ¿No tenés una clave? <a href="/#pricing" className="text-primary hover:underline">Ver planes</a>
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {activeTab === "account" && (
               <div className="space-y-6">
                 <div>
