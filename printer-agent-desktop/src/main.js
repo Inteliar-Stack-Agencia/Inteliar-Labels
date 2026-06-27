@@ -17,7 +17,7 @@ const AGENT_ENTRY = isDev
   ? path.join(__dirname, '../../printer-agent/src/index.js')
   : path.join(process.resourcesPath, 'agent', 'src', 'index.js')
 
-const LICENSE_SERVER = 'https://inteliar-labels.vercel.app'
+const LICENSE_SERVER = process.env.LICENSE_SERVER || 'https://v0-inteliar-labels-ui.vercel.app'
 const PORT = 9638
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -60,7 +60,13 @@ async function validateLicense(key) {
       body: JSON.stringify({ key, device_id: deviceId, hostname: os.hostname() }),
       signal: AbortSignal.timeout(10000),
     })
-    return await res.json()
+    const text = await res.text()
+    try {
+      return JSON.parse(text)
+    } catch {
+      // Server returned HTML/text (wrong URL, 404, Vercel error page, etc.)
+      return { valid: false, message: `El servidor de licencias no respondió correctamente (HTTP ${res.status}). Verificá tu conexión.` }
+    }
   } catch (e) {
     return { valid: false, message: `Sin conexión: ${e.message}` }
   }
