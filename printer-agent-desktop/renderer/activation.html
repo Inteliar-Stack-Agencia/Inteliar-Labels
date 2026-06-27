@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Activación</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0a;
+      color: #fafafa;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      user-select: none;
+    }
+    .card { width: 100%; max-width: 400px; text-align: center; }
+    .logo {
+      width: 56px; height: 56px;
+      background: #0ea5e9;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 28px;
+    }
+    h1 { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+    p.sub { font-size: 13px; color: #a1a1aa; margin-bottom: 24px; }
+    label { display: block; text-align: left; font-size: 12px; color: #a1a1aa; margin-bottom: 6px; }
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 10px;
+      color: #fafafa;
+      font-size: 15px;
+      font-family: 'SF Mono', Menlo, monospace;
+      letter-spacing: 1px;
+      text-align: center;
+      text-transform: uppercase;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input:focus { border-color: #0ea5e9; }
+    button {
+      width: 100%;
+      margin-top: 16px;
+      padding: 12px;
+      background: #0ea5e9;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    button:hover:not(:disabled) { background: #0284c7; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .msg { margin-top: 14px; font-size: 13px; min-height: 18px; }
+    .msg.error { color: #f87171; }
+    .msg.success { color: #4ade80; }
+    .hint { margin-top: 18px; font-size: 11px; color: #71717a; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">🏷️</div>
+    <h1>Activá tu licencia</h1>
+    <p class="sub">Ingresá la clave que recibiste al comprar Inteliar Printer Agent</p>
+
+    <label for="key">Clave de licencia</label>
+    <input id="key" type="text" placeholder="INTELIAR-XXXX-XXXX-XXXX" maxlength="23" autocomplete="off" spellcheck="false">
+
+    <button id="activate">Activar</button>
+    <div class="msg" id="msg"></div>
+
+    <p class="hint">¿No tenés una clave? Comprala en inteliar-labels.vercel.app</p>
+  </div>
+
+  <script>
+    const input = document.getElementById('key')
+    const btn = document.getElementById('activate')
+    const msg = document.getElementById('msg')
+
+    // Auto-format: insert dashes
+    input.addEventListener('input', (e) => {
+      let v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')
+      if (v.startsWith('INTELIAR')) v = v.slice(8)
+      let formatted = 'INTELIAR'
+      for (let i = 0; i < v.length && i < 12; i += 4) {
+        formatted += '-' + v.slice(i, i + 4)
+      }
+      e.target.value = formatted
+    })
+
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') activate() })
+    btn.addEventListener('click', activate)
+
+    async function activate() {
+      const key = input.value.trim()
+      if (!/^INTELIAR-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(key)) {
+        msg.className = 'msg error'
+        msg.textContent = 'Formato inválido. Debe ser INTELIAR-XXXX-XXXX-XXXX'
+        return
+      }
+      btn.disabled = true
+      btn.textContent = 'Validando...'
+      msg.className = 'msg'
+      msg.textContent = ''
+
+      const result = await window.agent.activateLicense(key)
+
+      if (result.valid) {
+        msg.className = 'msg success'
+        msg.textContent = '✓ Licencia activada. Iniciando agente...'
+        btn.textContent = '¡Listo!'
+      } else {
+        msg.className = 'msg error'
+        msg.textContent = result.message || 'Clave inválida'
+        btn.disabled = false
+        btn.textContent = 'Activar'
+      }
+    }
+
+    input.focus()
+  </script>
+</body>
+</html>

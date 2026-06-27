@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
@@ -69,6 +69,23 @@ export default function NewTemplatePage() {
   const [aiError, setAiError] = useState<string | null>(null)
   const [lockAspect, setLockAspect] = useState(true)
   const [realSize, setRealSize] = useState(false)
+
+  // Load a preset template when arriving via /templates/new?preset=<id>
+  useEffect(() => {
+    const presetId = new URLSearchParams(window.location.search).get("preset")
+    if (!presetId) return
+    const preset = PRESET_TEMPLATES.find((p) => p.id === presetId)
+    if (!preset) return
+    setTemplateName(preset.name)
+    setWidthMm(preset.widthMm)
+    setHeightMm(preset.heightMm)
+    setCutBetweenLabels(preset.canvas.cutBetweenLabels !== false)
+    setCutEveryN(preset.canvas.cutEveryN ?? 1)
+    // Fresh ids so dragging/editing works independently
+    setElements(preset.canvas.elements.map((el, i) => ({ ...el, id: `${Date.now()}-${i}` })))
+    setShowSizePanel(false)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const selectedElementData = elements.find((el) => el?.id === selectedElement)
 

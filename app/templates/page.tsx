@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
+import { PRESET_TEMPLATES } from "@/lib/preset-templates"
 
 interface Template {
   id: string
@@ -304,6 +305,39 @@ export default function TemplatesPage() {
             </table>
           </div>
         )}
+
+        {/* Plantillas predeterminadas */}
+        <div className="mt-12">
+          <h2 className="text-lg font-semibold text-foreground">¿Qué querés etiquetar?</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Elegí una plantilla base y la personalizás en segundos
+          </p>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {PRESET_TEMPLATES.map((preset) => (
+              <Link
+                key={preset.id}
+                href={`/templates/new?preset=${preset.id}`}
+                className="group flex items-start gap-4 rounded-xl border border-border bg-card p-5 transition-all hover:border-primary"
+              >
+                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-muted text-2xl">
+                  {preset.emoji}
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-medium text-card-foreground group-hover:text-primary">
+                    {preset.name}
+                  </h3>
+                  <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
+                    {preset.description}
+                  </p>
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    {preset.widthMm} × {preset.heightMm} mm
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   )

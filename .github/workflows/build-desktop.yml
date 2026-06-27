@@ -1,0 +1,73 @@
+name: Build Desktop Agent
+
+on:
+  push:
+    paths:
+      - 'printer-agent-desktop/**'
+      - 'printer-agent/src/**'
+      - '.github/workflows/build-desktop.yml'
+    branches:
+      - main
+      - 'claude/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Install agent runtime deps (express, cors) — bundled into the app
+      - name: Install agent dependencies
+        working-directory: printer-agent
+        run: npm install --omit=optional --omit=dev
+
+      - name: Install desktop dependencies
+        working-directory: printer-agent-desktop
+        run: npm install
+
+      - name: Build Windows installer
+        working-directory: printer-agent-desktop
+        run: npm run build:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: InteliarPrinterAgent-Setup
+          path: printer-agent-desktop/dist/*.exe
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: desktop-v${{ github.run_number }}
+          name: "Inteliar Printer Agent (Desktop) v${{ github.run_number }}"
+          body: |
+            ## Inteliar Printer Agent — Aplicación de escritorio
+
+            Instalador completo para Windows con ícono en la bandeja del sistema.
+
+            ### Instalación
+            1. Descargá `Inteliar Printer Agent Setup X.X.X.exe`
+            2. Ejecutá el instalador (doble clic)
+            3. Al abrirse, ingresá tu clave de licencia `INTELIAR-XXXX-XXXX-XXXX`
+            4. El agente queda corriendo en la bandeja del sistema y arranca solo con Windows
+
+            ### Características
+            - Ícono en la bandeja (verde = activo, gris = detenido)
+            - Activación con clave de licencia
+            - Arranque automático con Windows
+            - Configuración de impresoras desde la web
+
+            > No requiere instalar Node.js. Todo viene incluido.
+          files: printer-agent-desktop/dist/*.exe
