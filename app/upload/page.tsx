@@ -46,6 +46,7 @@ export default function UploadPage() {
   const [showSamplePicker, setShowSamplePicker] = useState(false)
   const [savedLists, setSavedLists] = useState<{ id: string; name: string; file_name: string | null; row_count: number; columns: string[]; rows: Record<string, string>[]; created_at: string }[]>([])
   const [savingList, setSavingList] = useState(false)
+  const [excludedRows, setExcludedRows] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     loadSavedLists()
@@ -78,6 +79,7 @@ export default function UploadPage() {
           fileName: file.name,
           totalRows: jsonData.length,
         })
+        setExcludedRows(new Set())
 
         const cantCol = columns.find((c) =>
           ["cantidad", "quantity", "cant", "qty", "copias", "copies"].includes(c.toLowerCase())
@@ -118,12 +120,13 @@ export default function UploadPage() {
     if (file) parseFile(file)
   }
 
-  const totalLabels = data
-    ? data.rows.reduce((sum, row) => {
-        const qty = quantityColumn ? Number(row[quantityColumn]) || 1 : 1
-        return sum + qty
-      }, 0)
-    : 0
+  const includedRows = data ? data.rows.filter((_, i) => !excludedRows.has(i)) : []
+  const includedCount = includedRows.length
+
+  const totalLabels = includedRows.reduce((sum, row) => {
+    const qty = quantityColumn ? Number(row[quantityColumn]) || 1 : 1
+    return sum + qty
+  }, 0)
 
   const handleCreateJob = async () => {
     if (!data || !selectedTemplate) return
@@ -146,12 +149,15 @@ export default function UploadPage() {
 
     if (error || !job) { setLoading(false); return }
 
-    const rowsToInsert = data.rows.map((row, i) => ({
-      job_id: job.id,
-      row_index: i,
-      row_data: row,
-      quantity: quantityColumn ? Math.max(1, Number(row[quantityColumn]) || 1) : 1,
-    }))
+    // Only include rows the user kept selected (re-indexed sequentially)
+    const rowsToInsert = data.rows
+      .filter((_, i) => !excludedRows.has(i))
+      .map((row, i) => ({
+        job_id: job.id,
+        row_index: i,
+        row_data: row,
+        quantity: quantityColumn ? Math.max(1, Number(row[quantityColumn]) || 1) : 1,
+      }))
 
     for (let i = 0; i < rowsToInsert.length; i += 500) {
       await supabase.from("print_job_rows").insert(rowsToInsert.slice(i, i + 500))
@@ -199,6 +205,7 @@ export default function UploadPage() {
       fileName: list.file_name ?? list.name,
       totalRows: list.row_count,
     })
+    setExcludedRows(new Set())
     const cantCol = list.columns.find((c) =>
       ["cantidad", "quantity", "cant", "qty", "copias", "copies"].includes(c.toLowerCase())
     )
@@ -514,42 +521,70 @@ export default function UploadPage() {
 
             <div className="rounded-xl border border-border bg-card p-5 space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold">Vista previa de datos</h3>
-                <button onClick={() => setPreviewRows(previewRows === 3 ? data.totalRows : 3)}
-                  className="flex items-center gap-1 text-xs text-primary hover:underline">
-                  <Eye className="h-3 w-3" />
-                  {previewRows === 3 ? "Ver todo" : "Ver menos"}
-                </button>
+                <div>
+                  <h3 className="text-sm font-semibold">Vista previa de datos</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Destildá las filas que no querés imprimir esta vez —
+                    <strong className="text-foreground"> {includedCount} de {data.totalRows} seleccionadas</strong>
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setExcludedRows(new Set())} className="text-xs text-primary hover:underline">Todas</button>
+                  <button
+                    onClick={() => setExcludedRows(new Set(data.rows.map((_, i) => i)))}
+                    className="text-xs text-primary hover:underline"
+                  >Ninguna</button>
+                  <button onClick={() => setPreviewRows(previewRows === 3 ? data.totalRows : 3)}
+                    className="flex items-center gap-1 text-xs text-primary hover:underline">
+                    <Eye className="h-3 w-3" />
+                    {previewRows === 3 ? "Ver todo" : "Ver menos"}
+                  </button>
+                </div>
               </div>
               <div className="overflow-x-auto rounded-lg border border-border">
                 <table className="w-full text-xs">
                   <thead className="bg-muted">
                     <tr>
+                      <th className="px-3 py-2 w-8"></th>
                       {data.columns.map((col) => (
                         <th key={col} className="px-3 py-2 text-left font-medium text-muted-foreground">{col}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {data.rows.slice(0, previewRows).map((row, i) => (
-                      <tr key={i} className="hover:bg-muted/50">
-                        {data.columns.map((col) => (
-                          <td key={col} className="px-3 py-2 text-foreground">{row[col]}</td>
-                        ))}
-                      </tr>
-                    ))}
+                    {data.rows.slice(0, previewRows).map((row, i) => {
+                      const excluded = excludedRows.has(i)
+                      return (
+                        <tr
+                          key={i}
+                          className={cn("hover:bg-muted/50 cursor-pointer", excluded && "opacity-40")}
+                          onClick={() => setExcludedRows((prev) => {
+                            const next = new Set(prev)
+                            if (next.has(i)) next.delete(i); else next.add(i)
+                            return next
+                          })}
+                        >
+                          <td className="px-3 py-2 text-center">
+                            <input type="checkbox" checked={!excluded} readOnly className="accent-primary" />
+                          </td>
+                          {data.columns.map((col) => (
+                            <td key={col} className={cn("px-3 py-2 text-foreground", excluded && "line-through")}>{row[col]}</td>
+                          ))}
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
               {data.totalRows > previewRows && (
                 <p className="text-xs text-muted-foreground text-center">
-                  Mostrando {previewRows} de {data.totalRows} filas
+                  Mostrando {previewRows} de {data.totalRows} filas — tocá <strong>Ver todo</strong> para elegir cuáles imprimir
                 </p>
               )}
             </div>
 
             <div className="flex justify-end">
-              <Button onClick={() => setStep(3)} disabled={!selectedTemplate} className="gap-2">
+              <Button onClick={() => setStep(3)} disabled={!selectedTemplate || includedCount === 0} className="gap-2">
                 Continuar
                 <ArrowRight className="h-4 w-4" />
               </Button>
@@ -564,8 +599,10 @@ export default function UploadPage() {
               <h3 className="text-lg font-semibold">Resumen del trabajo de impresión</h3>
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="rounded-lg bg-muted p-4 text-center">
-                  <p className="text-3xl font-bold text-foreground">{data.totalRows}</p>
-                  <p className="text-xs text-muted-foreground mt-1">Filas del Excel</p>
+                  <p className="text-3xl font-bold text-foreground">{includedCount}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Filas seleccionadas{includedCount !== data.totalRows ? ` (de ${data.totalRows})` : ""}
+                  </p>
                 </div>
                 <div className="rounded-lg bg-primary/10 p-4 text-center">
                   <p className="text-3xl font-bold text-primary">{totalLabels}</p>
