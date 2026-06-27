@@ -242,7 +242,7 @@ export default function JobDetailPage() {
         rows,
         { startFromLabel, endAtLabel: endAtLabel === "" ? undefined : endAtLabel, imageCache }
       )
-      const result = await sendToPrinterAgent(zpl, "zpl", undefined, printerId)
+      const result = await sendToPrinterAgent(zpl, "zpl", { printerId, retries: 2 })
       const printedCount = result.labels ?? 0
       const total = job?.total_labels ?? 0
       const isFullRange = startFromLabel <= 1 && (endAtLabel === "" || endAtLabel >= total)
