@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import * as XLSX from "xlsx"
+import { PRESET_TEMPLATES } from "@/lib/preset-templates"
 
 interface ParsedData {
   columns: string[]
@@ -156,15 +157,30 @@ export default function UploadPage() {
   const loadSampleTemplates = async () => {
     if (sampleTemplates.length > 0) { setShowSamplePicker(true); return }
     setLoadingSampleTemplates(true)
+
+    // Extract variables from preset templates
+    const presetItems = PRESET_TEMPLATES.filter((p) => p.id !== "blank").map((p) => ({
+      id: `preset:${p.id}`,
+      name: `${p.emoji} ${p.name} (predeterminada)`,
+      variables: Array.from(new Set(
+        p.canvas.elements
+          .flatMap((el) => [...(el.content ?? "").matchAll(/\{\{(\w+)(?:\+[^}]*)?\}\}/g)].map((m) => m[1]))
+          .filter((v) => !["hoy"].includes(v))
+      )),
+    }))
+
     const { data: { user } } = await supabase.auth.getUser()
+    let userItems: { id: string; name: string; variables: string[] }[] = []
     if (user) {
       const { data } = await supabase
         .from("templates")
         .select("id, name, variables")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
-      if (data) setSampleTemplates(data)
+      if (data) userItems = data
     }
+
+    setSampleTemplates([...userItems, ...presetItems])
     setLoadingSampleTemplates(false)
     setShowSamplePicker(true)
   }
