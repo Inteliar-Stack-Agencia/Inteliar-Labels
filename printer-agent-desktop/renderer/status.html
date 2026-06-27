@@ -79,6 +79,8 @@
     <span id="status-text">Cargando...</span>
   </div>
 
+  <div id="error-box" style="display:none; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:10px; padding:12px; margin-bottom:20px; font-size:12px; color:#fca5a5; line-height:1.5;"></div>
+
   <div class="info">
     <div class="row">
       <span class="label">Puerto local</span>
@@ -119,6 +121,14 @@
       const st = STATUS[s.agentStatus] || STATUS.stopped
       badge.className = 'status-badge ' + st.cls
       statusText.textContent = st.text
+
+      const errBox = document.getElementById('error-box')
+      if (s.agentStatus === 'error' && s.agentError) {
+        errBox.style.display = 'block'
+        errBox.textContent = s.agentError
+      } else {
+        errBox.style.display = 'none'
+      }
       document.getElementById('version').textContent = 'v' + s.version
       document.getElementById('port').textContent = s.port
       if (s.licenseInfo) {

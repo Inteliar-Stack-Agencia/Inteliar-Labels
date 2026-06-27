@@ -27,6 +27,7 @@ let statusWindow = null
 let activationWindow = null
 let agentProcess = null
 let agentStatus = 'stopped' // stopped | starting | running | error
+let agentError = null
 let licenseInfo = null
 
 // ── License helpers ───────────────────────────────────────────────────────────
@@ -102,6 +103,7 @@ async function checkLicense() {
 function startAgent() {
   if (agentProcess) return
   agentStatus = 'starting'
+  agentError = null
   updateTray()
 
   // Pass config path so agent stores printers.json in user data dir.
@@ -131,12 +133,27 @@ function startAgent() {
     }
   })
 
-  agentProcess.stderr.on('data', (d) => console.error('[Agent ERR]', d.toString().trim()))
+  agentProcess.stderr.on('data', (d) => {
+    const line = d.toString().trim()
+    console.error('[Agent ERR]', line)
+    if (line.includes('EADDRINUSE') || line.includes('address already in use')) {
+      agentError = `El puerto ${PORT} ya está en uso. Cerrá cualquier versión anterior del agente (revisá la bandeja del sistema y el Administrador de tareas) y reiniciá.`
+    } else if (line) {
+      agentError = line.slice(0, 200)
+    }
+  })
 
   agentProcess.on('exit', (code) => {
     console.log('[Agent] Proceso terminado, código:', code)
     agentProcess = null
     agentStatus = code === 0 ? 'stopped' : 'error'
+    updateTray()
+  })
+
+  agentProcess.on('error', (err) => {
+    console.error('[Agent] No se pudo iniciar:', err.message)
+    agentError = `No se pudo iniciar el agente: ${err.message}`
+    agentStatus = 'error'
     updateTray()
   })
 }
@@ -282,6 +299,7 @@ ipcMain.handle('activate-license', async (_e, key) => {
 
 ipcMain.handle('get-status', () => ({
   agentStatus,
+  agentError,
   licenseInfo,
   port: PORT,
   version: app.getVersion(),
