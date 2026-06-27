@@ -72,7 +72,7 @@ export const PRESET_TEMPLATES: PresetTemplate[] = [
   {
     id: "shipping",
     name: "Etiqueta de envío",
-    description: "Destinatario, dirección y número de seguimiento",
+    description: "Destinatario, remitente, código 2D y seguimiento — estilo courier",
     emoji: "📦",
     widthMm: 100,
     heightMm: 150,
@@ -80,12 +80,38 @@ export const PRESET_TEMPLATES: PresetTemplate[] = [
       cutBetweenLabels: true,
       cutEveryN: 1,
       elements: [
-        { id: "1", type: "text", content: "PARA:", x: 50, y: 50, fontSize: 10, bold: false },
-        { id: "2", type: "text", content: "{{destinatario}}", x: 50, y: 110, fontSize: 16, bold: true },
-        { id: "3", type: "text", content: "{{direccion}}", x: 50, y: 280, fontSize: 12, bold: false },
-        { id: "4", type: "text", content: "{{ciudad}}", x: 50, y: 380, fontSize: 12, bold: false },
-        { id: "5", type: "barcode", content: "{{tracking}}", x: 50, y: 600, fontSize: 10, bold: false, barcodeType: "code128" },
-        { id: "6", type: "text", content: "{{hoy}}", x: 700, y: 50, fontSize: 9, bold: false },
+        // Outer border
+        { id: "border", type: "rect", content: "", x: 20, y: 20, fontSize: 12, bold: false, lineWidth: 960, lineHeight: 1460, lineThickness: 4 },
+
+        // ── Header: service (left) + big zone code (right) ──
+        { id: "svc1", type: "text", content: "{{servicio}}", x: 50, y: 55, fontSize: 15, bold: true },
+        { id: "zone", type: "text", content: "{{zona}}", x: 560, y: 40, fontSize: 24, bold: true },
+        { id: "route", type: "text", content: "{{ruta}}", x: 560, y: 120, fontSize: 16, bold: true },
+        { id: "div1", type: "line", content: "", x: 40, y: 175, fontSize: 12, bold: false, lineWidth: 920, lineThickness: 8 },
+
+        // ── 2D code + SHIP FROM ──
+        { id: "qr", type: "qr", content: "{{tracking}}", x: 50, y: 200, fontSize: 10, bold: false },
+        { id: "from-lbl", type: "text", content: "SHIP FROM:", x: 320, y: 200, fontSize: 7, bold: false },
+        { id: "from-name", type: "text", content: "{{remitente}}", x: 320, y: 235, fontSize: 10, bold: true },
+        { id: "from-addr", type: "text", content: "{{dir_remitente}}", x: 320, y: 275, fontSize: 9, bold: false },
+        { id: "from-city", type: "text", content: "{{ciudad_remitente}}", x: 320, y: 310, fontSize: 9, bold: false },
+        { id: "div2", type: "line", content: "", x: 40, y: 370, fontSize: 12, bold: false, lineWidth: 920, lineThickness: 4 },
+
+        // ── SHIP TO ──
+        { id: "to-lbl", type: "text", content: "SHIP TO:", x: 50, y: 400, fontSize: 9, bold: true },
+        { id: "to-name", type: "text", content: "{{destinatario}}", x: 50, y: 440, fontSize: 16, bold: true },
+        { id: "to-addr", type: "text", content: "{{direccion}}", x: 50, y: 500, fontSize: 12, bold: false },
+        { id: "to-city", type: "text", content: "{{ciudad}}", x: 50, y: 550, fontSize: 12, bold: false },
+        { id: "to-dest", type: "text", content: "{{destino}}", x: 50, y: 620, fontSize: 24, bold: true },
+        { id: "div3", type: "line", content: "", x: 40, y: 740, fontSize: 12, bold: false, lineWidth: 920, lineThickness: 10 },
+
+        // ── Service + weight ──
+        { id: "svc2", type: "text", content: "{{servicio}}", x: 50, y: 775, fontSize: 12, bold: true },
+        { id: "weight", type: "text", content: "{{peso}} LBS", x: 720, y: 775, fontSize: 12, bold: true },
+
+        // ── Tracking barcode ──
+        { id: "barcode", type: "barcode", content: "{{tracking}}", x: 70, y: 850, fontSize: 10, bold: false, barcodeType: "code128" },
+        { id: "track-num", type: "text", content: "{{tracking}}", x: 50, y: 1320, fontSize: 11, bold: true, textAlign: "center" },
       ],
     },
   },
