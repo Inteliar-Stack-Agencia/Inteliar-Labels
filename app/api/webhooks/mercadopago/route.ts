@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
+import { createClient } from "@supabase/supabase-js"
 import { createLicense } from "@/lib/create-license"
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 // MercadoPago payment webhook.
 // Configure this URL in your MercadoPago app:
@@ -62,6 +68,19 @@ export async function POST(req: NextRequest) {
       paymentRef: `mp:${paymentId}`,
       sendEmail: true,
     })
+
+    // Log payment event (ignore errors — license was already created)
+    await supabaseAdmin.from("payment_events").upsert({
+      provider: "mercadopago",
+      payment_id: paymentId,
+      email,
+      amount: payment.transaction_amount ?? null,
+      currency: payment.currency_id ?? "ARS",
+      plan,
+      license_key: license.key,
+      license_created: created,
+      raw: payment,
+    }, { onConflict: "provider,payment_id" }).select()
 
     console.log(`[mp-webhook] licencia ${created ? "creada" : "ya existía"}: ${license.key} → ${email}`)
     return NextResponse.json({ ok: true, created })

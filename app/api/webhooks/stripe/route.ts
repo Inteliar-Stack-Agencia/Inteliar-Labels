@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import crypto from "crypto"
+import { createClient } from "@supabase/supabase-js"
 import { createLicense } from "@/lib/create-license"
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 // Stripe payment webhook (no SDK — signature verified with native crypto).
 // Configure this URL in your Stripe dashboard → Webhooks:
@@ -80,6 +86,18 @@ export async function POST(req: NextRequest) {
       paymentRef: `stripe:${session.id}`,
       sendEmail: true,
     })
+
+    await supabaseAdmin.from("payment_events").upsert({
+      provider: "stripe",
+      payment_id: session.id,
+      email,
+      amount: session.amount_total ? session.amount_total / 100 : null,
+      currency: (session.currency ?? "usd").toUpperCase(),
+      plan,
+      license_key: license.key,
+      license_created: created,
+      raw: session,
+    }, { onConflict: "provider,payment_id" }).select()
 
     console.log(`[stripe-webhook] licencia ${created ? "creada" : "ya existía"}: ${license.key} → ${email}`)
     return NextResponse.json({ ok: true, created })

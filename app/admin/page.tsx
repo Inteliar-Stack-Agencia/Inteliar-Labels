@@ -8,11 +8,14 @@ import {
   Shield, Plus, Search, RefreshCw, Copy, Check, Trash2,
   ChevronDown, ChevronUp, MonitorSmartphone, X, Pencil,
   Calendar, RotateCcw, LogOut, Tag, FileStack, Printer, Activity,
+  Users, CreditCard, Key,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { License, LicenseActivation } from "@/lib/license-utils"
 
 const PLAN_LABEL: Record<string, string> = { monthly: "Mensual", lifetime: "De por vida" }
+
+type AdminTab = "licenses" | "users" | "payments"
 const STATUS_STYLE: Record<string, string> = {
   active: "bg-success/15 text-success border-success/30",
   suspended: "bg-warning/15 text-warning border-warning/30",
@@ -37,10 +40,32 @@ function formatDate(iso: string | null) {
   return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" })
 }
 
+interface AdminUser {
+  id: string
+  email: string
+  created_at: string
+  last_sign_in_at: string | null
+  license: { key: string; plan: string; status: string; expires_at: string | null } | null
+}
+
+interface PaymentEvent {
+  id: string
+  provider: string
+  payment_id: string
+  email: string | null
+  amount: number | null
+  currency: string
+  plan: string
+  license_key: string | null
+  license_created: boolean
+  created_at: string
+}
+
 export default function AdminPage() {
   const router = useRouter()
   const supabase = createClient()
   const [authorized, setAuthorized] = useState<boolean | null>(null)
+  const [activeTab, setActiveTab] = useState<AdminTab>("licenses")
   const [licenses, setLicenses] = useState<License[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
@@ -62,11 +87,21 @@ export default function AdminPage() {
   }
   const [userStats, setUserStats] = useState<Record<string, UserStats>>({})
 
+  // Users tab
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([])
+  const [usersLoading, setUsersLoading] = useState(false)
+
+  // Payments tab
+  const [payments, setPayments] = useState<PaymentEvent[]>([])
+  const [paymentsLoading, setPaymentsLoading] = useState(false)
+
   // Stats
   const total = licenses.length
   const active = licenses.filter((l) => l.status === "active").length
   const monthly = licenses.filter((l) => l.plan === "monthly").length
   const lifetime = licenses.filter((l) => l.plan === "lifetime").length
+  const mrr = monthly * 10  // $10/mes
+  const totalRevenue = payments.reduce((sum, p) => sum + (p.amount ?? 0), 0)
 
   const checkAuth = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -98,8 +133,26 @@ export default function AdminPage() {
     setLoading(false)
   }, [search])
 
+  const fetchUsers = useCallback(async () => {
+    setUsersLoading(true)
+    const res = await fetch("/api/admin/users")
+    if (res.ok) setAdminUsers(await res.json())
+    setUsersLoading(false)
+  }, [])
+
+  const fetchPayments = useCallback(async () => {
+    setPaymentsLoading(true)
+    const res = await fetch("/api/admin/payments")
+    if (res.ok) setPayments(await res.json())
+    setPaymentsLoading(false)
+  }, [])
+
   useEffect(() => { checkAuth() }, [checkAuth])
   useEffect(() => { if (authorized) fetchLicenses() }, [authorized, fetchLicenses])
+  useEffect(() => {
+    if (authorized && activeTab === "users") fetchUsers()
+    if (authorized && activeTab === "payments") fetchPayments()
+  }, [authorized, activeTab, fetchUsers, fetchPayments])
 
   const copyKey = (key: string) => {
     navigator.clipboard.writeText(key)
@@ -202,10 +255,10 @@ export default function AdminPage() {
         {/* KPIs */}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {[
-            { label: "Total", value: total, color: "text-foreground" },
-            { label: "Activas", value: active, color: "text-success" },
+            { label: "Licencias activas", value: active, color: "text-success" },
             { label: "Mensuales", value: monthly, color: "text-primary" },
             { label: "De por vida", value: lifetime, color: "text-amber-500" },
+            { label: "Usuarios registrados", value: adminUsers.length || total, color: "text-foreground" },
           ].map((kpi) => (
             <div key={kpi.label} className="rounded-xl border border-border bg-background p-4">
               <p className="text-xs text-muted-foreground">{kpi.label}</p>
@@ -213,6 +266,32 @@ export default function AdminPage() {
             </div>
           ))}
         </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 border-b border-border">
+          {([
+            { id: "licenses", label: "Licencias", icon: Key },
+            { id: "users", label: "Usuarios", icon: Users },
+            { id: "payments", label: "Pagos", icon: CreditCard },
+          ] as { id: AdminTab; label: string; icon: React.ElementType }[]).map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors",
+                activeTab === id
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── LICENSES TAB ── */}
+        {activeTab === "licenses" && <div className="space-y-6">
 
         {/* Create new license */}
         <div className="rounded-xl border border-border bg-background p-6">
@@ -313,6 +392,142 @@ export default function AdminPage() {
             </div>
           )}
         </div>
+
+        </div>}  {/* end licenses tab */}
+
+        {/* ── USERS TAB ── */}
+        {activeTab === "users" && (
+          <div className="space-y-3">
+            {usersLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+              </div>
+            ) : adminUsers.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border py-16 text-center text-sm text-muted-foreground">
+                Sin usuarios aún.
+              </div>
+            ) : (
+              <div className="rounded-xl border border-border bg-background overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/30">
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Email</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Registro</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Último acceso</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Licencia</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {adminUsers.map((u) => (
+                      <tr key={u.id} className="hover:bg-muted/20 transition-colors">
+                        <td className="px-4 py-3 font-medium text-foreground">{u.email}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{formatDate(u.created_at)}</td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {u.last_sign_in_at ? timeAgo(u.last_sign_in_at) : "—"}
+                        </td>
+                        <td className="px-4 py-3">
+                          {u.license ? (
+                            <div className="flex items-center gap-2">
+                              <span className={cn("rounded-full border px-2 py-0.5 text-[10px] font-medium", STATUS_STYLE[u.license.status])}>
+                                {STATUS_LABEL[u.license.status]}
+                              </span>
+                              <span className={cn(
+                                "rounded-full px-2 py-0.5 text-[10px] font-medium",
+                                u.license.plan === "lifetime" ? "bg-amber-500/15 text-amber-600" : "bg-primary/10 text-primary"
+                              )}>
+                                {PLAN_LABEL[u.license.plan]}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground italic">Sin licencia</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── PAYMENTS TAB ── */}
+        {activeTab === "payments" && (
+          <div className="space-y-4">
+            {payments.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div className="rounded-xl border border-border bg-background p-4">
+                  <p className="text-xs text-muted-foreground">Total pagos</p>
+                  <p className="text-3xl font-bold mt-1 text-foreground">{payments.length}</p>
+                </div>
+                <div className="rounded-xl border border-border bg-background p-4">
+                  <p className="text-xs text-muted-foreground">MercadoPago</p>
+                  <p className="text-3xl font-bold mt-1 text-primary">{payments.filter(p => p.provider === "mercadopago").length}</p>
+                </div>
+                <div className="rounded-xl border border-border bg-background p-4">
+                  <p className="text-xs text-muted-foreground">Stripe</p>
+                  <p className="text-3xl font-bold mt-1 text-violet-500">{payments.filter(p => p.provider === "stripe").length}</p>
+                </div>
+              </div>
+            )}
+
+            {paymentsLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+              </div>
+            ) : payments.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border py-16 text-center text-sm text-muted-foreground">
+                Sin pagos registrados aún. Los pagos aparecen acá cuando llegan los webhooks de MercadoPago o Stripe.
+              </div>
+            ) : (
+              <div className="rounded-xl border border-border bg-background overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/30">
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Fecha</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Email</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Proveedor</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Monto</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Plan</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Licencia</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {payments.map((p) => (
+                      <tr key={p.id} className="hover:bg-muted/20 transition-colors">
+                        <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{formatDate(p.created_at)}</td>
+                        <td className="px-4 py-3 text-foreground">{p.email || "—"}</td>
+                        <td className="px-4 py-3">
+                          <span className={cn(
+                            "rounded-full px-2 py-0.5 text-[10px] font-medium",
+                            p.provider === "mercadopago" ? "bg-sky-500/15 text-sky-600" : "bg-violet-500/15 text-violet-600"
+                          )}>
+                            {p.provider === "mercadopago" ? "MercadoPago" : "Stripe"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 font-medium text-foreground">
+                          {p.amount != null ? `${p.currency} ${p.amount.toLocaleString("es-AR")}` : "—"}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={cn(
+                            "rounded-full px-2 py-0.5 text-[10px] font-medium",
+                            p.plan === "lifetime" ? "bg-amber-500/15 text-amber-600" : "bg-primary/10 text-primary"
+                          )}>
+                            {PLAN_LABEL[p.plan] ?? p.plan}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                          {p.license_key ?? "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
     </div>
   )
