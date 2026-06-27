@@ -306,7 +306,8 @@ ipcMain.handle('get-status', () => ({
 }))
 
 ipcMain.handle('open-config', () => {
-  shell.openExternal(`http://localhost:${PORT}`)
+  // Printer configuration lives in the web app (Settings page), not the agent.
+  shell.openExternal(`${LICENSE_SERVER}/settings`)
 })
 
 ipcMain.handle('restart-agent', () => {
