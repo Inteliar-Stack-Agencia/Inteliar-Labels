@@ -30,11 +30,14 @@ import {
   AlignCenter,
   AlignRight,
   Calendar,
+  FileSpreadsheet,
+  Pencil,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { LabelElement, ElementType } from "@/lib/label-types"
 import { PRESET_TEMPLATES } from "@/lib/preset-templates"
 import { resolveDateVars, DATE_SHORTCUTS, isDateToken } from "@/lib/date-vars"
+import * as XLSX from "xlsx"
 
 const PRESET_SIZES = [
   { label: "80 × 40 mm (catering / vianda)", width: 80, height: 40 },
@@ -319,6 +322,28 @@ export default function NewTemplatePage() {
     }
   }
 
+  const collectVariables = () =>
+    Array.from(new Set(
+      elements
+        .filter(Boolean)
+        .flatMap((el) => [...(el.content ?? "").matchAll(/\{\{([^}]+?)(?:\+[^}]*)?\}\}/g)].map((m) => m[1].trim()))
+        .filter((v) => !isDateToken(v))
+    ))
+
+  const handleDownloadExcel = () => {
+    const vars = collectVariables()
+    if (vars.length === 0) {
+      alert("Esta plantilla no tiene variables {{...}}. Agregá variables para generar el Excel.")
+      return
+    }
+    const headers = [...vars, "cantidad"]
+    const exampleRow = Object.fromEntries(headers.map((h) => [h, h === "cantidad" ? "1" : `ejemplo_${h}`]))
+    const ws = XLSX.utils.json_to_sheet([exampleRow], { header: headers })
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Etiquetas")
+    XLSX.writeFile(wb, `${templateName.replace(/\s+/g, "_")}.xlsx`)
+  }
+
   const handleSave = async () => {
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
@@ -368,14 +393,22 @@ export default function NewTemplatePage() {
             Volver
           </Link>
           <div className="h-6 w-px bg-border" />
-          <input
-            type="text"
-            value={templateName}
-            onChange={(e) => setTemplateName(e.target.value)}
-            className="bg-transparent text-lg font-semibold text-foreground focus:outline-none"
-          />
+          <div className="group flex items-center gap-1.5 rounded-lg border border-transparent px-2 py-1 hover:border-border focus-within:border-primary">
+            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+            <input
+              type="text"
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              placeholder="Nombre de la plantilla"
+              className="bg-transparent text-lg font-semibold text-foreground focus:outline-none w-48"
+            />
+          </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-2" onClick={handleDownloadExcel}>
+            <FileSpreadsheet className="h-4 w-4" />
+            Descargar Excel
+          </Button>
           <Button
             variant="outline"
             size="sm"
