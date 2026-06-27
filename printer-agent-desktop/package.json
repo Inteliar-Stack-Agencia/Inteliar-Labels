@@ -1,0 +1,60 @@
+{
+  "name": "inteliar-printer-agent-desktop",
+  "version": "1.0.0",
+  "description": "Inteliar Printer Agent — aplicación de escritorio",
+  "main": "src/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build:win": "electron-builder --win --x64",
+    "build:mac": "electron-builder --mac"
+  },
+  "build": {
+    "appId": "com.inteliar.printer-agent",
+    "productName": "Inteliar Printer Agent",
+    "copyright": "Copyright © 2026 Inteliar",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "renderer/**/*",
+      "assets/**/*",
+      "agent/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../printer-agent",
+        "to": "agent",
+        "filter": ["src/**", "package.json", "node_modules/**"]
+      }
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Inteliar Printer Agent",
+      "runAfterFinish": true
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.utilities"
+    }
+  },
+  "dependencies": {
+    "electron-store": "^8.1.0"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  }
+}

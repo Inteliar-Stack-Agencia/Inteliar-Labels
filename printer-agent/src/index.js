@@ -30,7 +30,8 @@ import { randomUUID } from 'crypto'
 import { createInterface } from 'readline'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const CONFIG_PATH = path.join(__dirname, '..', 'printers.json')
+// CONFIG_PATH can be overridden by env (Electron passes the userData dir)
+const CONFIG_PATH = process.env.CONFIG_PATH || path.join(__dirname, '..', 'printers.json')
 const LICENSE_PATH = path.join(__dirname, '..', 'license.json')
 const PORT = process.env.AGENT_PORT || 9638
 
@@ -569,7 +570,12 @@ app.get('/log', (_req, res) => {
 // ── Start ─────────────────────────────────────────────────────────────────────
 
 async function start() {
-  await ensureLicense()
+  // When launched by the Electron desktop wrapper, license is validated there.
+  if (process.env.SKIP_LICENSE_CHECK !== '1') {
+    await ensureLicense()
+  } else {
+    console.log('[Licencia] Validación delegada a la app de escritorio.')
+  }
 
   app.listen(PORT, () => {
     console.log(`[Printer Agent] Inteliar Printer Agent v2 — http://localhost:${PORT}`)
