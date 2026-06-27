@@ -34,7 +34,6 @@ import {
 import { cn } from "@/lib/utils"
 import type { LabelElement, ElementType } from "@/lib/label-types"
 import { resolveDateVars, DATE_SHORTCUTS, isDateToken } from "@/lib/date-vars"
-import { PRESET_TEMPLATES } from "@/lib/preset-templates"
 
 const PRESET_SIZES = [
   { label: "80 × 40 mm (catering / vianda)", width: 80, height: 40 },
