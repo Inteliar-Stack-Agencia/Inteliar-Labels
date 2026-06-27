@@ -129,7 +129,7 @@ function startAgent() {
     if (line.includes('http://localhost')) {
       agentStatus = 'running'
       updateTray()
-      showNotification('Inteliar Printer Agent', 'Agente iniciado correctamente ✓')
+      showNotification('Inteliar Label', 'Agente iniciado correctamente ✓')
     }
   })
 
@@ -194,7 +194,7 @@ function updateTray() {
     : ''
 
   const contextMenu = Menu.buildFromTemplate([
-    { label: 'Inteliar Printer Agent', enabled: false },
+    { label: 'Inteliar Label', enabled: false },
     { label: statusLabel, enabled: false },
     ...(licenseInfo ? [{ label: `Plan: ${planLabel}`, enabled: false }] : []),
     ...(licenseInfo?.offline ? [{ label: `⚠ Modo offline (${licenseInfo.graceDays}d/7d)`, enabled: false }] : []),
@@ -228,7 +228,7 @@ function updateTray() {
   ])
 
   tray.setContextMenu(contextMenu)
-  tray.setToolTip(`Inteliar Printer Agent — ${statusLabel}`)
+  tray.setToolTip(`Inteliar Label — ${statusLabel}`)
 }
 
 // ── Windows ───────────────────────────────────────────────────────────────────
@@ -240,7 +240,7 @@ function openActivationWindow(force = false) {
     width: 480,
     height: 380,
     resizable: false,
-    title: 'Inteliar Printer Agent — Activación',
+    title: 'Inteliar Label — Activación',
     icon: path.join(__dirname, '../assets/icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -270,7 +270,7 @@ function openStatusWindow() {
     width: 420,
     height: 500,
     resizable: false,
-    title: 'Inteliar Printer Agent — Estado',
+    title: 'Inteliar Label — Estado',
     icon: path.join(__dirname, '../assets/icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -343,7 +343,7 @@ app.whenReady().then(async () => {
 
   // Create tray
   tray = new Tray(getTrayIcon())
-  tray.setToolTip('Inteliar Printer Agent')
+  tray.setToolTip('Inteliar Label')
   tray.on('click', () => openStatusWindow())
   updateTray()
 
@@ -355,7 +355,7 @@ app.whenReady().then(async () => {
       openActivationWindow(false)
     } else {
       dialog.showErrorBox(
-        'Inteliar Printer Agent — Licencia inválida',
+        'Inteliar Label — Licencia inválida',
         licenseCheck.message || 'Licencia no válida. Contactá soporte.'
       )
       app.quit()
@@ -369,7 +369,7 @@ app.whenReady().then(async () => {
   // Auto-start on login
   app.setLoginItemSettings({
     openAtLogin: true,
-    name: 'Inteliar Printer Agent',
+    name: 'Inteliar Label',
   })
 })
 

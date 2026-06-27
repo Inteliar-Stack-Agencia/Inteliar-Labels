@@ -17,7 +17,7 @@
   },
   "build": {
     "appId": "com.inteliar.printer-agent",
-    "productName": "Inteliar Printer Agent",
+    "productName": "Inteliar Label",
     "copyright": "Copyright © 2026 Inteliar",
     "directories": {
       "output": "dist"
@@ -46,7 +46,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": false,
       "createStartMenuShortcut": true,
-      "shortcutName": "Inteliar Printer Agent",
+      "shortcutName": "Inteliar Label",
       "runAfterFinish": true
     },
     "mac": {
