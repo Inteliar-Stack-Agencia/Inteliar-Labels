@@ -72,6 +72,7 @@ export default function TemplateEditPage() {
   const [aiError, setAiError] = useState<string | null>(null)
   const [lockAspect, setLockAspect] = useState(true)
   const [realSize, setRealSize] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
 
   // Load template from Supabase
   useEffect(() => {
@@ -105,6 +106,37 @@ export default function TemplateEditPage() {
   }, [templateId])
 
   const selectedElementData = elements.find((el) => el?.id === selectedElement)
+
+  const SAMPLE_VALUES: Record<string, string> = {
+    empresa: "La Casa del Sabor",
+    plato: "Milanesa a la napolitana",
+    comensal: "Juan García",
+    producto: "Empanadas de carne",
+    peso: "500",
+    lote: "L-2024-001",
+    precio: "1.250",
+    codigo: "7790001234567",
+    tracking: "ILA000123456AR",
+    destinatario: "María López",
+    direccion: "Av. Corrientes 1234",
+    ciudad: "Buenos Aires",
+    destino: "CABA",
+    servicio: "Express",
+    zona: "Z1",
+    ruta: "R-042",
+    remitente: "Inteliar Logística",
+    dir_remitente: "Av. del Libertador 500",
+    ciudad_remitente: "Rosario, Santa Fe",
+  }
+
+  function applyPreviewData(content: string): string {
+    return resolveDateVars(
+      content.replace(/\{\{(\w+)(\+\d+[dDmMhH])?\}\}/g, (_match, key, mod) => {
+        if (mod) return _match
+        return SAMPLE_VALUES[key] ?? `[${key}]`
+      })
+    )
+  }
 
   const SCALE = realSize ? 96 / 25.4 : 6  // 96dpi/25.4mm = screen real size; 6 = edit scale
   const canvasW = widthMm * SCALE
@@ -546,6 +578,12 @@ export default function TemplateEditPage() {
                     <span className="text-[10px] bg-muted px-2 py-0.5 rounded">
                       {realSize ? "Tamaño real (aprox.)" : "Vista previa a escala"}
                     </span>
+                    <button
+                      onClick={() => setShowPreview(true)}
+                      className="text-[10px] px-2 py-0.5 rounded border border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+                    >
+                      👁 Vista previa real
+                    </button>
                     <button
                       onClick={() => setRealSize(!realSize)}
                       className={cn(
@@ -1040,6 +1078,62 @@ export default function TemplateEditPage() {
                 {aiLoading ? "Generando..." : "Generar plantilla"}
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Preview Modal */}
+      {showPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setShowPreview(false)}>
+          <div className="relative flex flex-col items-center gap-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between w-full">
+              <span className="text-white font-medium text-sm">Vista previa con datos reales</span>
+              <button onClick={() => setShowPreview(false)} className="text-white/70 hover:text-white ml-4">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div
+              className="relative bg-white shadow-2xl"
+              style={{ width: `${widthMm * 6}px`, height: `${heightMm * 6}px`, minWidth: "200px", minHeight: "100px" }}
+            >
+              {elements.filter(Boolean).map((element) => (
+                <div
+                  key={element.id}
+                  className="absolute"
+                  style={
+                    element.type === "line"
+                      ? { left: 0, top: `${element.y * 6 / 10}px`, width: `${widthMm * 6}px`, paddingLeft: `${2 * 6}px`, paddingRight: `${2 * 6}px` }
+                      : { left: `${element.x * 6 / 10}px`, top: `${element.y * 6 / 10}px` }
+                  }
+                >
+                  {element.type === "line" ? (
+                    <div style={{ width: `${(element.lineWidth ?? (widthMm - 8) * 10) * 6 / 10}px`, height: `${Math.max(1, (element.lineThickness ?? 5) * 6 / 10)}px`, backgroundColor: "#333" }} />
+                  ) : element.type === "rect" ? (
+                    <div style={{ width: `${(element.lineWidth ?? 200) * 6 / 10}px`, height: `${(element.lineHeight ?? 100) * 6 / 10}px`, border: `${Math.max(1, (element.lineThickness ?? 5) * 6 / 10)}px solid #333` }} />
+                  ) : element.type === "image" ? (
+                    element.content ? <img src={element.content} alt="" style={{ width: `${(element.imgWidth ?? 200) * 6 / 10}px`, height: `${(element.imgHeight ?? 150) * 6 / 10}px`, objectFit: "contain" }} /> : null
+                  ) : (
+                    <div className="px-1.5 py-1">
+                      <span
+                        className="text-gray-800"
+                        style={{
+                          fontSize: `${element.fontSize * 6 / 3}px`,
+                          fontWeight: element.bold ? "bold" : "normal",
+                          textAlign: element.textAlign || "left",
+                          display: "block",
+                          fontFamily: "'Arial Narrow', Arial, sans-serif",
+                          letterSpacing: "-0.03em",
+                          lineHeight: 1.1,
+                        }}
+                      >
+                        {applyPreviewData(element.content ?? "")}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <p className="text-white/50 text-xs">Los datos mostrados son de ejemplo</p>
           </div>
         </div>
       )}
