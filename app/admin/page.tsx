@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import {
   Shield, Plus, Search, RefreshCw, Copy, Check, Trash2,
   ChevronDown, ChevronUp, MonitorSmartphone, X, Pencil,
-  Calendar, RotateCcw, LogOut, Tag,
+  Calendar, RotateCcw, LogOut, Tag, FileStack, Printer, Activity,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { License, LicenseActivation } from "@/lib/license-utils"
@@ -54,6 +54,14 @@ export default function AdminPage() {
   const [editEmail, setEditEmail] = useState("")
   const [editNotes, setEditNotes] = useState("")
 
+  interface UserStats {
+    templates: number
+    labelsMonth: number
+    jobsMonth: number
+    lastActive: string | null
+  }
+  const [userStats, setUserStats] = useState<Record<string, UserStats>>({})
+
   // Stats
   const total = licenses.length
   const active = licenses.filter((l) => l.status === "active").length
@@ -73,7 +81,20 @@ export default function AdminPage() {
   const fetchLicenses = useCallback(async () => {
     setLoading(true)
     const res = await fetch(`/api/admin/licenses?q=${encodeURIComponent(search)}`)
-    if (res.ok) setLicenses(await res.json())
+    if (res.ok) {
+      const data: License[] = await res.json()
+      setLicenses(data)
+      // Fetch usage stats for all users that have a user_id
+      const userIds = [...new Set(data.map((l) => l.user_id).filter(Boolean))]
+      if (userIds.length > 0) {
+        const statsRes = await fetch("/api/admin/user-stats", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userIds }),
+        })
+        if (statsRes.ok) setUserStats(await statsRes.json())
+      }
+    }
     setLoading(false)
   }, [search])
 
@@ -269,6 +290,7 @@ export default function AdminPage() {
                 <LicenseRow
                   key={license.id}
                   license={license}
+                  stats={license.user_id ? userStats[license.user_id] ?? null : null}
                   expanded={expanded === license.id}
                   copied={copied === license.key}
                   editingId={editingId}
@@ -296,8 +318,16 @@ export default function AdminPage() {
   )
 }
 
+interface UserStats {
+  templates: number
+  labelsMonth: number
+  jobsMonth: number
+  lastActive: string | null
+}
+
 interface LicenseRowProps {
   license: License
+  stats: UserStats | null
   expanded: boolean
   copied: boolean
   editingId: string | null
@@ -318,7 +348,7 @@ interface LicenseRowProps {
 }
 
 function LicenseRow({
-  license, expanded, copied, editingId,
+  license, stats, expanded, copied, editingId,
   editEmail, editNotes,
   onToggle, onCopy, onStatusChange, onPlanChange, onExtend,
   onDelete, onRemoveDevice, onEditStart, onEditSave, onEditCancel,
@@ -364,6 +394,20 @@ function LicenseRow({
           <MonitorSmartphone className="h-3.5 w-3.5" />
           {activations.length}/{license.max_devices}
         </span>
+
+        {/* Usage stats */}
+        {stats && (
+          <span className="hidden sm:flex items-center gap-3 text-xs text-muted-foreground shrink-0">
+            <span className="flex items-center gap-1" title="Plantillas">
+              <FileStack className="h-3.5 w-3.5" />
+              {stats.templates}
+            </span>
+            <span className="flex items-center gap-1" title="Etiquetas este mes">
+              <Printer className="h-3.5 w-3.5" />
+              {stats.labelsMonth.toLocaleString("es-AR")}
+            </span>
+          </span>
+        )}
 
         {/* Expiry */}
         {license.plan === "monthly" && (
@@ -461,6 +505,26 @@ function LicenseRow({
               </div>
             </div>
           </div>
+
+          {/* Usage stats */}
+          {stats && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: "Plantillas", value: stats.templates, icon: FileStack },
+                { label: "Etiquetas este mes", value: stats.labelsMonth.toLocaleString("es-AR"), icon: Printer },
+                { label: "Trabajos este mes", value: stats.jobsMonth, icon: Activity },
+                { label: "Último trabajo", value: stats.lastActive ? timeAgo(stats.lastActive) : "—", icon: Calendar },
+              ].map(({ label, value, icon: Icon }) => (
+                <div key={label} className="rounded-lg border border-border bg-background p-3">
+                  <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mb-1">
+                    <Icon className="h-3 w-3" />
+                    {label}
+                  </div>
+                  <p className="text-lg font-bold text-foreground leading-none">{value}</p>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Devices */}
           <div>

@@ -26,6 +26,7 @@ export interface LicenseActivation {
 export interface License {
   id: string
   key: string
+  user_id: string | null
   plan: "monthly" | "lifetime"
   status: "active" | "suspended" | "expired"
   email: string | null
