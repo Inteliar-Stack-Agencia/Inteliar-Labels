@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 import { createClient } from "@/lib/supabase/server"
-import { generateLicenseKey, maxDevicesForPlan } from "@/lib/license-utils"
+import { createLicense } from "@/lib/create-license"
 
 const supabaseAdmin = createSupabaseClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -45,21 +45,15 @@ export async function POST(req: NextRequest) {
   const email: string = body.email ?? ""
   const notes: string = body.notes ?? ""
 
-  // Monthly: expires in 30 days from now; lifetime: no expiry
-  const expires_at = plan === "monthly"
-    ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-    : null
-
-  const { data, error } = await supabaseAdmin.from("licenses").insert({
-    key: generateLicenseKey(),
-    plan,
-    email,
-    notes,
-    max_devices: maxDevicesForPlan(plan),
-    expires_at,
-    activations: [],
-  }).select().single()
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data, { status: 201 })
+  try {
+    const { license } = await createLicense({
+      plan,
+      email,
+      notes,
+      sendEmail: Boolean(body.sendEmail),
+    })
+    return NextResponse.json(license, { status: 201 })
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
 }
