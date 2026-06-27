@@ -33,6 +33,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { LabelElement, ElementType } from "@/lib/label-types"
+import { PRESET_TEMPLATES } from "@/lib/preset-templates"
 import { resolveDateVars, DATE_SHORTCUTS, isDateToken } from "@/lib/date-vars"
 
 const PRESET_SIZES = [
