@@ -18,3 +18,4 @@ node_modules/
 # Printer agent runtime config & build artifacts
 printer-agent/printers.json
 printer-agent/dist/
+tsconfig.tsbuildinfo
