@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Header } from "@/components/dashboard/header"
@@ -44,6 +44,13 @@ export default function UploadPage() {
   const [sampleTemplates, setSampleTemplates] = useState<{ id: string; name: string; variables: string[] }[]>([])
   const [loadingSampleTemplates, setLoadingSampleTemplates] = useState(false)
   const [showSamplePicker, setShowSamplePicker] = useState(false)
+  const [savedLists, setSavedLists] = useState<{ id: string; name: string; file_name: string | null; row_count: number; columns: string[]; rows: Record<string, string>[]; created_at: string }[]>([])
+  const [savingList, setSavingList] = useState(false)
+
+  useEffect(() => {
+    loadSavedLists()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const parseFile = useCallback((file: File) => {
     setError(null)
@@ -152,6 +159,57 @@ export default function UploadPage() {
 
     setLoading(false)
     router.push(`/jobs/${job.id}`)
+  }
+
+  const loadSavedLists = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: lists } = await supabase
+      .from("saved_lists")
+      .select("id, name, file_name, row_count, columns, rows, created_at")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false })
+    if (lists) setSavedLists(lists)
+  }
+
+  const handleSaveList = async () => {
+    if (!data) return
+    const name = window.prompt("Nombre para esta lista (ej: Productos góndola):", data.fileName?.replace(/\.[^.]+$/, "") ?? "")
+    if (!name) return
+    setSavingList(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setSavingList(false); return }
+    await supabase.from("saved_lists").insert({
+      user_id: user.id,
+      name,
+      file_name: data.fileName,
+      columns: data.columns,
+      rows: data.rows,
+      row_count: data.totalRows,
+    })
+    setSavingList(false)
+    await loadSavedLists()
+    alert("Lista guardada. La vas a encontrar al subir datos la próxima vez.")
+  }
+
+  const useSavedList = (list: typeof savedLists[number]) => {
+    setData({
+      columns: list.columns,
+      rows: list.rows,
+      fileName: list.file_name ?? list.name,
+      totalRows: list.row_count,
+    })
+    const cantCol = list.columns.find((c) =>
+      ["cantidad", "quantity", "cant", "qty", "copias", "copies"].includes(c.toLowerCase())
+    )
+    if (cantCol) setQuantityColumn(cantCol)
+    setStep(2)
+    loadTemplates()
+  }
+
+  const deleteSavedList = async (id: string) => {
+    await supabase.from("saved_lists").delete().eq("id", id)
+    setSavedLists((prev) => prev.filter((l) => l.id !== id))
   }
 
   const loadSampleTemplates = async () => {
@@ -320,6 +378,37 @@ export default function UploadPage() {
                 </div>
               )}
             </div>
+
+            {/* Saved lists */}
+            {savedLists.length > 0 && (
+              <div className="rounded-xl border border-border bg-card p-4">
+                <p className="text-sm font-medium text-foreground">Tus listas guardadas</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Reusá una lista que ya cargaste antes — la podés editar antes de imprimir</p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {savedLists.map((list) => (
+                    <div
+                      key={list.id}
+                      className="flex items-center gap-3 rounded-lg border border-border bg-background p-3 hover:border-primary transition-colors"
+                    >
+                      <FileSpreadsheet className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                      <button onClick={() => useSavedList(list)} className="flex-1 min-w-0 text-left">
+                        <p className="text-sm font-medium truncate">{list.name}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          {list.row_count} filas · {list.columns.length} columnas
+                        </p>
+                      </button>
+                      <button
+                        onClick={() => deleteSavedList(list.id)}
+                        className="text-muted-foreground hover:text-destructive flex-shrink-0"
+                        title="Eliminar lista"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -342,6 +431,18 @@ export default function UploadPage() {
                 <p className="text-sm font-medium text-foreground">{data.fileName}</p>
                 <p className="text-xs text-muted-foreground">{data.totalRows} filas · {data.columns.length} columnas detectadas</p>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 flex-shrink-0"
+                onClick={handleSaveList}
+                disabled={savingList}
+              >
+                {savingList
+                  ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  : <FileSpreadsheet className="h-4 w-4" />}
+                Guardar lista
+              </Button>
               <button onClick={() => { setData(null); setStep(1) }} className="text-muted-foreground hover:text-foreground">
                 <X className="h-4 w-4" />
               </button>
