@@ -109,7 +109,15 @@ export function usePlanLimits(): PlanLimits {
         return
       }
 
-      // No license — check trial
+      // No license — check trial (with possible admin extension)
+      const { data: extension } = await supabase
+        .from("trial_extensions")
+        .select("extra_days")
+        .eq("user_id", user.id)
+        .maybeSingle()
+
+      const extraDays = extension?.extra_days ?? 0
+
       const { data: allJobs } = await supabase
         .from("print_jobs")
         .select("total_labels")
@@ -124,7 +132,7 @@ export function usePlanLimits(): PlanLimits {
       const daysElapsed = Math.floor(
         (Date.now() - new Date(user.created_at).getTime()) / (1000 * 60 * 60 * 24)
       )
-      const daysLeft = Math.max(0, TRIAL_DAYS - daysElapsed)
+      const daysLeft = Math.max(0, TRIAL_DAYS + extraDays - daysElapsed)
       const labelsLeft = Math.max(0, TRIAL_LABELS - totalLabelsUsed)
       const trialExpired = daysLeft === 0 || labelsLeft === 0
 

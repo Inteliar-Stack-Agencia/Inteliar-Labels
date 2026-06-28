@@ -16,8 +16,10 @@ const supabaseAdmin = createClient(
 
 const MP_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN
 
-function inferPlan(text: string): "monthly" | "lifetime" {
-  return /vida|lifetime|por.?vida|anual/i.test(text) ? "lifetime" : "monthly"
+function inferPlan(text: string): "monthly" | "pro" | "lifetime" {
+  if (/vida|lifetime|por.?vida/i.test(text)) return "lifetime"
+  if (/pro/i.test(text)) return "pro"
+  return "monthly"
 }
 
 export async function POST(req: NextRequest) {

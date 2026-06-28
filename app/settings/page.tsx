@@ -940,7 +940,7 @@ export default function SettingsPage() {
                           </div>
                           <div>
                             <p className="font-semibold text-foreground capitalize">
-                              Plan {license.plan === "monthly" ? "Mensual" : license.plan === "lifetime" ? "De por vida" : license.plan}
+                              Plan {license.plan === "monthly" ? "Mensual" : license.plan === "pro" ? "Pro" : license.plan === "lifetime" ? "De por vida" : license.plan}
                             </p>
                             <p className={cn("text-sm", license.status === "active" ? "text-emerald-500" : "text-amber-500")}>
                               {license.status === "active" ? "Activa" : license.status === "expired" ? "Vencida" : "Suspendida"}
@@ -989,6 +989,42 @@ export default function SettingsPage() {
                         </div>
                       )}
                     </div>
+
+                    {/* Upgrade CTA for monthly plan */}
+                    {license.plan === "monthly" && license.status === "active" && (
+                      <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 flex items-center justify-between gap-4">
+                        <div>
+                          <p className="font-semibold text-foreground text-sm">Pasate al plan Pro</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Impresiones ilimitadas · Hasta 3 sucursales · US$19/mes
+                          </p>
+                        </div>
+                        <a href="/#pricing">
+                          <Button size="sm" className="gap-2 whitespace-nowrap">
+                            Mejorar plan
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </a>
+                      </div>
+                    )}
+
+                    {/* Upgrade CTA for pro plan */}
+                    {license.plan === "pro" && license.status === "active" && (
+                      <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 flex items-center justify-between gap-4">
+                        <div>
+                          <p className="font-semibold text-foreground text-sm">Considerá el plan De por vida</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Pago único de US$300 · Hasta 5 sucursales · Sin renovaciones
+                          </p>
+                        </div>
+                        <a href="/#pricing">
+                          <Button size="sm" variant="outline" className="gap-2 whitespace-nowrap">
+                            Ver oferta
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </a>
+                      </div>
+                    )}
                   </>
                 ) : (
                   /* No license — show activation form */

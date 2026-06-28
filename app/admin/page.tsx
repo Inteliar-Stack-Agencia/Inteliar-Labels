@@ -13,7 +13,7 @@ import {
 import { cn } from "@/lib/utils"
 import type { License, LicenseActivation } from "@/lib/license-utils"
 
-const PLAN_LABEL: Record<string, string> = { monthly: "Mensual", lifetime: "De por vida" }
+const PLAN_LABEL: Record<string, string> = { monthly: "Mensual", pro: "Pro", lifetime: "De por vida" }
 
 type AdminTab = "licenses" | "users" | "payments" | "config"
 const STATUS_STYLE: Record<string, string> = {
@@ -416,16 +416,31 @@ export default function AdminPage() {
                       <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Email</th>
                       <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Registro</th>
                       <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Último acceso</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Trial</th>
                       <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Licencia</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {adminUsers.map((u) => (
+                    {adminUsers.map((u) => {
+                      const daysElapsed = Math.floor((Date.now() - new Date(u.created_at).getTime()) / (1000 * 60 * 60 * 24))
+                      const trialDaysLeft = Math.max(0, 15 - daysElapsed)
+                      const trialExpired = trialDaysLeft === 0 && !u.license
+                      return (
                       <tr key={u.id} className="hover:bg-muted/20 transition-colors">
                         <td className="px-4 py-3 font-medium text-foreground">{u.email}</td>
                         <td className="px-4 py-3 text-muted-foreground">{formatDate(u.created_at)}</td>
                         <td className="px-4 py-3 text-muted-foreground">
                           {u.last_sign_in_at ? timeAgo(u.last_sign_in_at) : "—"}
+                        </td>
+                        <td className="px-4 py-3">
+                          {u.license ? (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          ) : trialExpired ? (
+                            <span className="rounded-full border px-2 py-0.5 text-[10px] font-medium bg-destructive/10 text-destructive border-destructive/30">Vencido</span>
+                          ) : (
+                            <span className="rounded-full border px-2 py-0.5 text-[10px] font-medium bg-primary/10 text-primary border-primary/20">{trialDaysLeft}d restantes</span>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           {u.license ? (
@@ -435,17 +450,37 @@ export default function AdminPage() {
                               </span>
                               <span className={cn(
                                 "rounded-full px-2 py-0.5 text-[10px] font-medium",
-                                u.license.plan === "lifetime" ? "bg-amber-500/15 text-amber-600" : "bg-primary/10 text-primary"
+                                u.license.plan === "lifetime" ? "bg-amber-500/15 text-amber-600" :
+                                u.license.plan === "pro" ? "bg-violet-500/15 text-violet-600" :
+                                "bg-primary/10 text-primary"
                               )}>
-                                {PLAN_LABEL[u.license.plan]}
+                                {PLAN_LABEL[u.license.plan] ?? u.license.plan}
                               </span>
                             </div>
                           ) : (
                             <span className="text-xs text-muted-foreground italic">Sin licencia</span>
                           )}
                         </td>
+                        <td className="px-4 py-3">
+                          {!u.license && (
+                            <button
+                              onClick={async () => {
+                                await fetch("/api/admin/extend-trial", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ userId: u.id, days: 7 }),
+                                })
+                                fetchUsers()
+                              }}
+                              className="text-xs text-primary hover:underline whitespace-nowrap"
+                            >
+                              +7 días trial
+                            </button>
+                          )}
+                        </td>
                       </tr>
-                    ))}
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>

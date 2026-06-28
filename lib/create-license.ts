@@ -9,7 +9,7 @@ const supabaseAdmin = createSupabaseClient(
 )
 
 export interface CreateLicenseInput {
-  plan: "monthly" | "lifetime"
+  plan: "monthly" | "pro" | "lifetime"
   email?: string
   notes?: string
   /** External payment reference (MercadoPago/Stripe id) to avoid duplicates */
@@ -31,7 +31,7 @@ export async function createLicense(input: CreateLicenseInput) {
     if (existing) return { license: existing, created: false }
   }
 
-  const expires_at = plan === "monthly"
+  const expires_at = (plan === "monthly" || plan === "pro")
     ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
     : null
 

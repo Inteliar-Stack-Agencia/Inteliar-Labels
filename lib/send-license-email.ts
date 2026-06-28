@@ -7,7 +7,7 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://v0-inteliar-labels-u
 export async function sendLicenseEmail(
   to: string,
   key: string,
-  plan: "monthly" | "lifetime"
+  plan: "monthly" | "pro" | "lifetime"
 ): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY
   if (!apiKey) {
@@ -15,7 +15,8 @@ export async function sendLicenseEmail(
     return
   }
 
-  const planLabel = plan === "lifetime" ? "De por vida" : "Mensual"
+  const planLabel = plan === "lifetime" ? "De por vida" : plan === "pro" ? "Pro" : "Mensual"
+  const deviceLabel = plan === "lifetime" ? "hasta 5 dispositivos" : plan === "pro" ? "hasta 3 dispositivos" : "1 dispositivo"
 
   const html = `
   <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; color: #1a1a2e;">
@@ -24,7 +25,7 @@ export async function sendLicenseEmail(
     </div>
     <div style="border: 1px solid #e5e5e5; border-top: none; padding: 28px; border-radius: 0 0 12px 12px;">
       <p style="font-size: 16px;">¡Gracias por tu compra! 🎉</p>
-      <p>Tu licencia <strong>${planLabel}</strong> está lista. Esta es tu clave de activación:</p>
+      <p>Tu licencia <strong>${planLabel}</strong> está lista (válida para <strong>${deviceLabel}</strong>). Esta es tu clave de activación:</p>
       <div style="background: #f4f6fb; border: 2px dashed #1e78dc; border-radius: 10px; padding: 18px; text-align: center; margin: 20px 0;">
         <code style="font-size: 20px; font-weight: bold; letter-spacing: 1px; color: #1e78dc;">${key}</code>
       </div>
