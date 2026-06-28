@@ -8,14 +8,14 @@ import {
   Shield, Plus, Search, RefreshCw, Copy, Check, Trash2,
   ChevronDown, ChevronUp, MonitorSmartphone, X, Pencil,
   Calendar, RotateCcw, LogOut, Tag, FileStack, Printer, Activity,
-  Users, CreditCard, Key,
+  Users, CreditCard, Key, Settings, ExternalLink, Info,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { License, LicenseActivation } from "@/lib/license-utils"
 
 const PLAN_LABEL: Record<string, string> = { monthly: "Mensual", lifetime: "De por vida" }
 
-type AdminTab = "licenses" | "users" | "payments"
+type AdminTab = "licenses" | "users" | "payments" | "config"
 const STATUS_STYLE: Record<string, string> = {
   active: "bg-success/15 text-success border-success/30",
   suspended: "bg-warning/15 text-warning border-warning/30",
@@ -273,7 +273,9 @@ export default function AdminPage() {
             { id: "licenses", label: "Licencias", icon: Key },
             { id: "users", label: "Usuarios", icon: Users },
             { id: "payments", label: "Pagos", icon: CreditCard },
-          ] as { id: AdminTab; label: string; icon: React.ElementType }[]).map(({ id, label, icon: Icon }) => (
+          ] as { id: AdminTab; label: string; icon: React.ElementType }[])
+            .concat([{ id: "config" as AdminTab, label: "Configuración", icon: Settings }])
+            .map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               onClick={() => setActiveTab(id)}
@@ -528,7 +530,196 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* ── CONFIG TAB ── */}
+        {activeTab === "config" && (
+          <div className="space-y-6 max-w-2xl">
+
+            {/* Webhook URL info */}
+            <div className="rounded-xl border border-border bg-background p-5 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <Info className="h-4 w-4 text-muted-foreground" />
+                URLs de webhooks
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Configurá estas URLs en cada pasarela para que los pagos generen licencias automáticamente.
+              </p>
+              {[
+                { label: "MercadoPago", path: "/api/webhooks/mercadopago" },
+                { label: "Stripe", path: "/api/webhooks/stripe" },
+              ].map(({ label, path }) => (
+                <div key={path}>
+                  <p className="text-xs text-muted-foreground mb-1">{label}</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 rounded-lg bg-muted px-3 py-2 text-xs font-mono break-all">
+                      https://v0-inteliar-labels-ui.vercel.app{path}
+                    </code>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(`https://v0-inteliar-labels-ui.vercel.app${path}`)}
+                      className="rounded-lg border border-border p-2 text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* MercadoPago */}
+            <div className="rounded-xl border border-border bg-background p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-500/10">
+                    <CreditCard className="h-4 w-4 text-sky-500" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">MercadoPago</p>
+                    <p className="text-xs text-muted-foreground">Pagos en pesos argentinos</p>
+                  </div>
+                </div>
+                <a
+                  href="https://www.mercadopago.com.ar/developers/panel/app"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  Panel MP <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+              <div className="space-y-3 text-sm">
+                <Step n={1} text="Entrá al Panel de Desarrolladores de MercadoPago" />
+                <Step n={2} text='Creá una aplicación → copiá el "Access Token" de producción' />
+                <Step n={3}>
+                  Agregalo en Vercel como variable de entorno:
+                  <code className="ml-1 rounded bg-muted px-1.5 py-0.5 text-xs font-mono">MERCADOPAGO_ACCESS_TOKEN=APP_USR-...</code>
+                </Step>
+                <Step n={4} text='En tu aplicación MP → "Notificaciones IPN" → pegá la URL del webhook de arriba' />
+                <Step n={5} text='Seleccioná el evento "Pagos" y guardá' />
+              </div>
+              <div className="rounded-lg bg-muted/50 border border-border px-4 py-3 text-xs text-muted-foreground">
+                <strong className="text-foreground">Tip:</strong> en la descripción o referencia externa del pago incluí "vida" o "lifetime" para que se asigne plan vitalicio. De lo contrario se asigna plan mensual.
+              </div>
+            </div>
+
+            {/* Stripe */}
+            <div className="rounded-xl border border-border bg-background p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-500/10">
+                    <CreditCard className="h-4 w-4 text-violet-500" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">Stripe</p>
+                    <p className="text-xs text-muted-foreground">Pagos internacionales en USD</p>
+                  </div>
+                </div>
+                <a
+                  href="https://dashboard.stripe.com/webhooks"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  Dashboard Stripe <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+              <div className="space-y-3 text-sm">
+                <Step n={1} text="En el Dashboard de Stripe → Developers → Webhooks" />
+                <Step n={2} text='Clic en "Add endpoint" → pegá la URL del webhook de arriba' />
+                <Step n={3} text='Seleccioná el evento "checkout.session.completed"' />
+                <Step n={4}>
+                  Copiá el "Signing secret" y agregalo en Vercel:
+                  <code className="ml-1 rounded bg-muted px-1.5 py-0.5 text-xs font-mono">STRIPE_WEBHOOK_SECRET=whsec_...</code>
+                </Step>
+                <Step n={5}>
+                  En tu Checkout, pasá el plan en metadata:
+                  <code className="ml-1 rounded bg-muted px-1.5 py-0.5 text-xs font-mono">{"metadata: { plan: 'lifetime' }"}</code>
+                </Step>
+              </div>
+              <div className="rounded-lg bg-muted/50 border border-border px-4 py-3 text-xs text-muted-foreground">
+                <strong className="text-foreground">Tip:</strong> si <code>metadata.plan</code> no está definido, el sistema infiere el plan por el nombre del producto. Incluí "lifetime" o "vida" en el nombre para plan vitalicio.
+              </div>
+            </div>
+
+            {/* Resend */}
+            <div className="rounded-xl border border-border bg-background p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10">
+                    <Settings className="h-4 w-4 text-emerald-500" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">Resend (email de licencia)</p>
+                    <p className="text-xs text-muted-foreground">Envía la clave al cliente automáticamente</p>
+                  </div>
+                </div>
+                <a
+                  href="https://resend.com/api-keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  Resend API Keys <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+              <div className="space-y-3 text-sm">
+                <Step n={1} text="Creá una cuenta en resend.com y verificá tu dominio" />
+                <Step n={2}>
+                  Generá una API key y agregala en Vercel:
+                  <code className="ml-1 rounded bg-muted px-1.5 py-0.5 text-xs font-mono">RESEND_API_KEY=re_...</code>
+                </Step>
+                <Step n={3} text="Listo — al llegar un pago aprobado, la clave se envía automáticamente al email del cliente" />
+              </div>
+            </div>
+
+            {/* Vercel env vars summary */}
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-5 space-y-3">
+              <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">Variables de entorno en Vercel</p>
+              <div className="space-y-1.5">
+                {[
+                  "MERCADOPAGO_ACCESS_TOKEN",
+                  "STRIPE_WEBHOOK_SECRET",
+                  "RESEND_API_KEY",
+                  "NEXT_PUBLIC_CHECKOUT_MONTHLY_URL",
+                  "NEXT_PUBLIC_CHECKOUT_LIFETIME_URL",
+                  "ADMIN_EMAILS",
+                ].map((v) => (
+                  <div key={v} className="flex items-center justify-between gap-2">
+                    <code className="text-xs font-mono text-foreground">{v}</code>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(v)}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <a
+                href="https://vercel.com/dashboard"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                Ir a Vercel Environment Variables <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+
+          </div>
+        )}
+
       </div>
+    </div>
+  )
+}
+
+function Step({ n, text, children }: { n: number; text?: string; children?: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground flex-shrink-0 mt-0.5">
+        {n}
+      </span>
+      <span className="text-sm text-muted-foreground leading-snug">
+        {text ?? children}
+      </span>
     </div>
   )
 }
