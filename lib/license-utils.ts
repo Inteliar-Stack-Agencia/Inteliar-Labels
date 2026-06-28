@@ -13,7 +13,9 @@ export function isValidKeyFormat(key: string): boolean {
 }
 
 export function maxDevicesForPlan(plan: string): number {
-  return plan === "lifetime" ? 3 : 1
+  if (plan === "lifetime") return 5
+  if (plan === "pro") return 3
+  return 1
 }
 
 export interface LicenseActivation {
@@ -26,7 +28,8 @@ export interface LicenseActivation {
 export interface License {
   id: string
   key: string
-  plan: "monthly" | "lifetime"
+  user_id: string | null
+  plan: "monthly" | "pro" | "lifetime"
   status: "active" | "suspended" | "expired"
   email: string | null
   notes: string | null

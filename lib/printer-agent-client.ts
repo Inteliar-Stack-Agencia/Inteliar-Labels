@@ -123,22 +123,64 @@ export async function discoverNetworkPrinters(
   return res.json()
 }
 
-export async function sendToPrinterAgent(
+export interface SendOptions {
+  agentUrl?: string
+  printerId?: string
+  /** Number of automatic retries on failure (default 2 = 3 attempts total) */
+  retries?: number
+  /** Called before each retry with (attemptNumber, error) */
+  onRetry?: (attempt: number, error: Error) => void
+}
+
+async function sendOnce(
   data: string,
-  type: 'zpl' | 'tspl' = 'zpl',
-  agentUrl?: string,
+  type: 'zpl' | 'tspl',
+  url: string,
   printerId?: string
 ): Promise<PrintResult> {
-  const url = agentUrl ?? getPrinterAgentUrl()
   const endpoint = printerId ? `${url}/print/${printerId}` : `${url}/print`
   const res = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ type, data }),
+    signal: AbortSignal.timeout(20000),
   })
   const result = await res.json() as PrintResult
-  if (!res.ok) throw new Error(result.error ?? result.message ?? 'Error de impresión')
+  if (!res.ok || result.success === false) {
+    throw new Error(result.error ?? result.message ?? 'Error de impresión')
+  }
   return result
+}
+
+export async function sendToPrinterAgent(
+  data: string,
+  type: 'zpl' | 'tspl' = 'zpl',
+  agentUrlOrOpts?: string | SendOptions,
+  printerId?: string
+): Promise<PrintResult> {
+  // Backwards-compatible: 3rd arg can be a string (agentUrl) or an options object
+  const opts: SendOptions = typeof agentUrlOrOpts === 'string'
+    ? { agentUrl: agentUrlOrOpts, printerId }
+    : (agentUrlOrOpts ?? {})
+
+  const url = opts.agentUrl ?? getPrinterAgentUrl()
+  const pid = opts.printerId ?? printerId
+  const maxRetries = opts.retries ?? 2
+
+  let lastError: Error = new Error('Error de impresión')
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await sendOnce(data, type, url, pid)
+    } catch (e) {
+      lastError = e as Error
+      if (attempt < maxRetries) {
+        opts.onRetry?.(attempt + 1, lastError)
+        // Exponential backoff: 1s, 2s, 4s…
+        await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt))
+      }
+    }
+  }
+  throw lastError
 }
 
 export async function getPrinterAgentLog(agentUrl?: string): Promise<AgentLogEntry[]> {

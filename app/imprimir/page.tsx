@@ -22,6 +22,7 @@ import {
   XCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { usePlanLimits } from "@/lib/use-plan-limits"
 
 interface Template {
   id: string
@@ -53,7 +54,9 @@ export default function ImprimirPage() {
   const [agentOnline, setAgentOnline] = useState(false)
   const [printing, setPrinting] = useState(false)
   const [printResult, setPrintResult] = useState<{ ok: boolean; message: string } | null>(null)
+  const [retryStatus, setRetryStatus] = useState<string | null>(null)
   const [printerId, setPrinterId] = useState<string | undefined>(undefined)
+  const planLimits = usePlanLimits()
 
   useEffect(() => {
     const load = async () => {
@@ -124,13 +127,21 @@ export default function ImprimirPage() {
     if (!zpl) return
     setPrinting(true)
     setPrintResult(null)
+    setRetryStatus(null)
     try {
-      const result = await sendToPrinterAgent(zpl, "zpl", undefined, printerId)
+      const result = await sendToPrinterAgent(zpl, "zpl", {
+        printerId,
+        retries: 2,
+        onRetry: (attempt, error) => {
+          setRetryStatus(`Falló el envío (${error.message}). Reintentando… (intento ${attempt + 1} de 3)`)
+        },
+      })
       setPrintResult({ ok: true, message: result.message ?? "Enviado a la impresora" })
     } catch (err) {
-      setPrintResult({ ok: false, message: (err as Error).message })
+      setPrintResult({ ok: false, message: `${(err as Error).message} — Verificá que la impresora esté encendida, con papel y conectada.` })
     } finally {
       setPrinting(false)
+      setRetryStatus(null)
     }
   }
 
@@ -381,6 +392,14 @@ export default function ImprimirPage() {
                 />
               </div>
 
+              {/* Retry status */}
+              {retryStatus && (
+                <div className="flex items-center gap-3 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
+                  <div className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+                  {retryStatus}
+                </div>
+              )}
+
               {/* Print result */}
               {printResult && (
                 <div className={cn(
@@ -397,12 +416,21 @@ export default function ImprimirPage() {
                 </div>
               )}
 
+              {!planLimits.loading && !planLimits.canPrint && (
+                <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
+                  {planLimits.plan === "monthly"
+                    ? <>Alcanzaste el límite de 2.000 impresiones del mes. Se renueva el 1° del próximo mes o <a href="/#pricing" className="font-medium underline underline-offset-2">pasá al plan Pro</a> para impresiones ilimitadas.</>
+                    : <>Tu período de prueba venció. <a href="/#pricing" className="font-medium underline underline-offset-2">Activá tu licencia</a> para seguir imprimiendo.</>
+                  }
+                </div>
+              )}
+
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button
                   size="lg"
                   className="gap-2 flex-1"
                   onClick={handlePrintNow}
-                  disabled={!agentOnline || printing}
+                  disabled={!agentOnline || printing || (!planLimits.loading && !planLimits.canPrint)}
                 >
                   <Printer className="h-5 w-5" />
                   {printing ? "Enviando a impresora..." : `Imprimir ahora · ${totalLabels} etiquetas`}

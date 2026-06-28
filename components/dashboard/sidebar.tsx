@@ -16,6 +16,7 @@ import {
   PrinterCheck,
   LogOut,
   HelpCircle,
+  BookOpen,
 } from "lucide-react"
 
 const navigation = [
@@ -26,6 +27,7 @@ const navigation = [
   { name: "Trabajos", href: "/jobs", icon: Printer },
   { name: "Historial", href: "/history", icon: Clock },
   { name: "Configuración", href: "/settings", icon: Settings },
+  { name: "Manual", href: "/manual", icon: BookOpen },
   { name: "Ayuda", href: "/ayuda", icon: HelpCircle },
 ]
 

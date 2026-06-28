@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
@@ -30,10 +30,14 @@ import {
   AlignCenter,
   AlignRight,
   Calendar,
+  FileSpreadsheet,
+  Pencil,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { LabelElement, ElementType } from "@/lib/label-types"
+import { PRESET_TEMPLATES } from "@/lib/preset-templates"
 import { resolveDateVars, DATE_SHORTCUTS, isDateToken } from "@/lib/date-vars"
+import * as XLSX from "xlsx"
 
 const PRESET_SIZES = [
   { label: "80 × 40 mm (catering / vianda)", width: 80, height: 40 },
@@ -69,8 +73,58 @@ export default function NewTemplatePage() {
   const [aiError, setAiError] = useState<string | null>(null)
   const [lockAspect, setLockAspect] = useState(true)
   const [realSize, setRealSize] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
+
+  // Load a preset template when arriving via /templates/new?preset=<id>
+  useEffect(() => {
+    const presetId = new URLSearchParams(window.location.search).get("preset")
+    if (!presetId) return
+    const preset = PRESET_TEMPLATES.find((p) => p.id === presetId)
+    if (!preset) return
+    setTemplateName(preset.name)
+    setWidthMm(preset.widthMm)
+    setHeightMm(preset.heightMm)
+    setCutBetweenLabels(preset.canvas.cutBetweenLabels !== false)
+    setCutEveryN(preset.canvas.cutEveryN ?? 1)
+    // Fresh ids so dragging/editing works independently
+    setElements(preset.canvas.elements.map((el, i) => ({ ...el, id: `${Date.now()}-${i}` })))
+    setShowSizePanel(false)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const selectedElementData = elements.find((el) => el?.id === selectedElement)
+
+  const SAMPLE_VALUES: Record<string, string> = {
+    empresa: "La Casa del Sabor",
+    plato: "Milanesa a la napolitana",
+    comensal: "Juan García",
+    producto: "Empanadas de carne",
+    peso: "500",
+    lote: "L-2024-001",
+    precio: "1.250",
+    codigo: "7790001234567",
+    sku: "REM-AZ-M-001",
+    tracking: "ILA000123456AR",
+    destinatario: "María López",
+    direccion: "Av. Corrientes 1234",
+    ciudad: "Buenos Aires",
+    destino: "CABA",
+    servicio: "Express",
+    zona: "Z1",
+    ruta: "R-042",
+    remitente: "Inteliar Logística",
+    dir_remitente: "Av. del Libertador 500",
+    ciudad_remitente: "Rosario, Santa Fe",
+  }
+
+  function applyPreviewData(content: string): string {
+    return resolveDateVars(
+      content.replace(/\{\{(\w+)(\+\d+[dDmMhH])?\}\}/g, (_match, key, mod) => {
+        if (mod) return _match // date vars handled by resolveDateVars
+        return SAMPLE_VALUES[key] ?? `[${key}]`
+      })
+    )
+  }
 
   const SCALE = realSize ? 96 / 25.4 : 6
   const canvasW = widthMm * SCALE
@@ -268,6 +322,28 @@ export default function NewTemplatePage() {
     }
   }
 
+  const collectVariables = () =>
+    Array.from(new Set(
+      elements
+        .filter(Boolean)
+        .flatMap((el) => [...(el.content ?? "").matchAll(/\{\{([^}]+?)(?:\+[^}]*)?\}\}/g)].map((m) => m[1].trim()))
+        .filter((v) => !isDateToken(v))
+    ))
+
+  const handleDownloadExcel = () => {
+    const vars = collectVariables()
+    if (vars.length === 0) {
+      alert("Esta plantilla no tiene variables {{...}}. Agregá variables para generar el Excel.")
+      return
+    }
+    const headers = [...vars, "cantidad"]
+    const exampleRow = Object.fromEntries(headers.map((h) => [h, h === "cantidad" ? "1" : `ejemplo_${h}`]))
+    const ws = XLSX.utils.json_to_sheet([exampleRow], { header: headers })
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Etiquetas")
+    XLSX.writeFile(wb, `${templateName.replace(/\s+/g, "_")}.xlsx`)
+  }
+
   const handleSave = async () => {
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
@@ -317,14 +393,22 @@ export default function NewTemplatePage() {
             Volver
           </Link>
           <div className="h-6 w-px bg-border" />
-          <input
-            type="text"
-            value={templateName}
-            onChange={(e) => setTemplateName(e.target.value)}
-            className="bg-transparent text-lg font-semibold text-foreground focus:outline-none"
-          />
+          <div className="group flex items-center gap-1.5 rounded-lg border border-transparent px-2 py-1 hover:border-border focus-within:border-primary">
+            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+            <input
+              type="text"
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              placeholder="Nombre de la plantilla"
+              className="bg-transparent text-lg font-semibold text-foreground focus:outline-none w-48"
+            />
+          </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-2" onClick={handleDownloadExcel}>
+            <FileSpreadsheet className="h-4 w-4" />
+            Descargar Excel
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -490,6 +574,12 @@ export default function NewTemplatePage() {
                     <span className="text-[10px] bg-muted px-2 py-0.5 rounded">
                       {realSize ? "Tamaño real (aprox.)" : "Vista previa a escala"}
                     </span>
+                    <button
+                      onClick={() => setShowPreview(true)}
+                      className="text-[10px] px-2 py-0.5 rounded border border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+                    >
+                      👁 Vista previa real
+                    </button>
                     <button
                       onClick={() => setRealSize(!realSize)}
                       className={cn(
@@ -752,6 +842,23 @@ export default function NewTemplatePage() {
                     className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                     placeholder="Texto o {{variable}}"
                   />
+                  {/* Common variable chips for text + barcode */}
+                  {(selectedElementData.type === "text" || selectedElementData.type === "barcode") && (
+                    <div className="mt-2">
+                      <p className="mb-1 text-[10px] text-muted-foreground flex items-center gap-1"><Hash className="h-3 w-3" /> Variables comunes:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {["producto", "precio", "sku", "codigo", "lote", "cantidad", "empresa"].map((v) => (
+                          <button
+                            key={v}
+                            onClick={() => updateElement(selectedElementData.id, { content: (selectedElementData.content ?? "") + `{{${v}}}` })}
+                            className="rounded border border-border px-2 py-0.5 text-[10px] hover:border-primary hover:text-primary transition-colors"
+                          >
+                            {`{{${v}}}`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {/* Date shortcuts for text */}
                   {selectedElementData.type === "text" && (
                     <div className="mt-2">
@@ -1005,6 +1112,62 @@ export default function NewTemplatePage() {
                 {aiLoading ? "Generando..." : "Generar plantilla"}
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Preview Modal */}
+      {showPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setShowPreview(false)}>
+          <div className="relative flex flex-col items-center gap-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between w-full">
+              <span className="text-white font-medium text-sm">Vista previa con datos reales</span>
+              <button onClick={() => setShowPreview(false)} className="text-white/70 hover:text-white ml-4">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div
+              className="relative bg-white shadow-2xl"
+              style={{ width: `${widthMm * 6}px`, height: `${heightMm * 6}px`, minWidth: "200px", minHeight: "100px" }}
+            >
+              {elements.filter(Boolean).map((element) => (
+                <div
+                  key={element.id}
+                  className="absolute"
+                  style={
+                    element.type === "line"
+                      ? { left: 0, top: `${element.y * 6 / 10}px`, width: `${widthMm * 6}px`, paddingLeft: `${2 * 6}px`, paddingRight: `${2 * 6}px` }
+                      : { left: `${element.x * 6 / 10}px`, top: `${element.y * 6 / 10}px` }
+                  }
+                >
+                  {element.type === "line" ? (
+                    <div style={{ width: `${(element.lineWidth ?? (widthMm - 8) * 10) * 6 / 10}px`, height: `${Math.max(1, (element.lineThickness ?? 5) * 6 / 10)}px`, backgroundColor: "#333" }} />
+                  ) : element.type === "rect" ? (
+                    <div style={{ width: `${(element.lineWidth ?? 200) * 6 / 10}px`, height: `${(element.lineHeight ?? 100) * 6 / 10}px`, border: `${Math.max(1, (element.lineThickness ?? 5) * 6 / 10)}px solid #333` }} />
+                  ) : element.type === "image" ? (
+                    element.content ? <img src={element.content} alt="" style={{ width: `${(element.imgWidth ?? 200) * 6 / 10}px`, height: `${(element.imgHeight ?? 150) * 6 / 10}px`, objectFit: "contain" }} /> : null
+                  ) : (
+                    <div className="px-1.5 py-1">
+                      <span
+                        className="text-gray-800"
+                        style={{
+                          fontSize: `${element.fontSize * 6 / 3}px`,
+                          fontWeight: element.bold ? "bold" : "normal",
+                          textAlign: element.textAlign || "left",
+                          display: "block",
+                          fontFamily: "'Arial Narrow', Arial, sans-serif",
+                          letterSpacing: "-0.03em",
+                          lineHeight: 1.1,
+                        }}
+                      >
+                        {applyPreviewData(element.content ?? "")}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <p className="text-white/50 text-xs">Los datos mostrados son de ejemplo</p>
           </div>
         </div>
       )}

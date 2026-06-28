@@ -19,6 +19,52 @@ interface Section {
 
 const SECTIONS: Section[] = [
   {
+    title: "Cómo funciona el sistema",
+    emoji: "🧭",
+    items: [
+      {
+        q: "¿Cómo funciona todo, de principio a fin?",
+        a: (
+          <div className="space-y-3">
+            <p>El sistema separa dos cosas: el <strong>diseño</strong> (la plantilla) y los <strong>datos</strong> (tu Excel). El nexo entre los dos son los nombres de las variables.</p>
+            <ol className="list-decimal pl-5 space-y-1.5">
+              <li><strong>Diseñás la plantilla</strong> con variables como <code>{"{{empresa}}"}</code>, <code>{"{{plato}}"}</code>, <code>{"{{comensal}}"}</code>.</li>
+              <li><strong>Descargás el Excel</strong> (botón "Descargar Excel" en el editor): sale con una columna por cada variable.</li>
+              <li><strong>Llenás el Excel</strong> con tus datos reales, una fila por etiqueta.</li>
+              <li><strong>Subís el Excel</strong> en "Cargar datos" y <strong>elegís qué plantilla usar</strong> (paso 2).</li>
+              <li><strong>El sistema cruza</strong> cada columna con su variable: la columna <code>empresa</code> rellena <code>{"{{empresa}}"}</code>, etc.</li>
+              <li><strong>Imprime</strong> una etiqueta por fila, con el diseño de la plantilla.</li>
+            </ol>
+          </div>
+        ),
+      },
+      {
+        q: "¿Cómo sabe el sistema qué plantilla usar con mi Excel?",
+        a: "No lo adivina: vos lo elegís. Al subir el Excel, en el paso 2 ('Configurar') hay una sección 'Plantilla de etiqueta' donde seleccionás cuál usar. Ahí es donde unís los datos con el diseño.",
+      },
+      {
+        q: "¿Cómo se conectan las columnas del Excel con la plantilla?",
+        a: "Por el nombre exacto. Si la plantilla tiene {{empresa}}, el sistema busca una columna llamada 'empresa' en el Excel. Por eso conviene usar el botón 'Descargar Excel' del editor: te da las columnas con los nombres correctos y evitás errores de tipeo (ej: 'Empresa' con mayúscula no matchea con {{empresa}}).",
+      },
+      {
+        q: "¿El logo o las imágenes van en el Excel?",
+        a: "No. El logo es parte del diseño de la plantilla, no un dato. Queda guardado dentro de la plantilla y se imprime automáticamente en todas las etiquetas. El Excel es solo para lo que cambia fila por fila (nombre, plato, precio). El logo es fijo y vive en el diseño.",
+      },
+      {
+        q: "¿Para qué sirve cada sección del menú?",
+        a: (
+          <div className="space-y-1.5">
+            <p><strong>Templates</strong>: diseñás y guardás tus plantillas (los moldes).</p>
+            <p><strong>Cargar datos</strong>: subís el Excel/CSV, elegís la plantilla y generás un lote.</p>
+            <p><strong>Imprimir</strong>: cargás datos a mano (sin Excel) para lotes chicos.</p>
+            <p><strong>Trabajos / Historial</strong>: ves lo que imprimiste y podés reimprimir.</p>
+            <p><strong>Configuración</strong>: conectás y administrás tus impresoras.</p>
+          </div>
+        ),
+      },
+    ],
+  },
+  {
     title: "Primeros pasos",
     emoji: "🚀",
     items: [

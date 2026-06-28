@@ -7,12 +7,15 @@ import { Button } from "@/components/ui/button"
 import {
   Shield, Plus, Search, RefreshCw, Copy, Check, Trash2,
   ChevronDown, ChevronUp, MonitorSmartphone, X, Pencil,
-  Calendar, RotateCcw, LogOut, Tag,
+  Calendar, RotateCcw, LogOut, Tag, FileStack, Printer, Activity,
+  Users, CreditCard, Key, Settings, ExternalLink, Info,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { License, LicenseActivation } from "@/lib/license-utils"
 
-const PLAN_LABEL: Record<string, string> = { monthly: "Mensual", lifetime: "De por vida" }
+const PLAN_LABEL: Record<string, string> = { monthly: "Mensual", pro: "Pro", lifetime: "De por vida" }
+
+type AdminTab = "licenses" | "users" | "payments" | "config"
 const STATUS_STYLE: Record<string, string> = {
   active: "bg-success/15 text-success border-success/30",
   suspended: "bg-warning/15 text-warning border-warning/30",
@@ -37,10 +40,32 @@ function formatDate(iso: string | null) {
   return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" })
 }
 
+interface AdminUser {
+  id: string
+  email: string
+  created_at: string
+  last_sign_in_at: string | null
+  license: { key: string; plan: string; status: string; expires_at: string | null } | null
+}
+
+interface PaymentEvent {
+  id: string
+  provider: string
+  payment_id: string
+  email: string | null
+  amount: number | null
+  currency: string
+  plan: string
+  license_key: string | null
+  license_created: boolean
+  created_at: string
+}
+
 export default function AdminPage() {
   const router = useRouter()
   const supabase = createClient()
   const [authorized, setAuthorized] = useState<boolean | null>(null)
+  const [activeTab, setActiveTab] = useState<AdminTab>("licenses")
   const [licenses, setLicenses] = useState<License[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
@@ -54,11 +79,29 @@ export default function AdminPage() {
   const [editEmail, setEditEmail] = useState("")
   const [editNotes, setEditNotes] = useState("")
 
+  interface UserStats {
+    templates: number
+    labelsMonth: number
+    jobsMonth: number
+    lastActive: string | null
+  }
+  const [userStats, setUserStats] = useState<Record<string, UserStats>>({})
+
+  // Users tab
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([])
+  const [usersLoading, setUsersLoading] = useState(false)
+
+  // Payments tab
+  const [payments, setPayments] = useState<PaymentEvent[]>([])
+  const [paymentsLoading, setPaymentsLoading] = useState(false)
+
   // Stats
   const total = licenses.length
   const active = licenses.filter((l) => l.status === "active").length
   const monthly = licenses.filter((l) => l.plan === "monthly").length
   const lifetime = licenses.filter((l) => l.plan === "lifetime").length
+  const mrr = monthly * 10  // $10/mes
+  const totalRevenue = payments.reduce((sum, p) => sum + (p.amount ?? 0), 0)
 
   const checkAuth = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -73,12 +116,43 @@ export default function AdminPage() {
   const fetchLicenses = useCallback(async () => {
     setLoading(true)
     const res = await fetch(`/api/admin/licenses?q=${encodeURIComponent(search)}`)
-    if (res.ok) setLicenses(await res.json())
+    if (res.ok) {
+      const data: License[] = await res.json()
+      setLicenses(data)
+      // Fetch usage stats for all users that have a user_id
+      const userIds = [...new Set(data.map((l) => l.user_id).filter(Boolean))]
+      if (userIds.length > 0) {
+        const statsRes = await fetch("/api/admin/user-stats", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userIds }),
+        })
+        if (statsRes.ok) setUserStats(await statsRes.json())
+      }
+    }
     setLoading(false)
   }, [search])
 
+  const fetchUsers = useCallback(async () => {
+    setUsersLoading(true)
+    const res = await fetch("/api/admin/users")
+    if (res.ok) setAdminUsers(await res.json())
+    setUsersLoading(false)
+  }, [])
+
+  const fetchPayments = useCallback(async () => {
+    setPaymentsLoading(true)
+    const res = await fetch("/api/admin/payments")
+    if (res.ok) setPayments(await res.json())
+    setPaymentsLoading(false)
+  }, [])
+
   useEffect(() => { checkAuth() }, [checkAuth])
   useEffect(() => { if (authorized) fetchLicenses() }, [authorized, fetchLicenses])
+  useEffect(() => {
+    if (authorized && activeTab === "users") fetchUsers()
+    if (authorized && activeTab === "payments") fetchPayments()
+  }, [authorized, activeTab, fetchUsers, fetchPayments])
 
   const copyKey = (key: string) => {
     navigator.clipboard.writeText(key)
@@ -181,10 +255,10 @@ export default function AdminPage() {
         {/* KPIs */}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {[
-            { label: "Total", value: total, color: "text-foreground" },
-            { label: "Activas", value: active, color: "text-success" },
+            { label: "Licencias activas", value: active, color: "text-success" },
             { label: "Mensuales", value: monthly, color: "text-primary" },
             { label: "De por vida", value: lifetime, color: "text-amber-500" },
+            { label: "Usuarios registrados", value: adminUsers.length || total, color: "text-foreground" },
           ].map((kpi) => (
             <div key={kpi.label} className="rounded-xl border border-border bg-background p-4">
               <p className="text-xs text-muted-foreground">{kpi.label}</p>
@@ -192,6 +266,34 @@ export default function AdminPage() {
             </div>
           ))}
         </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 border-b border-border">
+          {([
+            { id: "licenses", label: "Licencias", icon: Key },
+            { id: "users", label: "Usuarios", icon: Users },
+            { id: "payments", label: "Pagos", icon: CreditCard },
+          ] as { id: AdminTab; label: string; icon: React.ElementType }[])
+            .concat([{ id: "config" as AdminTab, label: "Configuración", icon: Settings }])
+            .map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors",
+                activeTab === id
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── LICENSES TAB ── */}
+        {activeTab === "licenses" && <div className="space-y-6">
 
         {/* Create new license */}
         <div className="rounded-xl border border-border bg-background p-6">
@@ -269,6 +371,7 @@ export default function AdminPage() {
                 <LicenseRow
                   key={license.id}
                   license={license}
+                  stats={license.user_id ? userStats[license.user_id] ?? null : null}
                   expanded={expanded === license.id}
                   copied={copied === license.key}
                   editingId={editingId}
@@ -291,13 +394,381 @@ export default function AdminPage() {
             </div>
           )}
         </div>
+
+        </div>}  {/* end licenses tab */}
+
+        {/* ── USERS TAB ── */}
+        {activeTab === "users" && (
+          <div className="space-y-3">
+            {usersLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+              </div>
+            ) : adminUsers.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border py-16 text-center text-sm text-muted-foreground">
+                Sin usuarios aún.
+              </div>
+            ) : (
+              <div className="rounded-xl border border-border bg-background overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/30">
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Email</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Registro</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Último acceso</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Trial</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Licencia</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {adminUsers.map((u) => {
+                      const daysElapsed = Math.floor((Date.now() - new Date(u.created_at).getTime()) / (1000 * 60 * 60 * 24))
+                      const trialDaysLeft = Math.max(0, 15 - daysElapsed)
+                      const trialExpired = trialDaysLeft === 0 && !u.license
+                      return (
+                      <tr key={u.id} className="hover:bg-muted/20 transition-colors">
+                        <td className="px-4 py-3 font-medium text-foreground">{u.email}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{formatDate(u.created_at)}</td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {u.last_sign_in_at ? timeAgo(u.last_sign_in_at) : "—"}
+                        </td>
+                        <td className="px-4 py-3">
+                          {u.license ? (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          ) : trialExpired ? (
+                            <span className="rounded-full border px-2 py-0.5 text-[10px] font-medium bg-destructive/10 text-destructive border-destructive/30">Vencido</span>
+                          ) : (
+                            <span className="rounded-full border px-2 py-0.5 text-[10px] font-medium bg-primary/10 text-primary border-primary/20">{trialDaysLeft}d restantes</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {u.license ? (
+                            <div className="flex items-center gap-2">
+                              <span className={cn("rounded-full border px-2 py-0.5 text-[10px] font-medium", STATUS_STYLE[u.license.status])}>
+                                {STATUS_LABEL[u.license.status]}
+                              </span>
+                              <span className={cn(
+                                "rounded-full px-2 py-0.5 text-[10px] font-medium",
+                                u.license.plan === "lifetime" ? "bg-amber-500/15 text-amber-600" :
+                                u.license.plan === "pro" ? "bg-violet-500/15 text-violet-600" :
+                                "bg-primary/10 text-primary"
+                              )}>
+                                {PLAN_LABEL[u.license.plan] ?? u.license.plan}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground italic">Sin licencia</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {!u.license && (
+                            <button
+                              onClick={async () => {
+                                await fetch("/api/admin/extend-trial", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ userId: u.id, days: 7 }),
+                                })
+                                fetchUsers()
+                              }}
+                              className="text-xs text-primary hover:underline whitespace-nowrap"
+                            >
+                              +7 días trial
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── PAYMENTS TAB ── */}
+        {activeTab === "payments" && (
+          <div className="space-y-4">
+            {payments.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div className="rounded-xl border border-border bg-background p-4">
+                  <p className="text-xs text-muted-foreground">Total pagos</p>
+                  <p className="text-3xl font-bold mt-1 text-foreground">{payments.length}</p>
+                </div>
+                <div className="rounded-xl border border-border bg-background p-4">
+                  <p className="text-xs text-muted-foreground">MercadoPago</p>
+                  <p className="text-3xl font-bold mt-1 text-primary">{payments.filter(p => p.provider === "mercadopago").length}</p>
+                </div>
+                <div className="rounded-xl border border-border bg-background p-4">
+                  <p className="text-xs text-muted-foreground">Stripe</p>
+                  <p className="text-3xl font-bold mt-1 text-violet-500">{payments.filter(p => p.provider === "stripe").length}</p>
+                </div>
+              </div>
+            )}
+
+            {paymentsLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+              </div>
+            ) : payments.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border py-16 text-center text-sm text-muted-foreground">
+                Sin pagos registrados aún. Los pagos aparecen acá cuando llegan los webhooks de MercadoPago o Stripe.
+              </div>
+            ) : (
+              <div className="rounded-xl border border-border bg-background overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/30">
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Fecha</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Email</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Proveedor</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Monto</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Plan</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Licencia</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {payments.map((p) => (
+                      <tr key={p.id} className="hover:bg-muted/20 transition-colors">
+                        <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{formatDate(p.created_at)}</td>
+                        <td className="px-4 py-3 text-foreground">{p.email || "—"}</td>
+                        <td className="px-4 py-3">
+                          <span className={cn(
+                            "rounded-full px-2 py-0.5 text-[10px] font-medium",
+                            p.provider === "mercadopago" ? "bg-sky-500/15 text-sky-600" : "bg-violet-500/15 text-violet-600"
+                          )}>
+                            {p.provider === "mercadopago" ? "MercadoPago" : "Stripe"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 font-medium text-foreground">
+                          {p.amount != null ? `${p.currency} ${p.amount.toLocaleString("es-AR")}` : "—"}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={cn(
+                            "rounded-full px-2 py-0.5 text-[10px] font-medium",
+                            p.plan === "lifetime" ? "bg-amber-500/15 text-amber-600" : "bg-primary/10 text-primary"
+                          )}>
+                            {PLAN_LABEL[p.plan] ?? p.plan}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                          {p.license_key ?? "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── CONFIG TAB ── */}
+        {activeTab === "config" && (
+          <div className="space-y-6 max-w-2xl">
+
+            {/* Webhook URL info */}
+            <div className="rounded-xl border border-border bg-background p-5 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <Info className="h-4 w-4 text-muted-foreground" />
+                URLs de webhooks
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Configurá estas URLs en cada pasarela para que los pagos generen licencias automáticamente.
+              </p>
+              {[
+                { label: "MercadoPago", path: "/api/webhooks/mercadopago" },
+                { label: "Stripe", path: "/api/webhooks/stripe" },
+              ].map(({ label, path }) => (
+                <div key={path}>
+                  <p className="text-xs text-muted-foreground mb-1">{label}</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 rounded-lg bg-muted px-3 py-2 text-xs font-mono break-all">
+                      https://v0-inteliar-labels-ui.vercel.app{path}
+                    </code>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(`https://v0-inteliar-labels-ui.vercel.app${path}`)}
+                      className="rounded-lg border border-border p-2 text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* MercadoPago */}
+            <div className="rounded-xl border border-border bg-background p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-500/10">
+                    <CreditCard className="h-4 w-4 text-sky-500" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">MercadoPago</p>
+                    <p className="text-xs text-muted-foreground">Pagos en pesos argentinos</p>
+                  </div>
+                </div>
+                <a
+                  href="https://www.mercadopago.com.ar/developers/panel/app"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  Panel MP <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+              <div className="space-y-3 text-sm">
+                <Step n={1} text="Entrá al Panel de Desarrolladores de MercadoPago" />
+                <Step n={2} text='Creá una aplicación → copiá el "Access Token" de producción' />
+                <Step n={3}>
+                  Agregalo en Vercel como variable de entorno:
+                  <code className="ml-1 rounded bg-muted px-1.5 py-0.5 text-xs font-mono">MERCADOPAGO_ACCESS_TOKEN=APP_USR-...</code>
+                </Step>
+                <Step n={4} text='En tu aplicación MP → "Notificaciones IPN" → pegá la URL del webhook de arriba' />
+                <Step n={5} text='Seleccioná el evento "Pagos" y guardá' />
+              </div>
+              <div className="rounded-lg bg-muted/50 border border-border px-4 py-3 text-xs text-muted-foreground">
+                <strong className="text-foreground">Tip:</strong> en la descripción o referencia externa del pago incluí "vida" o "lifetime" para que se asigne plan vitalicio. De lo contrario se asigna plan mensual.
+              </div>
+            </div>
+
+            {/* Stripe */}
+            <div className="rounded-xl border border-border bg-background p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-500/10">
+                    <CreditCard className="h-4 w-4 text-violet-500" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">Stripe</p>
+                    <p className="text-xs text-muted-foreground">Pagos internacionales en USD</p>
+                  </div>
+                </div>
+                <a
+                  href="https://dashboard.stripe.com/webhooks"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  Dashboard Stripe <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+              <div className="space-y-3 text-sm">
+                <Step n={1} text="En el Dashboard de Stripe → Developers → Webhooks" />
+                <Step n={2} text='Clic en "Add endpoint" → pegá la URL del webhook de arriba' />
+                <Step n={3} text='Seleccioná el evento "checkout.session.completed"' />
+                <Step n={4}>
+                  Copiá el "Signing secret" y agregalo en Vercel:
+                  <code className="ml-1 rounded bg-muted px-1.5 py-0.5 text-xs font-mono">STRIPE_WEBHOOK_SECRET=whsec_...</code>
+                </Step>
+                <Step n={5}>
+                  En tu Checkout, pasá el plan en metadata:
+                  <code className="ml-1 rounded bg-muted px-1.5 py-0.5 text-xs font-mono">{"metadata: { plan: 'lifetime' }"}</code>
+                </Step>
+              </div>
+              <div className="rounded-lg bg-muted/50 border border-border px-4 py-3 text-xs text-muted-foreground">
+                <strong className="text-foreground">Tip:</strong> si <code>metadata.plan</code> no está definido, el sistema infiere el plan por el nombre del producto. Incluí "lifetime" o "vida" en el nombre para plan vitalicio.
+              </div>
+            </div>
+
+            {/* Resend */}
+            <div className="rounded-xl border border-border bg-background p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10">
+                    <Settings className="h-4 w-4 text-emerald-500" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">Resend (email de licencia)</p>
+                    <p className="text-xs text-muted-foreground">Envía la clave al cliente automáticamente</p>
+                  </div>
+                </div>
+                <a
+                  href="https://resend.com/api-keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  Resend API Keys <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+              <div className="space-y-3 text-sm">
+                <Step n={1} text="Creá una cuenta en resend.com y verificá tu dominio" />
+                <Step n={2}>
+                  Generá una API key y agregala en Vercel:
+                  <code className="ml-1 rounded bg-muted px-1.5 py-0.5 text-xs font-mono">RESEND_API_KEY=re_...</code>
+                </Step>
+                <Step n={3} text="Listo — al llegar un pago aprobado, la clave se envía automáticamente al email del cliente" />
+              </div>
+            </div>
+
+            {/* Vercel env vars summary */}
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-5 space-y-3">
+              <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">Variables de entorno en Vercel</p>
+              <div className="space-y-1.5">
+                {[
+                  "MERCADOPAGO_ACCESS_TOKEN",
+                  "STRIPE_WEBHOOK_SECRET",
+                  "RESEND_API_KEY",
+                  "NEXT_PUBLIC_CHECKOUT_MONTHLY_URL",
+                  "NEXT_PUBLIC_CHECKOUT_LIFETIME_URL",
+                  "ADMIN_EMAILS",
+                ].map((v) => (
+                  <div key={v} className="flex items-center justify-between gap-2">
+                    <code className="text-xs font-mono text-foreground">{v}</code>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(v)}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <a
+                href="https://vercel.com/dashboard"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                Ir a Vercel Environment Variables <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+
+          </div>
+        )}
+
       </div>
     </div>
   )
 }
 
+function Step({ n, text, children }: { n: number; text?: string; children?: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground flex-shrink-0 mt-0.5">
+        {n}
+      </span>
+      <span className="text-sm text-muted-foreground leading-snug">
+        {text ?? children}
+      </span>
+    </div>
+  )
+}
+
+interface UserStats {
+  templates: number
+  labelsMonth: number
+  jobsMonth: number
+  lastActive: string | null
+}
+
 interface LicenseRowProps {
   license: License
+  stats: UserStats | null
   expanded: boolean
   copied: boolean
   editingId: string | null
@@ -318,7 +789,7 @@ interface LicenseRowProps {
 }
 
 function LicenseRow({
-  license, expanded, copied, editingId,
+  license, stats, expanded, copied, editingId,
   editEmail, editNotes,
   onToggle, onCopy, onStatusChange, onPlanChange, onExtend,
   onDelete, onRemoveDevice, onEditStart, onEditSave, onEditCancel,
@@ -364,6 +835,20 @@ function LicenseRow({
           <MonitorSmartphone className="h-3.5 w-3.5" />
           {activations.length}/{license.max_devices}
         </span>
+
+        {/* Usage stats */}
+        {stats && (
+          <span className="hidden sm:flex items-center gap-3 text-xs text-muted-foreground shrink-0">
+            <span className="flex items-center gap-1" title="Plantillas">
+              <FileStack className="h-3.5 w-3.5" />
+              {stats.templates}
+            </span>
+            <span className="flex items-center gap-1" title="Etiquetas este mes">
+              <Printer className="h-3.5 w-3.5" />
+              {stats.labelsMonth.toLocaleString("es-AR")}
+            </span>
+          </span>
+        )}
 
         {/* Expiry */}
         {license.plan === "monthly" && (
@@ -461,6 +946,26 @@ function LicenseRow({
               </div>
             </div>
           </div>
+
+          {/* Usage stats */}
+          {stats && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: "Plantillas", value: stats.templates, icon: FileStack },
+                { label: "Etiquetas este mes", value: stats.labelsMonth.toLocaleString("es-AR"), icon: Printer },
+                { label: "Trabajos este mes", value: stats.jobsMonth, icon: Activity },
+                { label: "Último trabajo", value: stats.lastActive ? timeAgo(stats.lastActive) : "—", icon: Calendar },
+              ].map(({ label, value, icon: Icon }) => (
+                <div key={label} className="rounded-lg border border-border bg-background p-3">
+                  <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mb-1">
+                    <Icon className="h-3 w-3" />
+                    {label}
+                  </div>
+                  <p className="text-lg font-bold text-foreground leading-none">{value}</p>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Devices */}
           <div>

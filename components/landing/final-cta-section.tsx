@@ -9,24 +9,28 @@ export function FinalCtaSection() {
           Dejá de imprimir etiquetas a lo bestia
         </h2>
         <p className="text-lg sm:text-xl text-background/70 max-w-2xl mx-auto mb-8">
-          Sumate a más de 500 empresas que ya automatizaron su impresión de etiquetas.
-          Empezá tu prueba gratis hoy: sin tarjeta, sin compromiso.
+          Empezá tu trial de 15 días gratis hoy. Sin tarjeta, sin compromiso.
+          Si te convence, activás tu licencia y seguís sin interrupciones.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-          <Button size="lg" variant="secondary" className="h-14 px-10 text-base gap-2 group bg-background text-foreground hover:bg-background/90">
-            Empezá tu prueba gratis
-            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+          <Button size="lg" variant="secondary" className="h-14 px-10 text-base gap-2 group bg-background text-foreground hover:bg-background/90" asChild>
+            <a href="/auth/register">
+              Empezá tu trial gratis
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </a>
           </Button>
-          <Button size="lg" variant="outline" className="h-14 px-10 text-base border-background/30 text-background hover:bg-background/10 hover:text-background">
-            Agendá una demo
+          <Button size="lg" variant="outline" className="h-14 px-10 text-base border-background/30 text-background hover:bg-background/10 hover:text-background" asChild>
+            <a href="mailto:inteliarstack.ia@gmail.com?subject=Consulta%20Inteliar%20Labels">
+              Hablar con un humano
+            </a>
           </Button>
         </div>
 
         <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-background/60">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4" />
-            <span>14 días de prueba gratis</span>
+            <span>15 días de prueba gratuita</span>
           </div>
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4" />

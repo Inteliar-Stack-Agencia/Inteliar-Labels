@@ -20,9 +20,9 @@ const footerLinks = {
     { label: "Partners", href: "#" },
   ],
   legal: [
-    { label: "Privacidad", href: "#" },
-    { label: "Términos", href: "#" },
-    { label: "Seguridad", href: "#" },
+    { label: "Privacidad", href: "/privacidad" },
+    { label: "Términos y Condiciones", href: "/terminos" },
+    { label: "Contacto", href: "mailto:inteliarstack.ia@gmail.com" },
   ],
 }
 

@@ -5,9 +5,11 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Header } from "@/components/dashboard/header"
 import { KpiCard } from "@/components/dashboard/kpi-card"
 import { QuickActions } from "@/components/dashboard/quick-actions"
-import { Tag, Printer, FileStack, CheckCircle2, Clock, AlertCircle } from "lucide-react"
+import { Tag, Printer, FileStack, CheckCircle2, Clock, AlertCircle, Rocket, X, Timer } from "lucide-react"
+import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
+import { usePlanLimits } from "@/lib/use-plan-limits"
 
 interface RecentJob {
   id: string
@@ -41,6 +43,8 @@ export default function DashboardPage() {
   const [totalTemplates, setTotalTemplates] = useState<number | null>(null)
   const [recentJobs, setRecentJobs] = useState<RecentJob[]>([])
   const [loading, setLoading] = useState(true)
+  const [showOnboarding, setShowOnboarding] = useState(false)
+  const planLimits = usePlanLimits()
 
   useEffect(() => {
     const supabase = createClient()
@@ -90,6 +94,12 @@ export default function DashboardPage() {
         setTotalJobs(jobsCount ?? 0)
         setTotalTemplates(templatesCount ?? 0)
         setRecentJobs(recent ?? [])
+
+        // Show onboarding if user has no templates and no jobs yet
+        if ((templatesCount ?? 0) === 0 && (jobsCount ?? 0) === 0) {
+          const dismissed = localStorage.getItem("onboarding_dismissed")
+          if (!dismissed) setShowOnboarding(true)
+        }
       } catch {
         // silent
       } finally {
@@ -108,6 +118,113 @@ export default function DashboardPage() {
       />
 
       <div className="p-6 space-y-6">
+
+        {/* Onboarding banner */}
+        {showOnboarding && (
+          <div className="relative rounded-xl border border-primary/30 bg-primary/5 p-5">
+            <button
+              onClick={() => { setShowOnboarding(false); localStorage.setItem("onboarding_dismissed", "1") }}
+              className="absolute right-3 top-3 rounded p-1 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <div className="flex items-start gap-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 flex-shrink-0">
+                <Rocket className="h-5 w-5 text-primary" />
+              </div>
+              <div className="space-y-3 flex-1">
+                <div>
+                  <p className="font-semibold text-foreground">Bienvenido a Inteliar Labels</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">Seguí estos pasos para imprimir tu primera etiqueta:</p>
+                </div>
+                <ol className="space-y-1.5 text-sm text-foreground">
+                  <li className="flex items-center gap-2">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground font-bold flex-shrink-0">1</span>
+                    <Link href="/templates/new" className="text-primary hover:underline font-medium">Creá una plantilla</Link>
+                    <span className="text-muted-foreground">— definí el diseño de la etiqueta</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground font-bold flex-shrink-0">2</span>
+                    <Link href="/upload" className="text-primary hover:underline font-medium">Cargá tu Excel</Link>
+                    <span className="text-muted-foreground">— subí la lista de datos a imprimir</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground font-bold flex-shrink-0">3</span>
+                    <Link href="/settings" className="text-primary hover:underline font-medium">Configurá tu impresora</Link>
+                    <span className="text-muted-foreground">— conectá el agente de impresión</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground font-bold flex-shrink-0">4</span>
+                    <Link href="/imprimir" className="text-primary hover:underline font-medium">Imprimí</Link>
+                    <span className="text-muted-foreground">— seleccioná plantilla y lanzá el trabajo</span>
+                  </li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Trial banner */}
+        {!planLimits.loading && (planLimits.plan === "trial" || planLimits.plan === "expired") && (
+          <div className={cn(
+            "rounded-xl border px-5 py-4 space-y-3",
+            planLimits.trialExpired
+              ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+              : planLimits.trialDaysLeft <= 3 || planLimits.trialLabelsLeft <= 50
+                ? "border-orange-500/40 bg-orange-500/10 text-orange-700 dark:text-orange-400"
+                : "border-border bg-muted/40 text-muted-foreground"
+          )}>
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Timer className="h-5 w-5 flex-shrink-0" />
+                <span className="text-sm font-medium">
+                  {planLimits.trialExpired
+                    ? "Tu trial venció. Activá una licencia para seguir usando Inteliar Labels."
+                    : `Trial gratuito · ${planLimits.trialDaysLeft} día${planLimits.trialDaysLeft !== 1 ? "s" : ""} restante${planLimits.trialDaysLeft !== 1 ? "s" : ""}`}
+                </span>
+              </div>
+              <a
+                href="/#pricing"
+                className="text-sm font-semibold underline underline-offset-2 whitespace-nowrap"
+              >
+                {planLimits.trialExpired ? "Activar licencia" : "Ver planes"}
+              </a>
+            </div>
+
+            {/* Counters */}
+            {!planLimits.trialExpired && (
+              <div className="grid grid-cols-2 gap-3">
+                {/* Labels counter */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs font-medium">
+                    <span>Impresiones usadas</span>
+                    <span>{planLimits.trialLabelsUsed} / 500</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-current/20 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-current transition-all"
+                      style={{ width: `${Math.min(100, (planLimits.trialLabelsUsed / 500) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+                {/* Days counter */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs font-medium">
+                    <span>Días transcurridos</span>
+                    <span>{15 - planLimits.trialDaysLeft} / 15</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-current/20 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-current transition-all"
+                      style={{ width: `${Math.min(100, ((15 - planLimits.trialDaysLeft) / 15) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* KPI Cards */}
         <div className="grid gap-6 md:grid-cols-3">
           <KpiCard

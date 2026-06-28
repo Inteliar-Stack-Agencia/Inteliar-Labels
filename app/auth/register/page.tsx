@@ -34,6 +34,13 @@ export default function RegisterPage() {
       return
     }
 
+    // Fire-and-forget welcome email
+    fetch("/api/auth/welcome", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    }).catch(() => {})
+
     setSuccess(true)
     setLoading(false)
   }
@@ -105,8 +112,14 @@ export default function RegisterPage() {
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Creando cuenta..." : "Crear cuenta gratis"}
+              {loading ? "Creando cuenta..." : "Crear cuenta gratis · 15 días de trial"}
             </Button>
+            <p className="text-xs text-muted-foreground text-center">
+              Al registrarte aceptás los{" "}
+              <Link href="/terminos" className="text-primary hover:underline">Términos y Condiciones</Link>
+              {" "}y la{" "}
+              <Link href="/privacidad" className="text-primary hover:underline">Política de Privacidad</Link>
+            </p>
             <p className="text-sm text-muted-foreground text-center">
               ¿Ya tenés cuenta?{" "}
               <Link href="/auth/login" className="text-primary hover:underline">

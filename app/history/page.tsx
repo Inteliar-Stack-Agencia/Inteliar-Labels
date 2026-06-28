@@ -16,7 +16,9 @@ import {
   Usb,
   Cable,
   FlaskConical,
+  RotateCcw,
 } from "lucide-react"
+import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 import { getPrinterAgentLog, type AgentLogEntry } from "@/lib/printer-agent-client"
@@ -337,10 +339,16 @@ export default function HistoryPage() {
                             {job.total_labels} etiquetas impresas
                           </p>
                         </div>
-                        <div className="text-right">
+                        <div className="flex flex-col items-end gap-2">
                           <p className="text-sm text-muted-foreground">
                             {formatDateTime(dateStr)}
                           </p>
+                          <Link href={`/jobs/${job.id}`}>
+                            <Button size="sm" variant="outline" className="gap-1.5 h-8">
+                              <RotateCcw className="h-3.5 w-3.5" />
+                              Reimprimir
+                            </Button>
+                          </Link>
                         </div>
                       </div>
                     </div>

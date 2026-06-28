@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Header } from "@/components/dashboard/header"
@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import * as XLSX from "xlsx"
+import { PRESET_TEMPLATES } from "@/lib/preset-templates"
 
 interface ParsedData {
   columns: string[]
@@ -43,6 +44,15 @@ export default function UploadPage() {
   const [sampleTemplates, setSampleTemplates] = useState<{ id: string; name: string; variables: string[] }[]>([])
   const [loadingSampleTemplates, setLoadingSampleTemplates] = useState(false)
   const [showSamplePicker, setShowSamplePicker] = useState(false)
+  const [savedLists, setSavedLists] = useState<{ id: string; name: string; file_name: string | null; row_count: number; columns: string[]; rows: Record<string, string>[]; created_at: string }[]>([])
+  const [savingList, setSavingList] = useState(false)
+  const [excludedRows, setExcludedRows] = useState<Set<number>>(new Set())
+  const [suggestedMatch, setSuggestedMatch] = useState<{ name: string; matched: number; total: number } | null>(null)
+
+  useEffect(() => {
+    loadSavedLists()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const parseFile = useCallback((file: File) => {
     setError(null)
@@ -70,6 +80,7 @@ export default function UploadPage() {
           fileName: file.name,
           totalRows: jsonData.length,
         })
+        setExcludedRows(new Set())
 
         const cantCol = columns.find((c) =>
           ["cantidad", "quantity", "cant", "qty", "copias", "copies"].includes(c.toLowerCase())
@@ -77,7 +88,7 @@ export default function UploadPage() {
         if (cantCol) setQuantityColumn(cantCol)
 
         setStep(2)
-        loadTemplates()
+        loadTemplates(columns)
       } catch {
         setError("No se pudo leer el archivo. Asegurate de subir un Excel (.xlsx, .xls) o CSV válido.")
       }
@@ -87,7 +98,7 @@ export default function UploadPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const loadTemplates = async () => {
+  const loadTemplates = async (columns?: string[]) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     const { data: tmpl } = await supabase
@@ -95,7 +106,29 @@ export default function UploadPage() {
       .select("id, name, variables")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
-    if (tmpl) setTemplates(tmpl)
+    if (!tmpl) return
+    setTemplates(tmpl)
+
+    // Auto-suggest the template whose variables best match the Excel columns
+    if (columns && columns.length > 0) {
+      const cols = columns.map((c) => c.toLowerCase().trim())
+      let best: { id: string; name: string; matched: number; total: number } | null = null
+      for (const t of tmpl) {
+        const vars = (t.variables ?? []).map((v) => v.toLowerCase().trim())
+        if (vars.length === 0) continue
+        const matched = vars.filter((v) => cols.includes(v)).length
+        if (!best || matched > best.matched) {
+          best = { id: t.id, name: t.name, matched, total: vars.length }
+        }
+      }
+      // Only suggest if at least one variable matches
+      if (best && best.matched > 0) {
+        setSelectedTemplate(best.id)
+        setSuggestedMatch({ name: best.name, matched: best.matched, total: best.total })
+      } else {
+        setSuggestedMatch(null)
+      }
+    }
   }
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -110,12 +143,13 @@ export default function UploadPage() {
     if (file) parseFile(file)
   }
 
-  const totalLabels = data
-    ? data.rows.reduce((sum, row) => {
-        const qty = quantityColumn ? Number(row[quantityColumn]) || 1 : 1
-        return sum + qty
-      }, 0)
-    : 0
+  const includedRows = data ? data.rows.filter((_, i) => !excludedRows.has(i)) : []
+  const includedCount = includedRows.length
+
+  const totalLabels = includedRows.reduce((sum, row) => {
+    const qty = quantityColumn ? Number(row[quantityColumn]) || 1 : 1
+    return sum + qty
+  }, 0)
 
   const handleCreateJob = async () => {
     if (!data || !selectedTemplate) return
@@ -138,12 +172,15 @@ export default function UploadPage() {
 
     if (error || !job) { setLoading(false); return }
 
-    const rowsToInsert = data.rows.map((row, i) => ({
-      job_id: job.id,
-      row_index: i,
-      row_data: row,
-      quantity: quantityColumn ? Math.max(1, Number(row[quantityColumn]) || 1) : 1,
-    }))
+    // Only include rows the user kept selected (re-indexed sequentially)
+    const rowsToInsert = data.rows
+      .filter((_, i) => !excludedRows.has(i))
+      .map((row, i) => ({
+        job_id: job.id,
+        row_index: i,
+        row_data: row,
+        quantity: quantityColumn ? Math.max(1, Number(row[quantityColumn]) || 1) : 1,
+      }))
 
     for (let i = 0; i < rowsToInsert.length; i += 500) {
       await supabase.from("print_job_rows").insert(rowsToInsert.slice(i, i + 500))
@@ -153,18 +190,85 @@ export default function UploadPage() {
     router.push(`/jobs/${job.id}`)
   }
 
+  const loadSavedLists = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: lists } = await supabase
+      .from("saved_lists")
+      .select("id, name, file_name, row_count, columns, rows, created_at")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false })
+    if (lists) setSavedLists(lists)
+  }
+
+  const handleSaveList = async () => {
+    if (!data) return
+    const name = window.prompt("Nombre para esta lista (ej: Productos góndola):", data.fileName?.replace(/\.[^.]+$/, "") ?? "")
+    if (!name) return
+    setSavingList(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setSavingList(false); return }
+    await supabase.from("saved_lists").insert({
+      user_id: user.id,
+      name,
+      file_name: data.fileName,
+      columns: data.columns,
+      rows: data.rows,
+      row_count: data.totalRows,
+    })
+    setSavingList(false)
+    await loadSavedLists()
+    alert("Lista guardada. La vas a encontrar al subir datos la próxima vez.")
+  }
+
+  const useSavedList = (list: typeof savedLists[number]) => {
+    setData({
+      columns: list.columns,
+      rows: list.rows,
+      fileName: list.file_name ?? list.name,
+      totalRows: list.row_count,
+    })
+    setExcludedRows(new Set())
+    const cantCol = list.columns.find((c) =>
+      ["cantidad", "quantity", "cant", "qty", "copias", "copies"].includes(c.toLowerCase())
+    )
+    if (cantCol) setQuantityColumn(cantCol)
+    setStep(2)
+    loadTemplates(list.columns)
+  }
+
+  const deleteSavedList = async (id: string) => {
+    await supabase.from("saved_lists").delete().eq("id", id)
+    setSavedLists((prev) => prev.filter((l) => l.id !== id))
+  }
+
   const loadSampleTemplates = async () => {
     if (sampleTemplates.length > 0) { setShowSamplePicker(true); return }
     setLoadingSampleTemplates(true)
+
+    // Extract variables from preset templates
+    const presetItems = PRESET_TEMPLATES.filter((p) => p.id !== "blank").map((p) => ({
+      id: `preset:${p.id}`,
+      name: `${p.emoji} ${p.name} (predeterminada)`,
+      variables: Array.from(new Set(
+        p.canvas.elements
+          .flatMap((el) => [...(el.content ?? "").matchAll(/\{\{(\w+)(?:\+[^}]*)?\}\}/g)].map((m) => m[1]))
+          .filter((v) => !["hoy"].includes(v))
+      )),
+    }))
+
     const { data: { user } } = await supabase.auth.getUser()
+    let userItems: { id: string; name: string; variables: string[] }[] = []
     if (user) {
       const { data } = await supabase
         .from("templates")
         .select("id, name, variables")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
-      if (data) setSampleTemplates(data)
+      if (data) userItems = data
     }
+
+    setSampleTemplates([...userItems, ...presetItems])
     setLoadingSampleTemplates(false)
     setShowSamplePicker(true)
   }
@@ -304,6 +408,37 @@ export default function UploadPage() {
                 </div>
               )}
             </div>
+
+            {/* Saved lists */}
+            {savedLists.length > 0 && (
+              <div className="rounded-xl border border-border bg-card p-4">
+                <p className="text-sm font-medium text-foreground">Tus listas guardadas</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Reusá una lista que ya cargaste antes — la podés editar antes de imprimir</p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {savedLists.map((list) => (
+                    <div
+                      key={list.id}
+                      className="flex items-center gap-3 rounded-lg border border-border bg-background p-3 hover:border-primary transition-colors"
+                    >
+                      <FileSpreadsheet className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                      <button onClick={() => useSavedList(list)} className="flex-1 min-w-0 text-left">
+                        <p className="text-sm font-medium truncate">{list.name}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          {list.row_count} filas · {list.columns.length} columnas
+                        </p>
+                      </button>
+                      <button
+                        onClick={() => deleteSavedList(list.id)}
+                        className="text-muted-foreground hover:text-destructive flex-shrink-0"
+                        title="Eliminar lista"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -326,6 +461,18 @@ export default function UploadPage() {
                 <p className="text-sm font-medium text-foreground">{data.fileName}</p>
                 <p className="text-xs text-muted-foreground">{data.totalRows} filas · {data.columns.length} columnas detectadas</p>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 flex-shrink-0"
+                onClick={handleSaveList}
+                disabled={savingList}
+              >
+                {savingList
+                  ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  : <FileSpreadsheet className="h-4 w-4" />}
+                Guardar lista
+              </Button>
               <button onClick={() => { setData(null); setStep(1) }} className="text-muted-foreground hover:text-foreground">
                 <X className="h-4 w-4" />
               </button>
@@ -360,6 +507,14 @@ export default function UploadPage() {
 
             <div className="rounded-xl border border-border bg-card p-5 space-y-3">
               <h3 className="text-sm font-semibold">Plantilla de etiqueta</h3>
+              {suggestedMatch && (
+                <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
+                  <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
+                  <p className="text-foreground">
+                    Sugerimos <strong>{suggestedMatch.name}</strong> — coincide con {suggestedMatch.matched} de {suggestedMatch.total} variables de tu Excel. Ya la seleccionamos, podés cambiarla.
+                  </p>
+                </div>
+              )}
               {templates.length === 0 ? (
                 <div className="rounded-lg bg-muted p-4 text-center">
                   <p className="text-sm text-muted-foreground">No tenés plantillas creadas.</p>
@@ -397,42 +552,70 @@ export default function UploadPage() {
 
             <div className="rounded-xl border border-border bg-card p-5 space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold">Vista previa de datos</h3>
-                <button onClick={() => setPreviewRows(previewRows === 3 ? data.totalRows : 3)}
-                  className="flex items-center gap-1 text-xs text-primary hover:underline">
-                  <Eye className="h-3 w-3" />
-                  {previewRows === 3 ? "Ver todo" : "Ver menos"}
-                </button>
+                <div>
+                  <h3 className="text-sm font-semibold">Vista previa de datos</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Destildá las filas que no querés imprimir esta vez —
+                    <strong className="text-foreground"> {includedCount} de {data.totalRows} seleccionadas</strong>
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setExcludedRows(new Set())} className="text-xs text-primary hover:underline">Todas</button>
+                  <button
+                    onClick={() => setExcludedRows(new Set(data.rows.map((_, i) => i)))}
+                    className="text-xs text-primary hover:underline"
+                  >Ninguna</button>
+                  <button onClick={() => setPreviewRows(previewRows === 3 ? data.totalRows : 3)}
+                    className="flex items-center gap-1 text-xs text-primary hover:underline">
+                    <Eye className="h-3 w-3" />
+                    {previewRows === 3 ? "Ver todo" : "Ver menos"}
+                  </button>
+                </div>
               </div>
               <div className="overflow-x-auto rounded-lg border border-border">
                 <table className="w-full text-xs">
                   <thead className="bg-muted">
                     <tr>
+                      <th className="px-3 py-2 w-8"></th>
                       {data.columns.map((col) => (
                         <th key={col} className="px-3 py-2 text-left font-medium text-muted-foreground">{col}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {data.rows.slice(0, previewRows).map((row, i) => (
-                      <tr key={i} className="hover:bg-muted/50">
-                        {data.columns.map((col) => (
-                          <td key={col} className="px-3 py-2 text-foreground">{row[col]}</td>
-                        ))}
-                      </tr>
-                    ))}
+                    {data.rows.slice(0, previewRows).map((row, i) => {
+                      const excluded = excludedRows.has(i)
+                      return (
+                        <tr
+                          key={i}
+                          className={cn("hover:bg-muted/50 cursor-pointer", excluded && "opacity-40")}
+                          onClick={() => setExcludedRows((prev) => {
+                            const next = new Set(prev)
+                            if (next.has(i)) next.delete(i); else next.add(i)
+                            return next
+                          })}
+                        >
+                          <td className="px-3 py-2 text-center">
+                            <input type="checkbox" checked={!excluded} readOnly className="accent-primary" />
+                          </td>
+                          {data.columns.map((col) => (
+                            <td key={col} className={cn("px-3 py-2 text-foreground", excluded && "line-through")}>{row[col]}</td>
+                          ))}
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
               {data.totalRows > previewRows && (
                 <p className="text-xs text-muted-foreground text-center">
-                  Mostrando {previewRows} de {data.totalRows} filas
+                  Mostrando {previewRows} de {data.totalRows} filas — tocá <strong>Ver todo</strong> para elegir cuáles imprimir
                 </p>
               )}
             </div>
 
             <div className="flex justify-end">
-              <Button onClick={() => setStep(3)} disabled={!selectedTemplate} className="gap-2">
+              <Button onClick={() => setStep(3)} disabled={!selectedTemplate || includedCount === 0} className="gap-2">
                 Continuar
                 <ArrowRight className="h-4 w-4" />
               </Button>
@@ -447,8 +630,10 @@ export default function UploadPage() {
               <h3 className="text-lg font-semibold">Resumen del trabajo de impresión</h3>
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="rounded-lg bg-muted p-4 text-center">
-                  <p className="text-3xl font-bold text-foreground">{data.totalRows}</p>
-                  <p className="text-xs text-muted-foreground mt-1">Filas del Excel</p>
+                  <p className="text-3xl font-bold text-foreground">{includedCount}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Filas seleccionadas{includedCount !== data.totalRows ? ` (de ${data.totalRows})` : ""}
+                  </p>
                 </div>
                 <div className="rounded-lg bg-primary/10 p-4 text-center">
                   <p className="text-3xl font-bold text-primary">{totalLabels}</p>

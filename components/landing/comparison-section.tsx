@@ -3,7 +3,7 @@ import { Check, X, Minus } from "lucide-react"
 const comparisonData = [
   {
     feature: "Tiempo hasta la primera etiqueta",
-    inteliar: "2 minutos",
+    inteliar: "5 minutos",
     bartender: "Horas o días",
     inteliarBetter: true,
   },
@@ -15,38 +15,38 @@ const comparisonData = [
   },
   {
     feature: "Requiere instalación",
-    inteliar: "No",
-    bartender: "Sí",
+    inteliar: "Solo el agente de impresión",
+    bartender: "Sí (completo)",
     inteliarBetter: true,
   },
   {
-    feature: "Costo mensual",
-    inteliar: "Desde US$10",
+    feature: "Costo",
+    inteliar: "Desde US$10/mes",
     bartender: "US$500+/usuario",
     inteliarBetter: true,
   },
   {
-    feature: "Soporte nativo de Excel",
+    feature: "Soporte nativo de Excel/CSV",
     inteliar: "Sí",
     bartender: "Limitado",
     inteliarBetter: true,
   },
   {
-    feature: "Velocidad de impresión masiva",
-    inteliar: "100+/minuto",
-    bartender: "Manual",
+    feature: "Generación de templates con IA",
+    inteliar: "Sí",
+    bartender: "No",
     inteliarBetter: true,
   },
   {
-    feature: "Actualizaciones y mantenimiento",
-    inteliar: "Automático",
-    bartender: "Manual",
+    feature: "Actualizaciones",
+    inteliar: "Automáticas",
+    bartender: "Manual / pago",
     inteliarBetter: true,
   },
   {
-    feature: "Colaboración en equipo",
-    inteliar: "Incluida",
-    bartender: "Configuración compleja",
+    feature: "Selección por fila del Excel",
+    inteliar: "Sí",
+    bartender: "No",
     inteliarBetter: true,
   },
 ]
@@ -103,7 +103,7 @@ export function ComparisonSection() {
                     <X className="w-4 h-4 text-red-600" />
                   </div>
                 ) : (
-                  <span className="text-sm font-medium text-foreground">{row.inteliar}</span>
+                  <span className="text-sm font-medium text-foreground text-center">{row.inteliar}</span>
                 )}
               </div>
               <div className="p-4 sm:p-6 flex items-center justify-center">
@@ -121,19 +121,12 @@ export function ComparisonSection() {
                     <span className="text-sm text-muted-foreground">{row.bartender}</span>
                   </div>
                 ) : (
-                  <span className="text-sm text-muted-foreground">{row.bartender}</span>
+                  <span className="text-sm text-muted-foreground text-center">{row.bartender}</span>
                 )}
               </div>
             </div>
           ))}
         </div>
-
-        <p className="text-center text-sm text-muted-foreground mt-6">
-          ¿Todavía no te convencimos?{" "}
-          <a href="#" className="text-primary hover:underline">
-            Ver la comparativa completa
-          </a>
-        </p>
       </div>
     </section>
   )

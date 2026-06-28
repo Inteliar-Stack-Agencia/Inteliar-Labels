@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Header } from "@/components/dashboard/header"
@@ -14,6 +14,8 @@ import {
   Trash2,
   Copy,
   FileStack,
+  Download,
+  Upload,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -23,6 +25,9 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
+import { PRESET_TEMPLATES } from "@/lib/preset-templates"
+import { usePlanLimits } from "@/lib/use-plan-limits"
+import { Lock } from "lucide-react"
 
 interface Template {
   id: string
@@ -46,6 +51,8 @@ export default function TemplatesPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [templates, setTemplates] = useState<Template[]>([])
   const [loading, setLoading] = useState(true)
+  const planLimits = usePlanLimits()
+  const importInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     loadTemplates()
@@ -84,15 +91,22 @@ export default function TemplatesPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+      // Re-fetch the full row so we also copy the design (canvas_data)
+      const { data: full } = await supabase
+        .from("templates")
+        .select("*")
+        .eq("id", template.id)
+        .single()
       const { data } = await supabase
         .from("templates")
         .insert({
           user_id: user.id,
           name: `${template.name} (copia)`,
-          description: template.description,
+          description: full?.description ?? template.description,
           width_mm: template.width_mm,
           height_mm: template.height_mm,
           variables: template.variables,
+          canvas_data: full?.canvas_data ?? null,
         })
         .select()
         .single()
@@ -102,22 +116,127 @@ export default function TemplatesPage() {
     }
   }
 
+  async function handleExportAll() {
+    const supabase = createClient()
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase
+        .from("templates")
+        .select("name, description, width_mm, height_mm, variables, canvas_data")
+        .eq("user_id", user.id)
+      const backup = {
+        app: "inteliar-label",
+        type: "templates-backup",
+        version: 1,
+        exported_at: new Date().toISOString(),
+        templates: data ?? [],
+      }
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `inteliar-plantillas-${new Date().toISOString().slice(0, 10)}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      // silent
+    }
+  }
+
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ""
+    if (!file) return
+    const supabase = createClient()
+    try {
+      const text = await file.text()
+      const parsed = JSON.parse(text)
+      const items = Array.isArray(parsed) ? parsed : parsed.templates
+      if (!Array.isArray(items) || items.length === 0) {
+        alert("El archivo no contiene plantillas válidas.")
+        return
+      }
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const rows = items.map((t: any) => ({
+        user_id: user.id,
+        name: t.name ? `${t.name} (importada)` : "Plantilla importada",
+        description: t.description ?? null,
+        width_mm: t.width_mm ?? 80,
+        height_mm: t.height_mm ?? 40,
+        variables: t.variables ?? [],
+        canvas_data: t.canvas_data ?? null,
+      }))
+      const { data } = await supabase.from("templates").insert(rows).select()
+      if (data) setTemplates((prev) => [...data, ...prev])
+      alert(`Se importaron ${data?.length ?? 0} plantilla(s).`)
+    } catch {
+      alert("No se pudo leer el archivo. Asegurate de que sea un backup de Inteliar Label.")
+    }
+  }
+
   return (
     <DashboardLayout>
       <Header
         title="Templates"
         description="Gestioná tus templates de etiquetas"
         actions={
-          <Link href="/templates/new">
-            <Button size="sm" className="gap-2">
-              <Plus className="h-4 w-4" />
-              Nueva plantilla
+          <div className="flex items-center gap-2">
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={handleImport}
+            />
+            <Button size="sm" variant="outline" className="gap-2" onClick={() => importInputRef.current?.click()}>
+              <Upload className="h-4 w-4" />
+              Importar
             </Button>
-          </Link>
+            <Button size="sm" variant="outline" className="gap-2" onClick={handleExportAll} disabled={templates.length === 0}>
+              <Download className="h-4 w-4" />
+              Backup
+            </Button>
+            {planLimits.canCreateTemplate ? (
+              <Link href="/templates/new">
+                <Button size="sm" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Nueva plantilla
+                </Button>
+              </Link>
+            ) : (
+              <a href="/#pricing">
+                <Button size="sm" className="gap-2 bg-amber-500 hover:bg-amber-600 text-white">
+                  <Lock className="h-4 w-4" />
+                  Trial vencido · Ver planes
+                </Button>
+              </a>
+            )}
+          </div>
         }
       />
 
       <div className="p-6">
+        {/* Trial banner */}
+        {!planLimits.loading && (planLimits.plan === "trial" || planLimits.plan === "expired") && (
+          <div className={cn(
+            "mb-4 flex items-center justify-between gap-4 rounded-lg border px-4 py-3 text-sm",
+            planLimits.trialExpired
+              ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+              : "border-border bg-muted/40 text-muted-foreground"
+          )}>
+            <span>
+              {planLimits.trialExpired
+                ? "Tu período de prueba de 15 días venció."
+                : `Trial gratuito · ${planLimits.trialDaysLeft} día${planLimits.trialDaysLeft !== 1 ? "s" : ""} restante${planLimits.trialDaysLeft !== 1 ? "s" : ""}`}
+            </span>
+            <a href="/#pricing" className="font-medium underline underline-offset-2 whitespace-nowrap">
+              {planLimits.trialExpired ? "Activar licencia" : "Ver planes"}
+            </a>
+          </div>
+        )}
+
         {/* View Toggle */}
         <div className="mb-6 flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
@@ -304,6 +423,39 @@ export default function TemplatesPage() {
             </table>
           </div>
         )}
+
+        {/* Plantillas predeterminadas */}
+        <div className="mt-12">
+          <h2 className="text-lg font-semibold text-foreground">¿Qué querés etiquetar?</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Elegí una plantilla base y la personalizás en segundos
+          </p>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {PRESET_TEMPLATES.map((preset) => (
+              <Link
+                key={preset.id}
+                href={`/templates/new?preset=${preset.id}`}
+                className="group flex items-start gap-4 rounded-xl border border-border bg-card p-5 transition-all hover:border-primary"
+              >
+                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-muted text-2xl">
+                  {preset.emoji}
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-medium text-card-foreground group-hover:text-primary">
+                    {preset.name}
+                  </h3>
+                  <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
+                    {preset.description}
+                  </p>
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    {preset.widthMm} × {preset.heightMm} mm
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   )
