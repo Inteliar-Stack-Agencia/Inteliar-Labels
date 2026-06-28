@@ -35,6 +35,7 @@ const plans = [
       "Diseñador visual + IA",
       "Plantillas predeterminadas",
       "Importación de Excel y CSV",
+      "Actualizaciones de software incluidas",
       "Soporte prioritario",
     ],
     cta: "Comprar plan Pro",
