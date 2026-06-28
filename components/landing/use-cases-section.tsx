@@ -1,4 +1,4 @@
-import { UtensilsCrossed, Truck, Store, ArrowRight } from "lucide-react"
+import { UtensilsCrossed, Truck, Store, ShoppingBag, Pill, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 const useCases = [
@@ -26,6 +26,22 @@ const useCases = [
     stats: "Listas reutilizables guardadas",
     labels: ["$24.990", "SKU: A-4521", "OFERTA 20%"],
   },
+  {
+    icon: ShoppingBag,
+    industry: "Vendedores online y Mercado Libre",
+    title: "Etiquetá tus bultos antes de despachar sin errores",
+    description: "Vendedores con alto volumen de pedidos imprimen etiquetas de identificación de bulto, dirección y número de orden desde su planilla de despacho diaria. Un clic y salen todas las etiquetas del día.",
+    stats: "Etiqueta todos tus pedidos del día",
+    labels: ["PEDIDO #8821", "DEST: ROSARIO", "FRÁGIL"],
+  },
+  {
+    icon: Pill,
+    industry: "Farmacias, dietéticas y mayoristas",
+    title: "Actualizá 500 precios de góndola en minutos",
+    description: "Cuando cambian los precios, reimprimís solo las etiquetas afectadas desde tu lista de precios en Excel. Sin tipear uno por uno, sin errores de precio en góndola, sin perder tiempo.",
+    stats: "Solo reimprimir lo que cambió",
+    labels: ["$8.750", "COD: 7798", "IVA inc."],
+  },
 ]
 
 export function UseCasesSection() {
@@ -38,7 +54,7 @@ export function UseCasesSection() {
             Pensado para empresas que imprimen etiquetas todos los días
           </h2>
           <p className="text-lg text-muted-foreground">
-            Productores de alimentos, depósitos y comercios que necesitan imprimir rápido, sin errores y sin depender de IT.
+            Productores de alimentos, depósitos, comercios, vendedores online y mayoristas que necesitan imprimir rápido, sin errores y sin depender de IT.
           </p>
         </div>
 
