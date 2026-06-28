@@ -418,8 +418,10 @@ export default function ImprimirPage() {
 
               {!planLimits.loading && !planLimits.canPrint && (
                 <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
-                  Tu período de prueba de 15 días venció.{" "}
-                  <a href="/#pricing" className="font-medium underline underline-offset-2">Activá tu licencia</a> para seguir imprimiendo.
+                  {planLimits.plan === "monthly"
+                    ? <>Alcanzaste el límite de 2.000 impresiones del mes. Se renueva el 1° del próximo mes o <a href="/#pricing" className="font-medium underline underline-offset-2">pasá al plan Pro</a> para impresiones ilimitadas.</>
+                    : <>Tu período de prueba venció. <a href="/#pricing" className="font-medium underline underline-offset-2">Activá tu licencia</a> para seguir imprimiendo.</>
+                  }
                 </div>
               )}
 

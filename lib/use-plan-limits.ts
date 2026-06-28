@@ -5,13 +5,19 @@ import { createClient } from "@/lib/supabase/client"
 
 const TRIAL_DAYS = 15
 const TRIAL_LABELS = 500
+const MONTHLY_LABELS_MAX = 2000
 
 export interface PlanLimits {
-  plan: "trial" | "expired" | "monthly" | "lifetime"
+  plan: "trial" | "expired" | "monthly" | "pro" | "lifetime"
+  // Trial
   trialDaysLeft: number
   trialLabelsLeft: number
   trialLabelsUsed: number
   trialExpired: boolean
+  // Monthly
+  labelsThisMonth: number
+  labelsMonthMax: number
+  // Common
   canCreateTemplate: boolean
   canPrint: boolean
   loading: boolean
@@ -24,6 +30,8 @@ export function usePlanLimits(): PlanLimits {
     trialLabelsLeft: TRIAL_LABELS,
     trialLabelsUsed: 0,
     trialExpired: false,
+    labelsThisMonth: 0,
+    labelsMonthMax: Infinity,
     canCreateTemplate: true,
     canPrint: true,
     loading: true,
@@ -50,12 +58,50 @@ export function usePlanLimits(): PlanLimits {
         (!licenseData.expires_at || new Date(licenseData.expires_at) > new Date())
 
       if (hasActiveLicense) {
+        const plan = licenseData.plan as "monthly" | "pro" | "lifetime"
+
+        if (plan === "monthly") {
+          // Check monthly label usage
+          const startOfMonth = new Date()
+          startOfMonth.setDate(1)
+          startOfMonth.setHours(0, 0, 0, 0)
+
+          const { data: monthJobs } = await supabase
+            .from("print_jobs")
+            .select("total_labels")
+            .eq("user_id", user.id)
+            .eq("status", "completed")
+            .gte("created_at", startOfMonth.toISOString())
+
+          const labelsThisMonth = (monthJobs ?? []).reduce(
+            (sum: number, j: { total_labels: number }) => sum + (j.total_labels ?? 0),
+            0
+          )
+
+          setLimits({
+            plan,
+            trialDaysLeft: 0,
+            trialLabelsLeft: 0,
+            trialLabelsUsed: 0,
+            trialExpired: false,
+            labelsThisMonth,
+            labelsMonthMax: MONTHLY_LABELS_MAX,
+            canCreateTemplate: true,
+            canPrint: labelsThisMonth < MONTHLY_LABELS_MAX,
+            loading: false,
+          })
+          return
+        }
+
+        // pro / lifetime — unlimited
         setLimits({
-          plan: licenseData.plan as "monthly" | "lifetime",
+          plan,
           trialDaysLeft: 0,
-          trialLabelsLeft: Infinity,
+          trialLabelsLeft: 0,
           trialLabelsUsed: 0,
           trialExpired: false,
+          labelsThisMonth: 0,
+          labelsMonthMax: Infinity,
           canCreateTemplate: true,
           canPrint: true,
           loading: false,
@@ -63,7 +109,7 @@ export function usePlanLimits(): PlanLimits {
         return
       }
 
-      // Count all labels ever printed during trial
+      // No license — check trial
       const { data: allJobs } = await supabase
         .from("print_jobs")
         .select("total_labels")
@@ -75,15 +121,11 @@ export function usePlanLimits(): PlanLimits {
         0
       )
 
-      // Check days elapsed
-      const registeredAt = new Date(user.created_at)
-      const now = new Date()
-      const daysElapsed = Math.floor((now.getTime() - registeredAt.getTime()) / (1000 * 60 * 60 * 24))
+      const daysElapsed = Math.floor(
+        (Date.now() - new Date(user.created_at).getTime()) / (1000 * 60 * 60 * 24)
+      )
       const daysLeft = Math.max(0, TRIAL_DAYS - daysElapsed)
-
       const labelsLeft = Math.max(0, TRIAL_LABELS - totalLabelsUsed)
-
-      // Trial expires when either limit is hit
       const trialExpired = daysLeft === 0 || labelsLeft === 0
 
       setLimits({
@@ -92,6 +134,8 @@ export function usePlanLimits(): PlanLimits {
         trialLabelsLeft: labelsLeft,
         trialLabelsUsed: totalLabelsUsed,
         trialExpired,
+        labelsThisMonth: 0,
+        labelsMonthMax: Infinity,
         canCreateTemplate: !trialExpired,
         canPrint: !trialExpired,
         loading: false,
