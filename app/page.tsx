@@ -1,7 +1,8 @@
 import { HeroSection } from "@/components/landing/hero-section"
+import { PrintersSection } from "@/components/landing/printers-section"
 import { HowItWorksSection } from "@/components/landing/how-it-works-section"
-import { ProductDemoSection } from "@/components/landing/product-demo-section"
 import { FeaturesSection } from "@/components/landing/features-section"
+import { TestimonialsSection } from "@/components/landing/testimonials-section"
 import { UseCasesSection } from "@/components/landing/use-cases-section"
 import { ComparisonSection } from "@/components/landing/comparison-section"
 import { PricingSection } from "@/components/landing/pricing-section"
@@ -16,9 +17,10 @@ export default function LandingPage() {
       <Navbar />
       <main>
         <HeroSection />
+        <PrintersSection />
         <HowItWorksSection />
-        <ProductDemoSection />
         <FeaturesSection />
+        <TestimonialsSection />
         <UseCasesSection />
         <ComparisonSection />
         <DownloadSection />

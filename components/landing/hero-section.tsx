@@ -1,5 +1,112 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Play, CheckCircle2 } from "lucide-react"
+import { ArrowRight, CheckCircle2, FileSpreadsheet, Tag, Printer, Barcode } from "lucide-react"
+import { useEffect, useState } from "react"
+
+const DEMO_ROWS = [
+  { producto: "Empanadas de carne", precio: "$1.250", sku: "EMP-CARNE-12" },
+  { producto: "Milanesa napolitana", precio: "$2.800", sku: "MIL-NAPO-01" },
+  { producto: "Tarta de verduras", precio: "$1.600", sku: "TAR-VERD-06" },
+  { producto: "Medialunas x6", precio: "$900", sku: "MED-x6-003" },
+]
+
+function AnimatedDemo() {
+  const [step, setStep] = useState(0)
+  const [printedCount, setPrintedCount] = useState(0)
+  const [printing, setPrinting] = useState(false)
+
+  useEffect(() => {
+    const timers: ReturnType<typeof setTimeout>[] = []
+    const cycle = () => {
+      setStep(0); setPrintedCount(0); setPrinting(false)
+      timers.push(setTimeout(() => setStep(1), 1200))
+      timers.push(setTimeout(() => setStep(2), 2600))
+      timers.push(setTimeout(() => { setStep(3); setPrinting(true) }, 4200))
+      let count = 0
+      for (let i = 0; i < 4; i++) {
+        timers.push(setTimeout(() => { count++; setPrintedCount(count) }, 5000 + i * 500))
+      }
+      timers.push(setTimeout(() => { setStep(4); setPrinting(false) }, 7200))
+      timers.push(setTimeout(cycle, 10000))
+    }
+    const init = setTimeout(cycle, 500)
+    return () => { clearTimeout(init); timers.forEach(clearTimeout) }
+  }, [])
+
+  return (
+    <div className="relative bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
+      {/* Window chrome */}
+      <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b border-border">
+        <div className="flex gap-1.5">
+          <div className="w-3 h-3 rounded-full bg-red-400" />
+          <div className="w-3 h-3 rounded-full bg-yellow-400" />
+          <div className="w-3 h-3 rounded-full bg-green-400" />
+        </div>
+        <span className="text-xs text-muted-foreground mx-auto">Inteliar Labels</span>
+      </div>
+
+      <div className="p-5 space-y-3 min-h-[320px]">
+        {/* Step 1: file loaded */}
+        <div className={`flex items-center justify-between p-3 rounded-lg border transition-all duration-500 ${step >= 1 ? "bg-green-500/5 border-green-500/30 opacity-100" : "bg-muted/30 border-border opacity-40"}`}>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded bg-green-100 flex items-center justify-center flex-shrink-0">
+              <FileSpreadsheet className="w-4 h-4 text-green-700" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-foreground">productos_mayo.xlsx</p>
+              <p className="text-xs text-muted-foreground">4 filas · columnas: producto, precio, sku</p>
+            </div>
+          </div>
+          {step >= 1 && <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 font-medium">✓ Cargado</span>}
+        </div>
+
+        {/* Step 2: template selected */}
+        <div className={`flex items-center gap-3 p-3 rounded-lg border transition-all duration-500 ${step >= 2 ? "bg-primary/5 border-primary/30 opacity-100" : "bg-muted/30 border-border opacity-40"}`}>
+          <div className="w-9 h-9 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <Tag className="w-4 h-4 text-primary" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-foreground">Template: Producto con SKU · 50×30mm</p>
+            <p className="text-xs text-muted-foreground">Variables: {"{{"}<span className="text-primary">producto</span>{"}}"} {"{{"}<span className="text-primary">precio</span>{"}}"} {"{{"}<span className="text-primary">sku</span>{"}}"}</p>
+          </div>
+          {step >= 2 && <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">✓ Ok</span>}
+        </div>
+
+        {/* Step 3: printing rows */}
+        <div className={`space-y-1.5 transition-all duration-500 ${step >= 3 ? "opacity-100" : "opacity-40"}`}>
+          {DEMO_ROWS.map((row, i) => (
+            <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs transition-all duration-300 ${printedCount > i ? "bg-green-500/5 border-green-500/20 text-foreground" : "bg-muted/20 border-border text-muted-foreground"}`}>
+              <Barcode className={`w-3.5 h-3.5 flex-shrink-0 ${printedCount > i ? "text-green-600" : "text-muted-foreground"}`} />
+              <span className="font-medium truncate">{row.producto}</span>
+              <span className="ml-auto font-mono flex-shrink-0">{row.precio}</span>
+              {printedCount > i && <span className="text-green-600 flex-shrink-0">✓</span>}
+              {printing && printedCount === i && <span className="text-primary flex-shrink-0 animate-pulse">···</span>}
+            </div>
+          ))}
+        </div>
+
+        {/* Step 4: done */}
+        {step >= 4 ? (
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-green-500/10 border border-green-500/30">
+            <Printer className="w-5 h-5 text-green-600 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-green-700 dark:text-green-400">4 etiquetas impresas</p>
+              <p className="text-xs text-muted-foreground">Trabajo guardado en historial</p>
+            </div>
+          </div>
+        ) : (
+          <div className={`flex items-center justify-between p-3 rounded-lg bg-primary border border-primary/50 transition-all duration-500 ${step >= 3 ? "opacity-100" : "opacity-30"}`}>
+            <span className="text-sm font-semibold text-primary-foreground">
+              {printing ? `Imprimiendo... (${printedCount}/4)` : "Imprimir las 4 etiquetas"}
+            </span>
+            <Printer className="w-4 h-4 text-primary-foreground" />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 
 export function HeroSection() {
   return (
@@ -30,17 +137,14 @@ export function HeroSection() {
                 </a>
               </Button>
               <Button size="lg" variant="outline" className="text-base h-12 px-8 gap-2" asChild>
-                <a href="#how-it-works">
-                  <Play className="w-4 h-4" />
-                  Ver cómo funciona
-                </a>
+                <a href="#how-it-works">Ver cómo funciona</a>
               </Button>
             </div>
 
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground pt-2">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-green-600" />
-                <span>Gratis hasta 3 plantillas y 50 etiquetas/mes</span>
+                <span>Gratis hasta 3 plantillas · 50 etiquetas/mes</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-green-600" />
@@ -55,54 +159,8 @@ export function HeroSection() {
 
           <div className="relative">
             <div className="absolute inset-0 bg-primary/5 rounded-3xl blur-3xl" />
-            <div className="relative bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b border-border">
-                <div className="flex gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-red-400" />
-                  <div className="w-3 h-3 rounded-full bg-yellow-400" />
-                  <div className="w-3 h-3 rounded-full bg-green-400" />
-                </div>
-                <span className="text-xs text-muted-foreground">Inteliar Labels</span>
-              </div>
-              <div className="p-6 space-y-4">
-                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border border-border">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded bg-green-100 flex items-center justify-center">
-                      <span className="text-green-700 text-xs font-semibold">XLS</span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">productos_lote_042.xlsx</p>
-                      <p className="text-xs text-muted-foreground">247 ítems listos para imprimir</p>
-                    </div>
-                  </div>
-                  <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 font-medium">Cargado</span>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="aspect-[3/4] bg-muted/30 rounded-lg border border-border p-3 flex flex-col justify-between">
-                      <div className="space-y-1">
-                        <div className="h-2 w-full bg-foreground/10 rounded" />
-                        <div className="h-2 w-3/4 bg-foreground/10 rounded" />
-                      </div>
-                      <div className="space-y-1">
-                        <div className="h-6 w-full bg-foreground/5 rounded flex items-center justify-center">
-                          <div className="flex gap-0.5">
-                            {[...Array(8)].map((_, j) => (
-                              <div key={j} className="w-0.5 h-4 bg-foreground/20 rounded-full" style={{ height: `${Math.random() * 12 + 8}px` }} />
-                            ))}
-                          </div>
-                        </div>
-                        <div className="h-1.5 w-1/2 bg-foreground/10 rounded mx-auto" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <Button className="w-full h-11 text-base">
-                  Imprimir las 247 etiquetas
-                </Button>
-              </div>
+            <div className="relative">
+              <AnimatedDemo />
             </div>
           </div>
         </div>
