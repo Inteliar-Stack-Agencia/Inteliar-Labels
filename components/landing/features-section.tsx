@@ -1,41 +1,41 @@
-import { Zap, Code, FileSpreadsheet, Printer, Cloud, Shield } from "lucide-react"
+import { Zap, Code, FileSpreadsheet, Printer, Sparkles, History } from "lucide-react"
 
 const features = [
   {
     icon: Zap,
-    title: "Impresión masiva ultrarrápida",
-    description: "Imprimí cientos de etiquetas en segundos, no en minutos. Tu impresora térmica se convierte en una máquina de producción.",
-    highlight: "100+ etiquetas/minuto",
+    title: "Impresión masiva desde Excel",
+    description: "Subí tu planilla, seleccioná las filas que querés imprimir y listo. También podés reusar listas guardadas de sesiones anteriores.",
+    highlight: "Excel y CSV nativos",
   },
   {
     icon: Code,
-    title: "Templates dinámicos",
-    description: "Usá {{variables}} para traer datos automáticamente desde tu planilla a cada etiqueta. Sin carga manual.",
+    title: "Templates con variables",
+    description: "Usá {{producto}}, {{precio}}, {{sku}} y más para traer datos automáticamente desde tu planilla a cada etiqueta. Sin carga manual.",
     highlight: "Cero carga manual",
   },
   {
-    icon: FileSpreadsheet,
-    title: "Excel y CSV nativos",
-    description: "Funciona con los archivos que ya tenés. Sin conversiones ni reformateo.",
-    highlight: "Arrastrá y soltá",
+    icon: Sparkles,
+    title: "Diseñador visual + IA",
+    description: "Diseñá tu etiqueta visualmente o describila en texto y la IA la genera por vos. Incluye vista previa real con tus datos.",
+    highlight: "Generación con IA",
   },
   {
     icon: Printer,
-    title: "Cualquier impresora térmica",
-    description: "ZPL, EPL, CPCL: hablamos el idioma de tu impresora. Zebra, Honeywell, Brother y más.",
-    highlight: "Compatibilidad universal",
+    title: "Impresoras térmicas ZPL/TSPL",
+    description: "Compatible con Zebra, Honeywell, TSC, Citizen, Sato y más. Conexión por red TCP/IP, USB o serial vía agente local.",
+    highlight: "Agente de escritorio",
   },
   {
-    icon: Cloud,
-    title: "Nada que instalar",
-    description: "100% en la nube. Funciona en tu navegador en cualquier dispositivo. Siempre actualizado.",
-    highlight: "Listo en 2 minutos",
+    icon: FileSpreadsheet,
+    title: "Códigos de barras y QR",
+    description: "EAN-13, EAN-8, Code 128, Code 39, QR y DataMatrix. Generados automáticamente desde los datos de tu planilla.",
+    highlight: "Múltiples formatos",
   },
   {
-    icon: Shield,
-    title: "Confiable para tu negocio",
-    description: "99.9% de uptime. Tus etiquetas se imprimen cuando las necesitás. Punto.",
-    highlight: "Disponibilidad 24/7",
+    icon: History,
+    title: "Historial y reimpresión",
+    description: "Todos los trabajos quedan guardados. Podés reimprimir cualquier lote con un clic, sin volver a cargar el Excel.",
+    highlight: "Reimpresión instantánea",
   },
 ]
 

@@ -9,7 +9,7 @@ export function HeroSection() {
           <div className="space-y-8">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border text-sm">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-muted-foreground">Usado por más de 500 empresas en todo el mundo</span>
+              <span className="text-muted-foreground">Diseñado para impresoras térmicas ZPL y TSPL</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground leading-[1.1] text-balance">
@@ -18,29 +18,33 @@ export function HeroSection() {
             </h1>
 
             <p className="text-lg sm:text-xl text-muted-foreground max-w-xl leading-relaxed">
-              Olvidate del software de etiquetas caro y complicado. Subí tu Excel, elegí un template
-              e imprimí al instante en cualquier impresora térmica. Sin capacitación.
+              Subí tu Excel, elegí un template e imprimí al instante en tu impresora térmica.
+              Diseñador visual con IA y soporte para códigos de barras. Sin capacitación.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" className="text-base h-12 px-8 gap-2 group">
-                Empezá gratis — Sin tarjeta
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              <Button size="lg" className="text-base h-12 px-8 gap-2 group" asChild>
+                <a href="/auth/register">
+                  Empezá gratis — Sin tarjeta
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </a>
               </Button>
-              <Button size="lg" variant="outline" className="text-base h-12 px-8 gap-2">
-                <Play className="w-4 h-4" />
-                Ver demo de 2 minutos
+              <Button size="lg" variant="outline" className="text-base h-12 px-8 gap-2" asChild>
+                <a href="#how-it-works">
+                  <Play className="w-4 h-4" />
+                  Ver cómo funciona
+                </a>
               </Button>
             </div>
 
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground pt-2">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-green-600" />
-                <span>14 días de prueba gratis</span>
+                <span>Gratis hasta 3 plantillas y 50 etiquetas/mes</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-green-600" />
-                <span>Compatible con cualquier impresora térmica</span>
+                <span>Compatible con Zebra, Honeywell, TSC y más</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-green-600" />
