@@ -167,27 +167,61 @@ export default function DashboardPage() {
         {/* Trial banner */}
         {!planLimits.loading && (planLimits.plan === "trial" || planLimits.plan === "expired") && (
           <div className={cn(
-            "flex items-center justify-between gap-4 rounded-xl border px-5 py-4",
+            "rounded-xl border px-5 py-4 space-y-3",
             planLimits.trialExpired
               ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-              : planLimits.trialDaysLeft <= 3
+              : planLimits.trialDaysLeft <= 3 || planLimits.trialLabelsLeft <= 50
                 ? "border-orange-500/40 bg-orange-500/10 text-orange-700 dark:text-orange-400"
                 : "border-border bg-muted/40 text-muted-foreground"
           )}>
-            <div className="flex items-center gap-3">
-              <Timer className="h-5 w-5 flex-shrink-0" />
-              <span className="text-sm font-medium">
-                {planLimits.trialExpired
-                  ? "Tu trial de 15 días venció. Activá una licencia para seguir usando Inteliar Labels."
-                  : `Trial gratuito activo · ${planLimits.trialDaysLeft} día${planLimits.trialDaysLeft !== 1 ? "s" : ""} restante${planLimits.trialDaysLeft !== 1 ? "s" : ""}`}
-              </span>
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Timer className="h-5 w-5 flex-shrink-0" />
+                <span className="text-sm font-medium">
+                  {planLimits.trialExpired
+                    ? "Tu trial venció. Activá una licencia para seguir usando Inteliar Labels."
+                    : `Trial gratuito · ${planLimits.trialDaysLeft} día${planLimits.trialDaysLeft !== 1 ? "s" : ""} restante${planLimits.trialDaysLeft !== 1 ? "s" : ""}`}
+                </span>
+              </div>
+              <a
+                href="/#pricing"
+                className="text-sm font-semibold underline underline-offset-2 whitespace-nowrap"
+              >
+                {planLimits.trialExpired ? "Activar licencia" : "Ver planes"}
+              </a>
             </div>
-            <a
-              href="/#pricing"
-              className="text-sm font-semibold underline underline-offset-2 whitespace-nowrap"
-            >
-              {planLimits.trialExpired ? "Activar licencia" : "Ver planes"}
-            </a>
+
+            {/* Counters */}
+            {!planLimits.trialExpired && (
+              <div className="grid grid-cols-2 gap-3">
+                {/* Labels counter */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs font-medium">
+                    <span>Impresiones usadas</span>
+                    <span>{planLimits.trialLabelsUsed} / 500</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-current/20 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-current transition-all"
+                      style={{ width: `${Math.min(100, (planLimits.trialLabelsUsed / 500) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+                {/* Days counter */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs font-medium">
+                    <span>Días transcurridos</span>
+                    <span>{15 - planLimits.trialDaysLeft} / 15</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-current/20 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-current transition-all"
+                      style={{ width: `${Math.min(100, ((15 - planLimits.trialDaysLeft) / 15) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
