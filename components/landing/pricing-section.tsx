@@ -54,7 +54,8 @@ export function PricingSection() {
             Elegí el plan que mejor te queda
           </h2>
           <p className="text-lg text-muted-foreground">
-            Activás tu licencia al instante. La clave te llega por email apenas pagás.
+            15 días de prueba gratuita. Después, elegí el plan que mejor te queda.
+            La clave te llega por email apenas pagás.
           </p>
         </div>
 

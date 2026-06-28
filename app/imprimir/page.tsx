@@ -418,8 +418,8 @@ export default function ImprimirPage() {
 
               {!planLimits.loading && !planLimits.canPrint && (
                 <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
-                  Alcanzaste el límite de {planLimits.labelsMax} etiquetas/mes del plan gratuito.{" "}
-                  <a href="/#pricing" className="font-medium underline underline-offset-2">Actualizá tu plan</a> para seguir imprimiendo.
+                  Tu período de prueba de 15 días venció.{" "}
+                  <a href="/#pricing" className="font-medium underline underline-offset-2">Activá tu licencia</a> para seguir imprimiendo.
                 </div>
               )}
 

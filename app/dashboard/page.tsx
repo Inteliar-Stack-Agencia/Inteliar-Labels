@@ -5,10 +5,11 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Header } from "@/components/dashboard/header"
 import { KpiCard } from "@/components/dashboard/kpi-card"
 import { QuickActions } from "@/components/dashboard/quick-actions"
-import { Tag, Printer, FileStack, CheckCircle2, Clock, AlertCircle, Rocket, X } from "lucide-react"
+import { Tag, Printer, FileStack, CheckCircle2, Clock, AlertCircle, Rocket, X, Timer } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
+import { usePlanLimits } from "@/lib/use-plan-limits"
 
 interface RecentJob {
   id: string
@@ -43,6 +44,7 @@ export default function DashboardPage() {
   const [recentJobs, setRecentJobs] = useState<RecentJob[]>([])
   const [loading, setLoading] = useState(true)
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const planLimits = usePlanLimits()
 
   useEffect(() => {
     const supabase = createClient()
@@ -159,6 +161,33 @@ export default function DashboardPage() {
                 </ol>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Trial banner */}
+        {!planLimits.loading && (planLimits.plan === "trial" || planLimits.plan === "expired") && (
+          <div className={cn(
+            "flex items-center justify-between gap-4 rounded-xl border px-5 py-4",
+            planLimits.trialExpired
+              ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+              : planLimits.trialDaysLeft <= 3
+                ? "border-orange-500/40 bg-orange-500/10 text-orange-700 dark:text-orange-400"
+                : "border-border bg-muted/40 text-muted-foreground"
+          )}>
+            <div className="flex items-center gap-3">
+              <Timer className="h-5 w-5 flex-shrink-0" />
+              <span className="text-sm font-medium">
+                {planLimits.trialExpired
+                  ? "Tu trial de 15 días venció. Activá una licencia para seguir usando Inteliar Labels."
+                  : `Trial gratuito activo · ${planLimits.trialDaysLeft} día${planLimits.trialDaysLeft !== 1 ? "s" : ""} restante${planLimits.trialDaysLeft !== 1 ? "s" : ""}`}
+              </span>
+            </div>
+            <a
+              href="/#pricing"
+              className="text-sm font-semibold underline underline-offset-2 whitespace-nowrap"
+            >
+              {planLimits.trialExpired ? "Activar licencia" : "Ver planes"}
+            </a>
           </div>
         )}
 

@@ -132,7 +132,7 @@ export function HeroSection() {
             <div className="flex flex-col sm:flex-row gap-4">
               <Button size="lg" className="text-base h-12 px-8 gap-2 group" asChild>
                 <a href="/auth/register">
-                  Empezá gratis — Sin tarjeta
+                  Empezá tu trial gratis
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                 </a>
               </Button>
@@ -144,7 +144,7 @@ export function HeroSection() {
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground pt-2">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-green-600" />
-                <span>Gratis hasta 3 plantillas · 50 etiquetas/mes</span>
+                <span>15 días de prueba gratuita · Sin tarjeta</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-green-600" />

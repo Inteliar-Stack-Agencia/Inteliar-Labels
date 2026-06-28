@@ -9,14 +9,14 @@ export function FinalCtaSection() {
           Dejá de imprimir etiquetas a lo bestia
         </h2>
         <p className="text-lg sm:text-xl text-background/70 max-w-2xl mx-auto mb-8">
-          Empezá gratis hoy: hasta 3 plantillas y 50 etiquetas por mes sin pagar nada.
-          Sin tarjeta, sin compromiso.
+          Empezá tu trial de 15 días gratis hoy. Sin tarjeta, sin compromiso.
+          Si te convence, activás tu licencia y seguís sin interrupciones.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
           <Button size="lg" variant="secondary" className="h-14 px-10 text-base gap-2 group bg-background text-foreground hover:bg-background/90" asChild>
             <a href="/auth/register">
-              Empezá gratis ahora
+              Empezá tu trial gratis
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </a>
           </Button>
@@ -30,7 +30,7 @@ export function FinalCtaSection() {
         <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-background/60">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4" />
-            <span>Gratis hasta 3 plantillas y 50 etiquetas/mes</span>
+            <span>15 días de prueba gratuita</span>
           </div>
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4" />

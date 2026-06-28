@@ -209,7 +209,7 @@ export default function TemplatesPage() {
               <a href="/#pricing">
                 <Button size="sm" className="gap-2 bg-amber-500 hover:bg-amber-600 text-white">
                   <Lock className="h-4 w-4" />
-                  Límite alcanzado · Ver planes
+                  Trial vencido · Ver planes
                 </Button>
               </a>
             )}
@@ -218,22 +218,22 @@ export default function TemplatesPage() {
       />
 
       <div className="p-6">
-        {/* Free plan usage banner */}
-        {!planLimits.loading && planLimits.plan === "free" && (
+        {/* Trial banner */}
+        {!planLimits.loading && (planLimits.plan === "trial" || planLimits.plan === "expired") && (
           <div className={cn(
             "mb-4 flex items-center justify-between gap-4 rounded-lg border px-4 py-3 text-sm",
-            planLimits.canCreateTemplate
-              ? "border-border bg-muted/40 text-muted-foreground"
-              : "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+            planLimits.trialExpired
+              ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+              : "border-border bg-muted/40 text-muted-foreground"
           )}>
             <span>
-              Plan gratuito · {planLimits.templatesUsed}/{planLimits.templatesMax} plantillas usadas
+              {planLimits.trialExpired
+                ? "Tu período de prueba de 15 días venció."
+                : `Trial gratuito · ${planLimits.trialDaysLeft} día${planLimits.trialDaysLeft !== 1 ? "s" : ""} restante${planLimits.trialDaysLeft !== 1 ? "s" : ""}`}
             </span>
-            {!planLimits.canCreateTemplate && (
-              <a href="/#pricing" className="font-medium underline underline-offset-2 whitespace-nowrap">
-                Actualizar plan
-              </a>
-            )}
+            <a href="/#pricing" className="font-medium underline underline-offset-2 whitespace-nowrap">
+              {planLimits.trialExpired ? "Activar licencia" : "Ver planes"}
+            </a>
           </div>
         )}
 
