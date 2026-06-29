@@ -65,6 +65,11 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
+    // Vincular licencias compradas con el email del usuario
+    fetch("/api/license/link", { method: "POST" }).catch(() => {})
+  }, [])
+
+  useEffect(() => {
     const supabase = createClient()
 
     async function loadData() {
