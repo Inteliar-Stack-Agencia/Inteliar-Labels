@@ -17,7 +17,7 @@ const AGENT_ENTRY = isDev
   ? path.join(__dirname, '../../printer-agent/src/index.js')
   : path.join(process.resourcesPath, 'agent', 'src', 'index.js')
 
-const LICENSE_SERVER = process.env.LICENSE_SERVER || 'https://v0-inteliar-labels-ui.vercel.app'
+const LICENSE_SERVER = process.env.LICENSE_SERVER || 'https://etiquetar.app'
 const PORT = 9638
 
 // ── State ─────────────────────────────────────────────────────────────────────

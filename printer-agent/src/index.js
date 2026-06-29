@@ -47,7 +47,7 @@ function getLicenseServer() {
       if (cfg.licenseServer) return cfg.licenseServer
     }
   } catch {}
-  return 'https://inteliar-labels.vercel.app'
+  return 'https://etiquetar.app'
 }
 const LICENSE_SERVER = getLicenseServer()
 
