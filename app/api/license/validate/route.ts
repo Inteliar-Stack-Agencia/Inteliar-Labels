@@ -34,11 +34,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ valid: false, message: "Licencia suspendida. Contactá soporte." }, { status: 403 })
     }
 
-    if (license.status === "expired" || (license.expires_at && new Date(license.expires_at) < new Date())) {
-      // Mark as expired if not already
-      if (license.status !== "expired") {
-        await supabase.from("licenses").update({ status: "expired" }).eq("id", license.id)
+    if (license.expires_at) {
+      const expiredAt = new Date(license.expires_at)
+      const graceDeadline = new Date(expiredAt.getTime() + 2 * 24 * 60 * 60 * 1000)
+      const now = new Date()
+      if (now > graceDeadline) {
+        if (license.status !== "expired") {
+          await supabase.from("licenses").update({ status: "expired" }).eq("id", license.id)
+        }
+        return NextResponse.json({ valid: false, message: "Licencia vencida. Renová tu suscripción." }, { status: 403 })
       }
+      if (now > expiredAt) {
+        // Within grace period — still valid but warn
+        return NextResponse.json({
+          valid: true,
+          plan: license.plan,
+          status: "grace",
+          message: `Licencia vencida — período de gracia activo (${Math.ceil((graceDeadline.getTime() - now.getTime()) / 86400000)}d restante). Renová para no perder acceso.`,
+          devices_used: (license.activations ?? []).length,
+          max_devices: license.max_devices,
+        })
+      }
+    }
+    if (license.status === "expired") {
       return NextResponse.json({ valid: false, message: "Licencia vencida. Renová tu suscripción." }, { status: 403 })
     }
 
