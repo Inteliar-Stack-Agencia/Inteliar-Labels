@@ -15,41 +15,40 @@ export async function sendRenewalEmail(
   }
 
   const grace = daysLeft < 0
-  const urgent = daysLeft <= 1
   const planLabel = plan === "pro" ? "Pro" : "Mensual"
-  const graceRemaining = grace ? 2 + daysLeft : null // daysLeft=-1 → 1 día restante de gracia
+  const graceRemaining = grace ? 2 + daysLeft : null
 
   const subject = grace
-    ? `🚨 Tu licencia venció — te queda${graceRemaining === 1 ? '' : 'n'} ${graceRemaining} día${graceRemaining === 1 ? '' : 's'} para renovar`
-    : urgent
-    ? `⚠️ Tu licencia de Inteliar Label vence HOY`
-    : `Tu licencia de Inteliar Label vence en ${daysLeft} días`
+    ? `Recordatorio de renovación — Inteliar Label`
+    : daysLeft === 1
+    ? `Tu suscripción de Inteliar Label vence mañana`
+    : `Tu suscripción de Inteliar Label vence en ${daysLeft} días`
 
-  const color = grace || urgent ? '#dc2626' : '#1e78dc'
+  const heading = grace
+    ? `Recordatorio de renovación`
+    : daysLeft === 1
+    ? `Tu suscripción vence mañana`
+    : `Tu suscripción vence en ${daysLeft} días`
+
+  const body = grace
+    ? `Tu plan <strong>${planLabel}</strong> ya venció, pero todavía tenés <strong>${graceRemaining} día${graceRemaining === 1 ? '' : 's'} para renovar</strong> y seguir imprimiendo sin interrupciones.`
+    : `Tu plan <strong>${planLabel}</strong> (clave <code style="background:#f4f6fb;padding:2px 6px;border-radius:4px;font-size:13px;">${key}</code>) está por renovarse. Para seguir imprimiendo sin interrupciones, podés renovar cuando quieras.`
 
   const html = `
   <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; color: #1a1a2e;">
-    <div style="background: ${color}; padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+    <div style="background: #1e78dc; padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
       <h1 style="color: #fff; margin: 0; font-size: 22px;">Inteliar Label</h1>
     </div>
     <div style="border: 1px solid #e5e5e5; border-top: none; padding: 28px; border-radius: 0 0 12px 12px;">
-      <p style="font-size: 16px; font-weight: bold;">
-        ${grace
-          ? `🚨 Tu licencia venció — período de gracia: ${graceRemaining} día${graceRemaining === 1 ? '' : 's'} restante${graceRemaining === 1 ? '' : 's'}`
-          : urgent ? '⚠️ Tu licencia vence hoy'
-          : `Tu licencia vence en ${daysLeft} día${daysLeft === 1 ? '' : 's'}`}
-      </p>
-      <p>Tu plan <strong>${planLabel}</strong> (clave <code style="background:#f4f6fb;padding:2px 6px;border-radius:4px;">${key}</code>) ${grace ? 'ya venció' : 'está por vencer'}.</p>
-      <p>${grace
-        ? `Todavía podés imprimir durante el período de gracia, pero <strong>en ${graceRemaining} día${graceRemaining === 1 ? '' : 's'} el agente se bloqueará definitivamente</strong>.`
-        : 'Si no renovás, el agente de impresión dejará de funcionar y no podrás imprimir etiquetas.'}</p>
+      <p style="font-size: 17px; font-weight: bold; margin-top: 0;">${heading}</p>
+      <p style="line-height: 1.6;">${body}</p>
       <div style="text-align: center; margin: 28px 0;">
-        <a href="${checkoutUrl}" style="background: ${color}; color: #fff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">
-          Renovar ahora
+        <a href="${checkoutUrl}" style="background: #1e78dc; color: #fff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px;">
+          Renovar suscripción
         </a>
       </div>
-      <p style="font-size: 13px; color: #666;">O ingresá a <a href="${APP_URL}">${APP_URL}</a> y hacé clic en "Renovar plan".</p>
-      <p style="font-size: 12px; color: #888; margin-top: 24px;">Si ya renovaste, ignorá este mensaje. ¿Preguntas? Respondé este mail.</p>
+      <p style="font-size: 13px; color: #666;">También podés ingresar a <a href="${APP_URL}" style="color:#1e78dc;">${APP_URL}</a> y renovar desde ahí.</p>
+      <p style="font-size: 12px; color: #aaa; margin-top: 24px;">Si ya renovaste, ignorá este mensaje. ¿Preguntas? Respondé este mail.</p>
     </div>
   </div>`
 
