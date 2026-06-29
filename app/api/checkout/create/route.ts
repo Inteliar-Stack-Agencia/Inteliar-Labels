@@ -3,13 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 const MP_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://etiquetar.app"
 
-const PLANS = {
-  monthly: {
-    title: "Inteliar Labels - Plan Mensual",
-    unit_price: 10,
-    currency_id: "USD",
-    external_reference: "monthly",
-  },
+const ONE_TIME_PLANS = {
   pro: {
     title: "Inteliar Labels - Plan Pro",
     unit_price: 19,
@@ -30,7 +24,44 @@ export async function POST(req: NextRequest) {
   }
 
   const { plan, email } = await req.json()
-  const planData = PLANS[plan as keyof typeof PLANS]
+
+  // Monthly plan → subscription (preapproval) so MP charges automatically each month
+  if (plan === "monthly") {
+    const body = {
+      reason: "Inteliar Labels - Plan Mensual",
+      auto_recurring: {
+        frequency: 1,
+        frequency_type: "months",
+        transaction_amount: 10,
+        currency_id: "USD",
+      },
+      payer_email: email || undefined,
+      back_url: `${APP_URL}/pago/exito`,
+      external_reference: "monthly",
+      notification_url: `${APP_URL}/api/webhooks/mercadopago`,
+    }
+
+    const res = await fetch("https://api.mercadopago.com/preapproval", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${MP_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    })
+
+    if (!res.ok) {
+      const err = await res.text()
+      console.error("[checkout/create] subscription error", res.status, err)
+      return NextResponse.json({ error: "Error creando suscripción" }, { status: 500 })
+    }
+
+    const data = await res.json()
+    return NextResponse.json({ url: data.init_point })
+  }
+
+  // Pro / Lifetime → one-time payment preference
+  const planData = ONE_TIME_PLANS[plan as keyof typeof ONE_TIME_PLANS]
   if (!planData) {
     return NextResponse.json({ error: "Plan inválido" }, { status: 400 })
   }
