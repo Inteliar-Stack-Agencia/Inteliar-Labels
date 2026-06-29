@@ -160,13 +160,20 @@ export function PricingSection() {
           ))}
         </div>
 
-        <div className="mt-12 text-center">
+        <div className="mt-12 text-center space-y-3">
           <p className="text-sm text-muted-foreground">
             ¿Dudas antes de comprar?{" "}
             <a href="https://wa.me/5491165689145?text=Hola%2C%20quiero%20saber%20m%C3%A1s%20sobre%20los%20planes%20de%20Inteliar%20Labels" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
               Escribinos por WhatsApp
             </a>{" "}
             y te ayudamos a elegir.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            ¿Necesitás una función específica o un ajuste para tu operación?{" "}
+            <a href="https://wa.me/5491165689145?text=Hola%2C%20necesito%20un%20desarrollo%20personalizado%20para%20Inteliar%20Labels" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+              Contanos qué necesitás
+            </a>{" "}
+            — podemos desarrollarlo para vos.
           </p>
         </div>
       </div>
