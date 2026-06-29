@@ -77,7 +77,7 @@ export function DownloadSection() {
               ))}
             </ul>
             <Button className="w-full gap-2" asChild>
-              <a href="https://github.com/Inteliar-Stack-Agencia/Inteliar-Labels/releases/download/desktop-v10/Inteliar.Label.Setup.1.0.0.exe">
+              <a href="https://github.com/Inteliar-Stack-Agencia/Inteliar-Labels/releases/latest/download/Inteliar.Label.Setup.1.0.0.exe">
                 <Download className="h-4 w-4" />
                 Descargar para Windows
               </a>

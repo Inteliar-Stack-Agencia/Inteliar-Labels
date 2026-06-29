@@ -272,7 +272,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <a
-            href="https://github.com/Inteliar-Stack-Agencia/Inteliar-Labels/releases/download/desktop-v10/Inteliar.Label.Setup.1.0.0.exe"
+            href="https://github.com/Inteliar-Stack-Agencia/Inteliar-Labels/releases/latest/download/Inteliar.Label.Setup.1.0.0.exe"
             className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap"
           >
             <Download className="h-3.5 w-3.5" />
