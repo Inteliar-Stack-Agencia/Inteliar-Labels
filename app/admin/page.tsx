@@ -586,10 +586,10 @@ export default function AdminPage() {
                   <p className="text-xs text-muted-foreground mb-1">{label}</p>
                   <div className="flex items-center gap-2">
                     <code className="flex-1 rounded-lg bg-muted px-3 py-2 text-xs font-mono break-all">
-                      https://v0-inteliar-labels-ui.vercel.app{path}
+                      https://etiquetar.app{path}
                     </code>
                     <button
-                      onClick={() => navigator.clipboard.writeText(`https://v0-inteliar-labels-ui.vercel.app${path}`)}
+                      onClick={() => navigator.clipboard.writeText(`https://etiquetar.app${path}`)}
                       className="rounded-lg border border-border p-2 text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
                     >
                       <Copy className="h-4 w-4" />

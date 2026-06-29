@@ -2,7 +2,7 @@
 // No-ops gracefully if RESEND_API_KEY is not set.
 
 const FROM = process.env.LICENSE_EMAIL_FROM || "Inteliar Labels <onboarding@resend.dev>"
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://v0-inteliar-labels-ui.vercel.app"
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://etiquetar.app"
 
 export async function sendWelcomeEmail(to: string): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY
