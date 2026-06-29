@@ -1,5 +1,28 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
-import { Check, ArrowRight } from "lucide-react"
+import { Check, ArrowRight, Flame } from "lucide-react"
+import { useEffect, useState } from "react"
+
+function useCountdown(targetDate: Date) {
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })
+  useEffect(() => {
+    function calc() {
+      const diff = targetDate.getTime() - Date.now()
+      if (diff <= 0) return setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 })
+      setTimeLeft({
+        days: Math.floor(diff / 86400000),
+        hours: Math.floor((diff % 86400000) / 3600000),
+        minutes: Math.floor((diff % 3600000) / 60000),
+        seconds: Math.floor((diff % 60000) / 1000),
+      })
+    }
+    calc()
+    const id = setInterval(calc, 1000)
+    return () => clearInterval(id)
+  }, [targetDate])
+  return timeLeft
+}
 
 const MONTHLY_URL = process.env.NEXT_PUBLIC_CHECKOUT_MONTHLY_URL || "mailto:inteliarstack.ia@gmail.com?subject=Quiero%20el%20plan%20Mensual"
 const PRO_URL = process.env.NEXT_PUBLIC_CHECKOUT_PRO_URL || "mailto:inteliarstack.ia@gmail.com?subject=Quiero%20el%20plan%20Pro"
@@ -66,10 +89,41 @@ const plans = [
   },
 ]
 
+// Launch pricing ends July 31 2026
+const LAUNCH_END = new Date("2026-07-31T23:59:59-03:00")
+
 export function PricingSection() {
+  const { days, hours, minutes, seconds } = useCountdown(LAUNCH_END)
+  const expired = days === 0 && hours === 0 && minutes === 0 && seconds === 0
+
   return (
     <section id="pricing" className="py-24 px-4 sm:px-6">
       <div className="max-w-5xl mx-auto">
+        {/* Urgency banner */}
+        {!expired && (
+          <div className="flex items-center justify-center gap-3 mb-8 flex-wrap">
+            <div className="inline-flex items-center gap-2 rounded-full bg-amber-500/10 border border-amber-500/30 px-4 py-2 text-sm font-medium text-amber-600 dark:text-amber-400">
+              <Flame className="w-4 h-4" />
+              Precio de lanzamiento — sube el 31 de julio
+            </div>
+            <div className="flex items-center gap-1.5 font-mono text-sm">
+              {[
+                { v: days, l: "d" },
+                { v: hours, l: "h" },
+                { v: minutes, l: "m" },
+                { v: seconds, l: "s" },
+              ].map(({ v, l }) => (
+                <span key={l} className="flex items-center gap-0.5">
+                  <span className="inline-flex items-center justify-center rounded-md bg-muted px-2 py-1 text-sm font-bold text-foreground min-w-[2rem]">
+                    {String(v).padStart(2, "0")}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{l}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="text-center max-w-2xl mx-auto mb-12">
           <p className="text-sm font-medium text-primary mb-3 uppercase tracking-wide">Precios</p>
           <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 text-balance">
