@@ -31,6 +31,52 @@ export async function createLicense(input: CreateLicenseInput) {
     if (existing) return { license: existing, created: false }
   }
 
+  // Renewal: if the customer already has a monthly/pro license (active, grace, or recently expired),
+  // extend it by 30 days instead of creating a new key.
+  if (email && (plan === "monthly" || plan === "pro")) {
+    const graceCutoff = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+    const { data: renewTarget } = await supabaseAdmin
+      .from("licenses")
+      .select("id, key, expires_at, status")
+      .eq("email", email)
+      .eq("plan", plan)
+      .in("status", ["active", "expired"])
+      .gte("expires_at", graceCutoff)
+      .order("expires_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (renewTarget) {
+      // Extend from current expiry (or now if already past) by 30 days
+      const base = renewTarget.expires_at && new Date(renewTarget.expires_at) > new Date()
+        ? new Date(renewTarget.expires_at)
+        : new Date()
+      const newExpiry = new Date(base.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
+
+      const { data: renewed, error } = await supabaseAdmin
+        .from("licenses")
+        .update({
+          expires_at: newExpiry,
+          status: "active",
+          payment_ref: paymentRef ?? null,
+          notes: notes || `Renovado — pago ${paymentRef}`,
+        })
+        .eq("id", renewTarget.id)
+        .select()
+        .single()
+
+      if (error) throw new Error(error.message)
+
+      if (sendEmail && email) {
+        await sendLicenseEmail(email, renewed.key, plan, true).catch((e) =>
+          console.error("[create-license] renewal email failed:", e.message)
+        )
+      }
+
+      return { license: renewed, created: false, renewed: true }
+    }
+  }
+
   const expires_at = (plan === "monthly" || plan === "pro")
     ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
     : null
@@ -49,10 +95,10 @@ export async function createLicense(input: CreateLicenseInput) {
   if (error) throw new Error(error.message)
 
   if (sendEmail && email) {
-    await sendLicenseEmail(email, data.key, plan).catch((e) =>
+    await sendLicenseEmail(email, data.key, plan, false).catch((e) =>
       console.error("[create-license] email failed:", e.message)
     )
   }
 
-  return { license: data, created: true }
+  return { license: data, created: true, renewed: false }
 }
