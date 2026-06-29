@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { ArrowRight, CheckCircle2, FileSpreadsheet, Tag, Printer, Barcode } from "lucide-react"
 import { useEffect, useState } from "react"
+import { analytics } from "@/lib/analytics"
 
 const DEMO_ROWS = [
   { producto: "Empanadas de carne", precio: "$1.250", sku: "EMP-CARNE-12" },
@@ -131,7 +132,7 @@ export function HeroSection() {
 
             <div className="flex flex-col sm:flex-row gap-4">
               <Button size="lg" className="text-base h-12 px-8 gap-2 group" asChild>
-                <a href="/auth/register">
+                <a href="/auth/register" onClick={() => analytics.ctaClick("hero")}>
                   Empezá tu trial gratis
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                 </a>

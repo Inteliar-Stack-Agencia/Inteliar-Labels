@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Check, ArrowRight, Flame } from "lucide-react"
 import { useEffect, useState } from "react"
+import { analytics } from "@/lib/analytics"
 
 function useCountdown(targetDate: Date) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })
@@ -169,7 +170,7 @@ export function PricingSection() {
                 ))}
               </ul>
 
-              <a href={plan.href} target={plan.href.startsWith("http") ? "_blank" : undefined} rel="noopener noreferrer">
+              <a href={plan.href} target={plan.href.startsWith("http") ? "_blank" : undefined} rel="noopener noreferrer" onClick={() => analytics.pricingClick(plan.name.toLowerCase().replace("de por vida", "lifetime").replace("mensual", "monthly") as "monthly" | "pro" | "lifetime")}>
                 <Button
                   className={`w-full h-11 gap-2 group ${
                     plan.highlight ? "" : "bg-foreground hover:bg-foreground/90 text-background"

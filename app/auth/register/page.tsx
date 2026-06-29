@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tag } from "lucide-react"
+import { analytics } from "@/lib/analytics"
 
 export default function RegisterPage() {
   const supabase = createClient()
@@ -21,6 +22,7 @@ export default function RegisterPage() {
     e.preventDefault()
     setLoading(true)
     setError(null)
+    analytics.registerStart()
 
     const { error } = await supabase.auth.signUp({
       email,
@@ -33,6 +35,8 @@ export default function RegisterPage() {
       setLoading(false)
       return
     }
+
+    analytics.registerComplete(email)
 
     // Fire-and-forget welcome email
     fetch("/api/auth/welcome", {
