@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button"
 import { Check, ArrowRight, Flame } from "lucide-react"
 import { useEffect, useState } from "react"
-import { analytics } from "@/lib/analytics"
 
 function useCountdown(targetDate: Date) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })

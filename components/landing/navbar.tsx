@@ -52,7 +52,7 @@ export function Navbar() {
               <a href="/auth/login">Iniciar sesión</a>
             </Button>
             <Button size="sm" asChild className={scrolled ? "ring-2 ring-primary/30 animate-pulse" : ""}>
-              <a href="/auth/register" onClick={() => analytics.ctaClick("navbar")}>{scrolled ? "Empezá gratis · 15 días" : "Probar gratis"}</a>
+              <a href="/auth/register">{scrolled ? "Empezá gratis · 15 días" : "Probar gratis"}</a>
             </Button>
           </div>
 
