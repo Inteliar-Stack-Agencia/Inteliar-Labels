@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Menu, X, Printer } from "lucide-react"
+import { analytics } from "@/lib/analytics"
 
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)

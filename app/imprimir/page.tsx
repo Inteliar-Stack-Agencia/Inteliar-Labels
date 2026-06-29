@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
 import { generateZPL, downloadZPL, prepareImages } from "@/lib/zpl"
 import { sendToPrinterAgent } from "@/lib/printer-agent-client"
+import { analytics } from "@/lib/analytics"
 import { PrinterAgentStatus } from "@/components/printer/agent-status"
 import { PrinterSelector } from "@/components/printer/printer-selector"
 import type { CanvasData } from "@/lib/label-types"
@@ -128,6 +129,7 @@ export default function ImprimirPage() {
     setPrinting(true)
     setPrintResult(null)
     setRetryStatus(null)
+    analytics.printJobStarted(totalLabels)
     try {
       const result = await sendToPrinterAgent(zpl, "zpl", {
         printerId,
@@ -136,6 +138,7 @@ export default function ImprimirPage() {
           setRetryStatus(`Falló el envío (${error.message}). Reintentando… (intento ${attempt + 1} de 3)`)
         },
       })
+      analytics.printJobCompleted(totalLabels)
       setPrintResult({ ok: true, message: result.message ?? "Enviado a la impresora" })
     } catch (err) {
       setPrintResult({ ok: false, message: `${(err as Error).message} — Verificá que la impresora esté encendida, con papel y conectada.` })
