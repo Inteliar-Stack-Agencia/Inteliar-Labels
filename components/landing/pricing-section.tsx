@@ -1,5 +1,8 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
 import { Check, ArrowRight } from "lucide-react"
+import { analytics } from "@/lib/analytics"
 
 const MONTHLY_URL = process.env.NEXT_PUBLIC_CHECKOUT_MONTHLY_URL || "mailto:inteliarstack.ia@gmail.com?subject=Quiero%20el%20plan%20Mensual"
 const PRO_URL = process.env.NEXT_PUBLIC_CHECKOUT_PRO_URL || "mailto:inteliarstack.ia@gmail.com?subject=Quiero%20el%20plan%20Pro"
