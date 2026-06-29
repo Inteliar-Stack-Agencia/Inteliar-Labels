@@ -1,12 +1,9 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Check, ArrowRight } from "lucide-react"
+import { Check, ArrowRight, Loader2 } from "lucide-react"
 import { analytics } from "@/lib/analytics"
-
-const MONTHLY_URL = process.env.NEXT_PUBLIC_CHECKOUT_MONTHLY_URL || "mailto:inteliarstack.ia@gmail.com?subject=Quiero%20el%20plan%20Mensual"
-const PRO_URL = process.env.NEXT_PUBLIC_CHECKOUT_PRO_URL || "mailto:inteliarstack.ia@gmail.com?subject=Quiero%20el%20plan%20Pro"
-const LIFETIME_URL = process.env.NEXT_PUBLIC_CHECKOUT_LIFETIME_URL || "mailto:inteliarstack.ia@gmail.com?subject=Quiero%20el%20plan%20De%20por%20vida"
 
 const plans = [
   {
@@ -23,7 +20,7 @@ const plans = [
       "Soporte por email",
     ],
     cta: "Comprar plan Mensual",
-    href: MONTHLY_URL,
+    plan: "monthly" as const,
     popular: false,
     highlight: false,
   },
@@ -43,7 +40,7 @@ const plans = [
       "Soporte prioritario",
     ],
     cta: "Comprar plan Pro",
-    href: PRO_URL,
+    plan: "pro" as const,
     popular: true,
     highlight: true,
   },
@@ -63,13 +60,37 @@ const plans = [
       "Soporte prioritario",
     ],
     cta: "Comprar de por vida",
-    href: LIFETIME_URL,
+    plan: "lifetime" as const,
     popular: false,
     highlight: false,
   },
 ]
 
 export function PricingSection() {
+  const [loading, setLoading] = useState<string | null>(null)
+
+  async function handleCheckout(plan: "monthly" | "pro" | "lifetime") {
+    setLoading(plan)
+    analytics.pricingClick(plan)
+    try {
+      const res = await fetch("/api/checkout/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        window.location.href = "https://wa.me/5491165689145?text=Hola%2C%20quiero%20comprar%20el%20plan%20" + plan
+      }
+    } catch {
+      window.location.href = "https://wa.me/5491165689145?text=Hola%2C%20quiero%20comprar%20el%20plan%20" + plan
+    } finally {
+      setLoading(null)
+    }
+  }
+
   return (
     <section id="pricing" className="py-24 px-4 sm:px-6">
       <div className="max-w-5xl mx-auto">
@@ -118,17 +139,23 @@ export function PricingSection() {
                 ))}
               </ul>
 
-              <a href={plan.href} target={plan.href.startsWith("http") ? "_blank" : undefined} rel="noopener noreferrer" onClick={() => analytics.pricingClick(plan.name.toLowerCase().replace("de por vida", "lifetime").replace("mensual", "monthly") as "monthly" | "pro" | "lifetime")}>
-                <Button
-                  className={`w-full h-11 gap-2 group ${
-                    plan.highlight ? "" : "bg-foreground hover:bg-foreground/90 text-background"
-                  }`}
-                  variant={plan.highlight ? "default" : "secondary"}
-                >
-                  {plan.cta}
-                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </a>
+              <Button
+                className={`w-full h-11 gap-2 group ${
+                  plan.highlight ? "" : "bg-foreground hover:bg-foreground/90 text-background"
+                }`}
+                variant={plan.highlight ? "default" : "secondary"}
+                onClick={() => handleCheckout(plan.plan)}
+                disabled={loading === plan.plan}
+              >
+                {loading === plan.plan ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    {plan.cta}
+                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                  </>
+                )}
+              </Button>
             </div>
           ))}
         </div>
