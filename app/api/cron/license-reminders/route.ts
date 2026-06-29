@@ -9,7 +9,7 @@ const supabaseAdmin = createClient(
 
 const CHECKOUT_URL = `${process.env.NEXT_PUBLIC_APP_URL || "https://etiquetar.app"}/#pricing`
 
-// Called daily by Vercel Cron. Sends renewal reminders for licenses expiring in 7 days or 1 day.
+// Called daily by Vercel Cron. Sends renewal reminders at 7d, 1d before expiry and during 2-day grace period.
 export async function GET(req: NextRequest) {
   // Verify request comes from Vercel Cron
   const authHeader = req.headers.get("authorization")
@@ -19,19 +19,22 @@ export async function GET(req: NextRequest) {
 
   const now = new Date()
 
-  // Find licenses expiring in ~1 day or ~7 days (within a 2-hour window to avoid double-sending)
+  // Reminders: 7 days before, 1 day before, and each day of the 2-day grace period after expiry
+  // Each window is ±2h around the target time to avoid double-sending across cron runs
   const targets = [
-    { daysLeft: 7, from: addDays(now, 6, 22), to: addDays(now, 7, 2) },
-    { daysLeft: 1, from: addDays(now, 0, 22), to: addDays(now, 1, 2) },
+    { daysLeft: 7,  from: addDays(now, 6, 22),  to: addDays(now, 7, 2),  grace: false },
+    { daysLeft: 1,  from: addDays(now, 0, 22),  to: addDays(now, 1, 2),  grace: false },
+    { daysLeft: -1, from: addDays(now, -2, 2),  to: addDays(now, -1, 2), grace: true  },
+    { daysLeft: -2, from: addDays(now, -3, 2),  to: addDays(now, -2, 2), grace: true  },
   ]
 
   const results: { email: string; daysLeft: number; ok: boolean; error?: string }[] = []
 
-  for (const { daysLeft, from, to } of targets) {
+  for (const { daysLeft, from, to, grace } of targets) {
     const { data: licenses, error } = await supabaseAdmin
       .from("licenses")
       .select("key, plan, email")
-      .eq("status", "active")
+      .in("status", grace ? ["active", "expired"] : ["active"])
       .in("plan", ["monthly", "pro"])
       .gte("expires_at", from.toISOString())
       .lt("expires_at", to.toISOString())
