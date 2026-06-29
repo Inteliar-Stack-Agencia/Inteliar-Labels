@@ -25,9 +25,11 @@ export async function sendRenewalEmail(
     ? `⚠️ Tu licencia de Inteliar Label vence HOY`
     : `Tu licencia de Inteliar Label vence en ${daysLeft} días`
 
+  const color = grace || urgent ? '#dc2626' : '#1e78dc'
+
   const html = `
   <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; color: #1a1a2e;">
-    <div style="background: ${grace || urgent ? '#dc2626' : '#1e78dc'}; padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+    <div style="background: ${color}; padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
       <h1 style="color: #fff; margin: 0; font-size: 22px;">Inteliar Label</h1>
     </div>
     <div style="border: 1px solid #e5e5e5; border-top: none; padding: 28px; border-radius: 0 0 12px 12px;">
@@ -39,10 +41,10 @@ export async function sendRenewalEmail(
       </p>
       <p>Tu plan <strong>${planLabel}</strong> (clave <code style="background:#f4f6fb;padding:2px 6px;border-radius:4px;">${key}</code>) ${grace ? 'ya venció' : 'está por vencer'}.</p>
       <p>${grace
-        ? `Todavía podés imprimir durante el período de gracia, pero <strong>en ${graceRemaining} día${graceRemaining === 1 ? '' : 's'} el agente se bloqueará</strong>.`
+        ? `Todavía podés imprimir durante el período de gracia, pero <strong>en ${graceRemaining} día${graceRemaining === 1 ? '' : 's'} el agente se bloqueará definitivamente</strong>.`
         : 'Si no renovás, el agente de impresión dejará de funcionar y no podrás imprimir etiquetas.'}</p>
       <div style="text-align: center; margin: 28px 0;">
-        <a href="${checkoutUrl}" style="background: ${urgent ? '#dc2626' : '#1e78dc'}; color: #fff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">
+        <a href="${checkoutUrl}" style="background: ${color}; color: #fff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">
           Renovar ahora
         </a>
       </div>
