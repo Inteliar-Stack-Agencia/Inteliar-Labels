@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 
 const FROM = process.env.LICENSE_EMAIL_FROM || "Inteliar Labels <onboarding@resend.dev>"
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://v0-inteliar-labels-ui.vercel.app"
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://etiquetar.app"
 
 export async function POST(req: NextRequest) {
   const { email, daysLeft, labelsLeft } = await req.json()
