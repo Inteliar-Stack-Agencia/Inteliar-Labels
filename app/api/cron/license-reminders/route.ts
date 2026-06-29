@@ -22,9 +22,8 @@ export async function GET(req: NextRequest) {
   // Reminders: 7 days before, 1 day before, and each day of the 2-day grace period after expiry
   // Each window is ±2h around the target time to avoid double-sending across cron runs
   const targets = [
-    { daysLeft: 7,  from: addDays(now, 6, 22),  to: addDays(now, 7, 2),  grace: false },
+    { daysLeft: 3,  from: addDays(now, 2, 22),  to: addDays(now, 3, 2),  grace: false },
     { daysLeft: 1,  from: addDays(now, 0, 22),  to: addDays(now, 1, 2),  grace: false },
-    { daysLeft: -1, from: addDays(now, -2, 2),  to: addDays(now, -1, 2), grace: true  },
     { daysLeft: -2, from: addDays(now, -3, 2),  to: addDays(now, -2, 2), grace: true  },
   ]
 
