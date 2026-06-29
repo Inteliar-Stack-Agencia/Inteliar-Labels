@@ -76,14 +76,14 @@ export function DownloadSection() {
                 </li>
               ))}
             </ul>
-            <Button className="w-full gap-2" variant="outline" asChild>
-              <a href="mailto:inteliarstack.ia@gmail.com?subject=Descargar%20agente%20de%20impresión">
+            <Button className="w-full gap-2" asChild>
+              <a href="https://github.com/Inteliar-Stack-Agencia/Inteliar-Labels/releases/download/desktop-v10/Inteliar.Label.Setup.1.0.0.exe">
                 <Download className="h-4 w-4" />
-                Solicitar descarga
+                Descargar para Windows
               </a>
             </Button>
             <p className="text-center text-xs text-muted-foreground -mt-2">
-              Te enviamos el instalador por email al registrarte
+              v1.0.0 · Windows 10/11 · 74 MB · No requiere Node.js
             </p>
           </div>
         </div>

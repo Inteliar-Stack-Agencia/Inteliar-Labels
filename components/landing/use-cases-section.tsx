@@ -49,12 +49,12 @@ export function UseCasesSection() {
     <section className="py-24 px-4 sm:px-6">
       <div className="max-w-6xl mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <p className="text-sm font-medium text-primary mb-3 uppercase tracking-wide">Casos de uso</p>
+          <p className="text-sm font-medium text-primary mb-3 uppercase tracking-wide">Para quién es</p>
           <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 text-balance">
-            Pensado para empresas que imprimen etiquetas todos los días
+            La alternativa simple para comercios y pymes
           </h2>
           <p className="text-lg text-muted-foreground">
-            Productores de alimentos, depósitos, comercios, vendedores online y mayoristas que necesitan imprimir rápido, sin errores y sin depender de IT.
+            BarTender y NiceLabel cuestan cientos de dólares y requieren capacitación. Inteliar Labels lo instalás vos mismo en 5 minutos y empezás a imprimir desde tu Excel de siempre — sin IT, sin licencias complejas, sin vueltas.
           </p>
         </div>
 
