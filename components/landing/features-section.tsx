@@ -1,4 +1,4 @@
-import { Zap, Code, FileSpreadsheet, Printer, Sparkles, History } from "lucide-react"
+import { Zap, Code, FileSpreadsheet, Printer, Sparkles, History, Monitor } from "lucide-react"
 
 const features = [
   {
@@ -36,6 +36,12 @@ const features = [
     title: "Historial y reimpresión",
     description: "Todos los trabajos quedan guardados. Podés reimprimir cualquier lote con un clic, sin volver a cargar el Excel.",
     highlight: "Reimpresión instantánea",
+  },
+  {
+    icon: Monitor,
+    title: "Control de sucursales y dispositivos",
+    description: "Cada licencia se activa por dispositivo. Desde tu panel podés ver qué PCs tienen el agente activo y desactivar cualquiera al instante — sin llamar a soporte.",
+    highlight: "Gestión desde el panel",
   },
 ]
 

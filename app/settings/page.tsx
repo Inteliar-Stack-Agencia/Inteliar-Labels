@@ -29,6 +29,7 @@ import {
   ShieldCheck,
   AlertTriangle,
   Clock,
+  Monitor,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
@@ -150,6 +151,7 @@ export default function SettingsPage() {
   const [licenseError, setLicenseError] = useState<string | null>(null)
   const [licenseActivating, setLicenseActivating] = useState(false)
   const [keyCopied, setKeyCopied] = useState(false)
+  const [deactivating, setDeactivating] = useState<string | null>(null)
 
   useEffect(() => {
     loadAccountData()
@@ -199,6 +201,23 @@ export default function SettingsPage() {
       if (user) await loadLicense(supabase, user.id)
     } finally {
       setLicenseActivating(false)
+    }
+  }
+
+  async function handleDeactivateDevice(deviceId: string) {
+    setDeactivating(deviceId)
+    try {
+      const res = await fetch("/api/license/device", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ device_id: deviceId }),
+      })
+      if (!res.ok) return
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) await loadLicense(supabase, user.id)
+    } finally {
+      setDeactivating(null)
     }
   }
 
@@ -971,23 +990,53 @@ export default function SettingsPage() {
                         </div>
                       </div>
 
-                      {Array.isArray(license.activations) && license.activations.length > 0 && (
-                        <div className="border-t border-border pt-4">
-                          <p className="text-xs text-muted-foreground mb-2">
-                            Dispositivos activados ({license.activations.length}/{license.max_devices})
+                      <div className="border-t border-border pt-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <p className="text-xs font-medium text-foreground">
+                            Dispositivos activados
                           </p>
-                          <div className="space-y-1.5">
+                          <span className={cn(
+                            "text-xs px-2 py-0.5 rounded-full font-medium",
+                            (license.activations?.length ?? 0) >= license.max_devices
+                              ? "bg-amber-500/10 text-amber-600"
+                              : "bg-muted text-muted-foreground"
+                          )}>
+                            {license.activations?.length ?? 0}/{license.max_devices} usados
+                          </span>
+                        </div>
+                        {Array.isArray(license.activations) && license.activations.length > 0 ? (
+                          <div className="space-y-2">
                             {license.activations.map((a) => (
-                              <div key={a.device_id} className="flex items-center justify-between text-sm">
-                                <span className="text-foreground">{a.hostname || a.device_id}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {new Date(a.last_seen).toLocaleDateString("es-AR")}
-                                </span>
+                              <div key={a.device_id} className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2">
+                                <Monitor className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-foreground truncate">
+                                    {a.hostname || "Dispositivo desconocido"}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Último uso: {new Date(a.last_seen).toLocaleDateString("es-AR")}
+                                  </p>
+                                </div>
+                                <button
+                                  onClick={() => handleDeactivateDevice(a.device_id)}
+                                  disabled={deactivating === a.device_id}
+                                  className="flex-shrink-0 text-xs text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1 disabled:opacity-50"
+                                  title="Desactivar este dispositivo"
+                                >
+                                  {deactivating === a.device_id
+                                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    : <XCircle className="h-3.5 w-3.5" />}
+                                  Desactivar
+                                </button>
                               </div>
                             ))}
                           </div>
-                        </div>
-                      )}
+                        ) : (
+                          <p className="text-xs text-muted-foreground">
+                            Ningún dispositivo activado aún. Instalá el agente y pegá la clave.
+                          </p>
+                        )}
+                      </div>
                     </div>
 
                     {/* Upgrade CTA for monthly plan */}

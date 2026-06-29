@@ -1,14 +1,21 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Menu, X, Printer } from "lucide-react"
 
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const fn = () => setScrolled(window.scrollY > 80)
+    window.addEventListener("scroll", fn, { passive: true })
+    return () => window.removeEventListener("scroll", fn)
+  }, [])
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
+    <header className={`fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border transition-shadow duration-300 ${scrolled ? "shadow-lg" : ""}`}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-2">
@@ -31,6 +38,9 @@ export function Navbar() {
             <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Precios
             </a>
+            <a href="#faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              FAQ
+            </a>
             <a href="/manual" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Manual
             </a>
@@ -40,8 +50,8 @@ export function Navbar() {
             <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
               <a href="/auth/login">Iniciar sesión</a>
             </Button>
-            <Button size="sm" asChild>
-              <a href="/auth/register">Probar gratis</a>
+            <Button size="sm" asChild className={scrolled ? "ring-2 ring-primary/30 animate-pulse" : ""}>
+              <a href="/auth/register">{scrolled ? "Empezá gratis · 15 días" : "Probar gratis"}</a>
             </Button>
           </div>
 
@@ -68,6 +78,9 @@ export function Navbar() {
               </a>
               <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 Precios
+              </a>
+              <a href="#faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                FAQ
               </a>
               <a href="/manual" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 Manual
