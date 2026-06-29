@@ -9,6 +9,7 @@ const MONTHLY_LABELS_MAX = 2000
 
 export interface PlanLimits {
   plan: "trial" | "expired" | "monthly" | "pro" | "lifetime"
+  expiresAt: string | null
   // Trial
   trialDaysLeft: number
   trialLabelsLeft: number
@@ -26,6 +27,7 @@ export interface PlanLimits {
 export function usePlanLimits(): PlanLimits {
   const [limits, setLimits] = useState<PlanLimits>({
     plan: "trial",
+    expiresAt: null,
     trialDaysLeft: TRIAL_DAYS,
     trialLabelsLeft: TRIAL_LABELS,
     trialLabelsUsed: 0,
@@ -47,15 +49,18 @@ export function usePlanLimits(): PlanLimits {
         .from("licenses")
         .select("plan, status, expires_at")
         .eq("user_id", user.id)
-        .eq("status", "active")
+        .in("status", ["active", "expired"])
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle()
 
+      // Active = valid license OR within 2-day grace period after expiry
+      const graceDeadline = licenseData?.expires_at
+        ? new Date(new Date(licenseData.expires_at).getTime() + 2 * 24 * 60 * 60 * 1000)
+        : null
       const hasActiveLicense =
         licenseData &&
-        licenseData.status === "active" &&
-        (!licenseData.expires_at || new Date(licenseData.expires_at) > new Date())
+        (!licenseData.expires_at || new Date() < (graceDeadline!))
 
       if (hasActiveLicense) {
         const plan = licenseData.plan as "monthly" | "pro" | "lifetime"
@@ -80,6 +85,7 @@ export function usePlanLimits(): PlanLimits {
 
           setLimits({
             plan,
+            expiresAt: licenseData.expires_at ?? null,
             trialDaysLeft: 0,
             trialLabelsLeft: 0,
             trialLabelsUsed: 0,
@@ -96,6 +102,7 @@ export function usePlanLimits(): PlanLimits {
         // pro / lifetime — unlimited
         setLimits({
           plan,
+          expiresAt: licenseData.expires_at ?? null,
           trialDaysLeft: 0,
           trialLabelsLeft: 0,
           trialLabelsUsed: 0,
@@ -138,6 +145,7 @@ export function usePlanLimits(): PlanLimits {
 
       setLimits({
         plan: trialExpired ? "expired" : "trial",
+        expiresAt: null,
         trialDaysLeft: daysLeft,
         trialLabelsLeft: labelsLeft,
         trialLabelsUsed: totalLabelsUsed,

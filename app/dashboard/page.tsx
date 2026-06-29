@@ -5,7 +5,7 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Header } from "@/components/dashboard/header"
 import { KpiCard } from "@/components/dashboard/kpi-card"
 import { QuickActions } from "@/components/dashboard/quick-actions"
-import { Tag, Printer, FileStack, CheckCircle2, Clock, AlertCircle, Rocket, X, Timer, Download, Loader2 } from "lucide-react"
+import { Tag, Printer, FileStack, CheckCircle2, Clock, AlertCircle, Rocket, X, Timer, Download, Loader2, ShieldCheck } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
@@ -182,6 +182,27 @@ export default function DashboardPage() {
                     <span className="text-muted-foreground">— seleccioná plantilla y lanzá el trabajo</span>
                   </li>
                 </ol>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Active license banner */}
+        {!planLimits.loading && !["trial", "expired"].includes(planLimits.plan) && (
+          <div className="rounded-xl border border-green-500/30 bg-green-500/10 px-5 py-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <ShieldCheck className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-green-700 dark:text-green-400">
+                  Licencia activa —{" "}
+                  {planLimits.plan === "lifetime" ? "De por vida" : planLimits.plan === "pro" ? "Pro" : "Mensual"}
+                </p>
+                {planLimits.expiresAt && (
+                  <p className="text-xs text-green-600/80 dark:text-green-500/80">
+                    Vence el {new Date(planLimits.expiresAt).toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })}
+                    {planLimits.plan === "monthly" ? " · Se renueva automáticamente" : ""}
+                  </p>
+                )}
               </div>
             </div>
           </div>
