@@ -21,8 +21,8 @@ export function FinalCtaSection() {
             </a>
           </Button>
           <Button size="lg" variant="outline" className="h-14 px-10 text-base border-background/30 text-background hover:bg-background/10 hover:text-background" asChild>
-            <a href="mailto:inteliarstack.ia@gmail.com?subject=Consulta%20Inteliar%20Labels">
-              Hablar con un humano
+            <a href="https://wa.me/5491165689145?text=Hola%2C%20tengo%20una%20consulta%20sobre%20Inteliar%20Labels" target="_blank" rel="noopener noreferrer">
+              Hablar por WhatsApp
             </a>
           </Button>
         </div>
