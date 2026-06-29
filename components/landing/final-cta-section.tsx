@@ -6,7 +6,7 @@ export function FinalCtaSection() {
     <section className="py-24 px-4 sm:px-6 bg-foreground">
       <div className="max-w-4xl mx-auto text-center">
         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-background mb-6 text-balance">
-          Dejá de imprimir etiquetas a lo bestia
+          Imprimí todo lo que necesitás sin gastar de más
         </h2>
         <p className="text-lg sm:text-xl text-background/70 max-w-2xl mx-auto mb-8">
           Empezá tu trial de 15 días gratis hoy. Sin tarjeta, sin compromiso.
