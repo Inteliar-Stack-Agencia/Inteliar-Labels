@@ -44,6 +44,21 @@ const faqs = [
     answer:
       "El plan Mensual se puede cancelar cuando quieras. El De por vida es un pago único sin renovaciones.",
   },
+  {
+    question: "¿Es una alternativa a BarTender?",
+    answer:
+      "Sí. Inteliar Labels hace lo mismo que BarTender para la mayoría de los casos de uso: diseñar plantillas, importar datos desde Excel o CSV e imprimir en impresoras térmicas ZPL y TSPL. La diferencia es que es más simple, 100% web y tiene un precio accesible desde US$10/mes.",
+  },
+  {
+    question: "¿Funciona para imprimir etiquetas de precio, envío e inventario?",
+    answer:
+      "Sí, es ideal para los tres casos. Comercios usan Inteliar Labels para etiquetas de precio con código de barras. Empresas de logística lo usan para etiquetas de envío con QR. Depósitos y distribuidoras lo usan para control de inventario con SKU.",
+  },
+  {
+    question: "¿Puedo imprimir códigos de barras y QR?",
+    answer:
+      "Sí. El diseñador visual incluye soporte nativo para códigos de barras (Code 128, EAN-13, EAN-8, Code 39) y códigos QR. Podés vincularlos a cualquier columna de tu planilla.",
+  },
 ]
 
 export function FaqSection() {

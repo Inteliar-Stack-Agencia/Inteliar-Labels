@@ -126,8 +126,8 @@ export function HeroSection() {
             </h1>
 
             <p className="text-lg sm:text-xl text-muted-foreground max-w-xl leading-relaxed">
-              Subí tu Excel, elegí un template e imprimí al instante en tu impresora térmica.
-              Diseñador visual con IA y soporte para códigos de barras. Sin capacitación.
+              Subí tu Excel o CSV, elegí un template e imprimí al instante en tu impresora térmica Zebra, TSC, Honeywell o Godex.
+              Diseñador visual con IA, códigos de barras, QR y más. La alternativa simple a BarTender. Sin capacitación.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
@@ -149,7 +149,7 @@ export function HeroSection() {
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-green-600" />
-                <span>Compatible con Zebra, Honeywell, TSC y más</span>
+                <span>Compatible con Zebra, Honeywell, TSC, Godex, Brother y más</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-green-600" />
