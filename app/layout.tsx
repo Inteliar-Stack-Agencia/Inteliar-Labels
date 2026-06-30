@@ -8,6 +8,9 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://etiquetar.app'),
+  verification: {
+    google: 'nemBe9x4IsZm82Op4LTeiMRz8HDCdYi6mu3FrrlBr_M',
+  },
   title: 'Inteliar Labels — Imprimí 100+ etiquetas en segundos desde Excel',
   description: 'La forma más rápida de imprimir etiquetas térmicas desde Excel o CSV. Templates con variables, diseñador visual con IA, soporte Zebra/TSC/Honeywell. Trial 15 días gratis, sin tarjeta.',
   keywords: ['etiquetas termicas', 'impresora zebra', 'ZPL', 'TSPL', 'etiquetas desde excel', 'bartender alternativa', 'software etiquetas', 'impresion etiquetas', 'etiquetas de precio', 'etiquetas zebra argentina'],
