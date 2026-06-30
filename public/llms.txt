@@ -1,0 +1,53 @@
+# Inteliar Labels
+
+> Software SaaS para imprimir etiquetas térmicas desde Excel o CSV, con diseñador visual e inteligencia artificial. Desarrollado por Inteliar Stack (Argentina).
+
+## Qué es
+
+Inteliar Labels es una herramienta web + agente de escritorio que permite a empresas imprimir etiquetas térmicas (Zebra, TSC, Honeywell, Brother y otras) directamente desde planillas de Excel o archivos CSV, sin necesidad de software caro como BarTender.
+
+## Características principales
+
+- Diseñador visual de plantillas con soporte para variables dinámicas
+- Asistente de IA para crear plantillas por descripción
+- Importación masiva desde Excel y CSV
+- Soporte para impresoras térmicas: Zebra (ZPL), TSC (TSPL), Honeywell, Brother
+- Agente local para Windows que gestiona la impresión
+- Control de múltiples sucursales y dispositivos
+- Trial gratuito de 15 días sin tarjeta de crédito
+
+## Planes
+
+- **Mensual** (US$10/mes): 1 sucursal, hasta 2.000 impresiones/mes
+- **Pro** (US$19/mes): hasta 3 sucursales, impresiones ilimitadas, soporte prioritario
+- **De por vida** (US$300 único): hasta 5 sucursales, todas las actualizaciones futuras
+
+## Casos de uso
+
+- Impresión de etiquetas de precio para comercios y supermercados
+- Etiquetas de producto para fabricantes y distribuidores
+- Etiquetas de envío y logística
+- Etiquetas de inventario y depósito
+- Cualquier empresa que imprima más de 100 etiquetas por vez
+
+## Tecnología
+
+- Frontend: Next.js 15 (App Router), TypeScript, Tailwind CSS
+- Backend: Supabase (PostgreSQL + Auth)
+- Agente: Node.js para Windows
+- Pagos: MercadoPago
+- Hosting: Vercel
+
+## Empresa
+
+Inteliar Labels es un producto de **Inteliar Stack**, empresa de desarrollo de software con sede en Argentina.
+
+- Sitio web: https://etiquetar.app
+- Contacto: inteliarstack.ia@gmail.com
+- WhatsApp: +54 9 11 6568 9145
+
+## Documentación
+
+- Manual de uso: https://etiquetar.app/manual
+- Descarga del agente: https://etiquetar.app/#download
+- Precios: https://etiquetar.app/#pricing
