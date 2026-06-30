@@ -183,6 +183,31 @@ export async function sendToPrinterAgent(
   throw lastError
 }
 
+/**
+ * Print pre-rendered label images through the printer's Windows driver.
+ * Use this for USB printers whose driver does not interpret raw ZPL.
+ */
+export async function sendImagesToPrinterAgent(
+  images: string[],
+  widthMm: number,
+  heightMm: number,
+  opts: { agentUrl?: string; printerId?: string } = {},
+): Promise<PrintResult> {
+  const url = opts.agentUrl ?? getPrinterAgentUrl()
+  const endpoint = opts.printerId ? `${url}/print-image/${opts.printerId}` : `${url}/print-image`
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ images, widthMm, heightMm }),
+    signal: AbortSignal.timeout(120000),
+  })
+  const result = (await res.json()) as PrintResult
+  if (!res.ok || result.success === false) {
+    throw new Error(result.error ?? result.message ?? "Error de impresión por driver")
+  }
+  return result
+}
+
 export async function getPrinterAgentLog(agentUrl?: string): Promise<AgentLogEntry[]> {
   const url = agentUrl ?? getPrinterAgentUrl()
   const res = await fetch(`${url}/log`)

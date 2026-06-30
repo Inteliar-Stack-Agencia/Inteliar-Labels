@@ -20,7 +20,7 @@ import {
   Download,
 } from "lucide-react"
 import { generateZPL, downloadZPL, prepareImages, type GenerateZPLOptions } from "@/lib/zpl"
-import { sendToPrinterAgent } from "@/lib/printer-agent-client"
+import { printLabels } from "@/lib/print-label"
 import { PrinterAgentStatus } from "@/components/printer/agent-status"
 import { PrinterSelector } from "@/components/printer/printer-selector"
 import { cn } from "@/lib/utils"
@@ -237,13 +237,11 @@ export default function JobDetailPage() {
     setPrinting(true)
     setPrintResult(null)
     try {
-      const imageCache = await prepareImages(template.canvas_data)
-      const zpl = generateZPL(
+      const result = await printLabels(
         { width_mm: template.width_mm, height_mm: template.height_mm, canvas_data: template.canvas_data },
         rows,
-        { startFromLabel, endAtLabel: endAtLabel === "" ? undefined : endAtLabel, imageCache }
+        { startFromLabel, endAtLabel: endAtLabel === "" ? undefined : endAtLabel, printerId, retries: 2 },
       )
-      const result = await sendToPrinterAgent(zpl, "zpl", { printerId, retries: 2 })
       const printedCount = result.labels ?? 0
       const total = job?.total_labels ?? 0
       const isFullRange = startFromLabel <= 1 && (endAtLabel === "" || endAtLabel >= total)
