@@ -88,7 +88,7 @@ export function Footer() {
             © {new Date().getFullYear()} Inteliar Labels. Todos los derechos reservados.
           </p>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span>Hecho para empresas que imprimen más inteligente.</span>
+            <span>Desarrollado por <a href="https://inteliarstack.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">Inteliar Stack</a></span>
           </div>
         </div>
       </div>
