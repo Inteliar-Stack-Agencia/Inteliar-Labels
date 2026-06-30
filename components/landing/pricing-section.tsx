@@ -82,9 +82,12 @@ export function PricingSection() {
       if (data.url) {
         window.location.href = data.url
       } else {
+        console.error("[checkout] sin URL:", data)
+        alert(`Error al iniciar el pago: ${data.error || "respuesta inesperada"}. Te redirigimos a WhatsApp.`)
         window.location.href = "https://wa.me/5491165689145?text=Hola%2C%20quiero%20comprar%20el%20plan%20" + plan
       }
-    } catch {
+    } catch (e: any) {
+      console.error("[checkout] excepción:", e.message)
       window.location.href = "https://wa.me/5491165689145?text=Hola%2C%20quiero%20comprar%20el%20plan%20" + plan
     } finally {
       setLoading(null)
