@@ -140,13 +140,21 @@ export function PricingSection() {
   const plans = region === "ARS" ? plansARS : plansUSD
 
   async function handleCheckout(plan: "monthly" | "pro" | "lifetime", currency: "ARS" | "USD") {
+    let email: string | null = null
+    if (currency === "ARS" && (plan === "monthly" || plan === "pro")) {
+      email = window.prompt("Ingresá tu email para continuar con el pago:")
+      if (!email || !email.includes("@")) {
+        alert("Email inválido. Por favor ingresá un email válido.")
+        return
+      }
+    }
     setLoading(plan)
     analytics.pricingClick(plan)
     try {
       const res = await fetch("/api/checkout/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, currency }),
+        body: JSON.stringify({ plan, currency, email }),
       })
       const data = await res.json()
       if (data.url) {

@@ -27,14 +27,14 @@ const STRIPE_PLANS_USD: Record<string, { priceId?: string; amount: number; name:
 
 // ── MercadoPago ───────────────────────────────────────────────────────────────
 
-async function createMPSubscription(plan: string) {
+async function createMPSubscription(plan: string, payerEmail?: string) {
   const amountMap: Record<string, number> = { monthly: 14999, pro: 29999 }
   const nameMap: Record<string, string> = {
     monthly: "Inteliar Labels - Plan Mensual",
     pro: "Inteliar Labels - Plan Pro",
   }
 
-  const body = {
+  const body: Record<string, any> = {
     reason: nameMap[plan] || "Inteliar Labels",
     auto_recurring: {
       frequency: 1,
@@ -46,6 +46,8 @@ async function createMPSubscription(plan: string) {
     external_reference: plan,
     notification_url: `${APP_URL}/api/webhooks/mercadopago`,
   }
+
+  if (payerEmail) body.payer_email = payerEmail
 
   const res = await fetch("https://api.mercadopago.com/preapproval", {
     method: "POST",
@@ -175,7 +177,7 @@ export async function POST(req: NextRequest) {
     if (!MP_TOKEN) return NextResponse.json({ error: "MercadoPago no configurado" }, { status: 500 })
 
     if (plan === "monthly" || plan === "pro") {
-      const url = await createMPSubscription(plan)
+      const url = await createMPSubscription(plan, email)
       return NextResponse.json({ url })
     }
 
