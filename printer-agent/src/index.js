@@ -26,6 +26,7 @@ import fs from 'fs'
 import path from 'path'
 import { execFile, exec } from 'child_process'
 import { fileURLToPath } from 'url'
+import os from 'os'
 import { randomUUID } from 'crypto'
 import { createInterface } from 'readline'
 
@@ -329,11 +330,18 @@ function printViaUsb(data, printer) {
 
     if (platform === 'win32') {
       const b64 = Buffer.from(data, 'binary').toString('base64')
+      // Write script to a temp .ps1 file so -File can be used instead of -Command.
+      // Printer names with parentheses (e.g. "Honeywell PC42t plus (203 dpi)") break
+      // PowerShell expression parsing when passed inline via -Command.
+      const tmpScript = path.join(os.tmpdir(), `inteliar_print_${Date.now()}.ps1`)
+      fs.writeFileSync(tmpScript, WINSPOOL_PS, 'utf8')
       execFile('powershell', [
-        '-NoProfile', '-NonInteractive', '-Command', WINSPOOL_PS,
+        '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+        '-File', tmpScript,
         '-printerName', queueName,
         '-dataBase64', b64,
       ], { timeout: 15000 }, (err, stdout, stderr) => {
+        try { fs.unlinkSync(tmpScript) } catch {}
         if (err) return reject(new Error(`USB WinSpool: ${stderr || err.message}`))
         if (!stdout.includes('OK:')) return reject(new Error(`USB WinSpool: respuesta inesperada: ${stdout}`))
         resolve()
