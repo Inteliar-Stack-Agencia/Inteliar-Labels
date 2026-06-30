@@ -1,27 +1,65 @@
 import { track } from "@vercel/analytics"
+import { gtagEvent } from "@/components/google-analytics"
+
+function event(name: string, params?: Record<string, any>) {
+  track(name, params)
+  gtagEvent(name, params)
+}
 
 // Conversion funnel events
 export const analytics = {
-  // Landing
+  // ── Landing ──────────────────────────────────────────────────────────────
   ctaClick: (location: "hero" | "navbar" | "pricing" | "final-cta") =>
-    track("cta_click", { location }),
+    event("cta_click", { location }),
 
   pricingClick: (plan: "monthly" | "pro" | "lifetime") =>
-    track("pricing_click", { plan }),
+    event("pricing_click", { plan }),
 
-  // Auth
-  registerStart: () => track("register_start"),
-  registerComplete: (email: string) => track("register_complete", { email }),
+  // ── Auth (embudo paso 1 y 2) ──────────────────────────────────────────────
+  registerStart: () => event("register_start"),
 
-  // Core actions
-  templateCreated: () => track("template_created"),
-  printJobStarted: (labelCount: number) => track("print_job_started", { label_count: labelCount }),
-  printJobCompleted: (labelCount: number) => track("print_job_completed", { label_count: labelCount }),
+  registerComplete: (email: string) => {
+    event("sign_up", { method: "email" })           // nombre estándar GA4
+    event("register_complete", { email })
+  },
 
-  // License
-  licenseActivated: (plan: string) => track("license_activated", { plan }),
-  deviceDeactivated: () => track("device_deactivated"),
+  // ── Onboarding (embudo paso 3) ────────────────────────────────────────────
+  agentDownloaded: () => event("agent_downloaded"),  // clic en descargar .exe
 
-  // Upgrade intent
-  upgradeCtaClick: (from: string, to: string) => track("upgrade_cta_click", { from, to }),
+  // ── Core actions (embudo paso 4 y 5) ─────────────────────────────────────
+  templateCreated: () => event("template_created"),
+
+  firstPrint: () => event("first_print"),            // primera impresión exitosa
+
+  printJobStarted: (labelCount: number) =>
+    event("print_job_started", { label_count: labelCount }),
+
+  printJobCompleted: (labelCount: number) =>
+    event("print_job_completed", { label_count: labelCount }),
+
+  // ── License / pago (embudo paso 6) ───────────────────────────────────────
+  licenseActivated: (plan: string) => {
+    event("purchase", {                              // nombre estándar GA4 / Google Ads
+      transaction_id: `license_${Date.now()}`,
+      value: plan === "monthly" ? 10 : plan === "pro" ? 19 : 300,
+      currency: "USD",
+      items: [{ item_name: `plan_${plan}`, quantity: 1 }],
+    })
+    event("license_activated", { plan })
+  },
+
+  trialStarted: () => event("trial_started"),
+
+  // ── Integraciones ─────────────────────────────────────────────────────────
+  tiendanubeConnected: (total: number) =>
+    event("tiendanube_connected", { product_count: total }),
+
+  tiendanubeSynced: (total: number) =>
+    event("tiendanube_synced", { product_count: total }),
+
+  // ── Upgrade intent ────────────────────────────────────────────────────────
+  upgradeCtaClick: (from: string, to: string) =>
+    event("upgrade_cta_click", { from, to }),
+
+  deviceDeactivated: () => event("device_deactivated"),
 }

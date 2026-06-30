@@ -1,5 +1,8 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
 import { Download, Monitor, Globe, Shield, ArrowRight } from "lucide-react"
+import { analytics } from "@/lib/analytics"
 
 export function DownloadSection() {
   return (
@@ -76,7 +79,7 @@ export function DownloadSection() {
                 </li>
               ))}
             </ul>
-            <Button className="w-full gap-2" asChild>
+            <Button className="w-full gap-2" asChild onClick={() => analytics.agentDownloaded()}>
               <a href="https://github.com/Inteliar-Stack-Agencia/Inteliar-Labels/releases/latest/download/Inteliar.Label.Setup.1.0.0.exe">
                 <Download className="h-4 w-4" />
                 Descargar para Windows
