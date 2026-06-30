@@ -16,6 +16,9 @@ import {
   X,
   Eye,
   Download,
+  ShoppingBag,
+  Loader2,
+  RefreshCw,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import * as XLSX from "xlsx"
@@ -49,7 +52,19 @@ export default function UploadPage() {
   const [excludedRows, setExcludedRows] = useState<Set<number>>(new Set())
   const [suggestedMatch, setSuggestedMatch] = useState<{ name: string; matched: number; total: number } | null>(null)
 
+  // Tiendanube import
+  const [showTNModal, setShowTNModal] = useState(false)
+  const [tnUrl, setTnUrl] = useState("")
+  const [tnLoading, setTnLoading] = useState(false)
+  const [tnError, setTnError] = useState("")
+  const [tnLastSync, setTnLastSync] = useState<{ url: string; syncedAt: string; total: number } | null>(null)
+
   useEffect(() => {
+    // Load last TN sync from localStorage
+    try {
+      const raw = localStorage.getItem("tn_last_sync")
+      if (raw) setTnLastSync(JSON.parse(raw))
+    } catch {}
     loadSavedLists()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -237,6 +252,38 @@ export default function UploadPage() {
     loadTemplates(list.columns)
   }
 
+  const importFromTiendanube = async () => {
+    if (!tnUrl.trim()) { setTnError("Ingresá la URL de tu tienda."); return }
+    setTnLoading(true)
+    setTnError("")
+    try {
+      const res = await fetch("/api/tiendanube/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storeUrl: tnUrl.trim() }),
+      })
+      const result = await res.json()
+      if (!res.ok) {
+        setTnError(result.error || "Error al importar productos.")
+        return
+      }
+      const syncInfo = { url: tnUrl.trim(), syncedAt: new Date().toISOString(), total: result.total }
+      localStorage.setItem("tn_last_sync", JSON.stringify(syncInfo))
+      setTnLastSync(syncInfo)
+      setData({ columns: result.columns, rows: result.rows, fileName: `Tiendanube · ${tnUrl.trim()}`, totalRows: result.total })
+      setExcludedRows(new Set())
+      setQuantityColumn("cantidad")
+      setShowTNModal(false)
+      setTnUrl("")
+      setStep(2)
+      loadTemplates(result.columns)
+    } catch {
+      setTnError("No se pudo conectar con Tiendanube.")
+    } finally {
+      setTnLoading(false)
+    }
+  }
+
   const deleteSavedList = async (id: string) => {
     await supabase.from("saved_lists").delete().eq("id", id)
     setSavedLists((prev) => prev.filter((l) => l.id !== id))
@@ -285,6 +332,47 @@ export default function UploadPage() {
   }
 
   return (
+    <>
+    {/* Tiendanube import modal */}
+    {showTNModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+        <div className="bg-background border border-border rounded-2xl shadow-2xl w-full max-w-md p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <ShoppingBag className="h-5 w-5 text-[#14cce4]" />
+              Importar desde Tiendanube
+            </h3>
+            <button onClick={() => { setShowTNModal(false); setTnError("") }} className="text-muted-foreground hover:text-foreground">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Pegá la URL de tu tienda y traemos todos los productos automáticamente.
+          </p>
+          <input
+            type="text"
+            placeholder="mitienda.mitiendanube.com"
+            value={tnUrl}
+            onChange={(e) => { setTnUrl(e.target.value); setTnError("") }}
+            onKeyDown={(e) => e.key === "Enter" && importFromTiendanube()}
+            className="w-full border border-border rounded-lg px-3 py-2.5 text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary mb-1"
+          />
+          {tnError && <p className="text-xs text-destructive mt-1 mb-2">{tnError}</p>}
+          <div className="flex gap-2 mt-4">
+            <Button variant="outline" className="flex-1" onClick={() => { setShowTNModal(false); setTnError("") }}>
+              Cancelar
+            </Button>
+            <Button className="flex-1 gap-2" onClick={importFromTiendanube} disabled={tnLoading}>
+              {tnLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+              {tnLoading ? "Importando..." : "Importar productos"}
+            </Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-3 text-center">
+            Solo funciona con tiendas públicas. Para tiendas privadas, usá el ID numérico de tu tienda.
+          </p>
+        </div>
+      </div>
+    )}
     <DashboardLayout>
       <Header
         title="Cargar datos"
@@ -405,6 +493,82 @@ export default function UploadPage() {
                       ))}
                     </div>
                   )}
+                </div>
+              )}
+            </div>
+
+            {/* Tiendanube import */}
+            <div className="rounded-xl border border-border bg-card p-4">
+              {tnLastSync ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                        <ShoppingBag className="h-4 w-4 text-[#14cce4]" />
+                        Tiendanube conectada
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[200px]">{tnLastSync.url}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-xs text-muted-foreground">
+                        {tnLastSync.total} productos
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {new Date(tnLastSync.syncedAt).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 gap-2"
+                      disabled={tnLoading}
+                      onClick={async () => {
+                        setTnUrl(tnLastSync.url)
+                        setTnError("")
+                        setTnLoading(true)
+                        try {
+                          const res = await fetch("/api/tiendanube/products", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ storeUrl: tnLastSync.url }),
+                          })
+                          const result = await res.json()
+                          if (!res.ok) { setError(result.error || "Error al sincronizar."); return }
+                          const syncInfo = { url: tnLastSync.url, syncedAt: new Date().toISOString(), total: result.total }
+                          localStorage.setItem("tn_last_sync", JSON.stringify(syncInfo))
+                          setTnLastSync(syncInfo)
+                          setData({ columns: result.columns, rows: result.rows, fileName: `Tiendanube · ${tnLastSync.url}`, totalRows: result.total })
+                          setExcludedRows(new Set())
+                          setQuantityColumn("cantidad")
+                          setStep(2)
+                          loadTemplates(result.columns)
+                        } catch { setError("No se pudo sincronizar.") }
+                        finally { setTnLoading(false) }
+                      }}
+                    >
+                      {tnLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                      Sincronizar ahora
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setShowTNModal(true)}>
+                      Cambiar tienda
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                      <ShoppingBag className="h-4 w-4 text-[#14cce4]" />
+                      Importar desde Tiendanube
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Traé tus productos directo sin pasar por Excel</p>
+                  </div>
+                  <Button variant="outline" size="sm" className="gap-2 flex-shrink-0" onClick={() => setShowTNModal(true)}>
+                    <ShoppingBag className="h-4 w-4" />
+                    Conectar tienda
+                  </Button>
                 </div>
               )}
             </div>
@@ -666,5 +830,6 @@ export default function UploadPage() {
         )}
       </div>
     </DashboardLayout>
+    </>
   )
 }

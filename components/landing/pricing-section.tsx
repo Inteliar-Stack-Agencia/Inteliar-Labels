@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Check, ArrowRight, Loader2, Globe, MapPin } from "lucide-react"
+import { Check, ArrowRight, Loader2, Globe, MapPin, X } from "lucide-react"
 import { analytics } from "@/lib/analytics"
 
 const plansARS = [
@@ -133,20 +133,26 @@ const plansUSD = [
   },
 ]
 
+type PendingCheckout = { plan: "monthly" | "pro" | "lifetime"; currency: "ARS" | "USD" } | null
+
 export function PricingSection() {
   const [loading, setLoading] = useState<string | null>(null)
   const [region, setRegion] = useState<"ARS" | "USD">("ARS")
+  const [pending, setPending] = useState<PendingCheckout>(null)
+  const [emailInput, setEmailInput] = useState("")
+  const [emailError, setEmailError] = useState("")
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const plans = region === "ARS" ? plansARS : plansUSD
 
-  async function handleCheckout(plan: "monthly" | "pro" | "lifetime", currency: "ARS" | "USD") {
+  async function submitCheckout(plan: "monthly" | "pro" | "lifetime", currency: "ARS" | "USD", email?: string) {
     setLoading(plan)
     analytics.pricingClick(plan)
     try {
       const res = await fetch("/api/checkout/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, currency }),
+        body: JSON.stringify({ plan, currency, email }),
       })
       const data = await res.json()
       if (data.url) {
@@ -164,7 +170,68 @@ export function PricingSection() {
     }
   }
 
+  function handleCheckout(plan: "monthly" | "pro" | "lifetime", currency: "ARS" | "USD") {
+    if (currency === "ARS" && (plan === "monthly" || plan === "pro")) {
+      setEmailInput("")
+      setEmailError("")
+      setPending({ plan, currency })
+      setTimeout(() => inputRef.current?.focus(), 50)
+      return
+    }
+    submitCheckout(plan, currency)
+  }
+
+  function handleEmailSubmit() {
+    const email = emailInput.trim()
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setEmailError("Ingresá un email válido.")
+      inputRef.current?.focus()
+      return
+    }
+    if (!pending) return
+    setPending(null)
+    submitCheckout(pending.plan, pending.currency, email)
+  }
+
   return (
+    <>
+    {/* Email modal for MP subscriptions */}
+    {pending && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+        <div className="bg-background border border-border rounded-2xl shadow-2xl w-full max-w-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-foreground">Ingresá tu email</h3>
+            <button onClick={() => setPending(null)} className="text-muted-foreground hover:text-foreground">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            MercadoPago necesita tu email para enviarte el comprobante y activar la suscripción.
+          </p>
+          <input
+            ref={inputRef}
+            type="email"
+            placeholder="tumail@ejemplo.com"
+            value={emailInput}
+            onChange={(e) => { setEmailInput(e.target.value); setEmailError("") }}
+            onKeyDown={(e) => e.key === "Enter" && handleEmailSubmit()}
+            className="w-full border border-border rounded-lg px-3 py-2.5 text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary mb-1"
+          />
+          {emailError && <p className="text-xs text-destructive mb-3">{emailError}</p>}
+          <Button
+            className="w-full mt-3 h-11 gap-2"
+            onClick={handleEmailSubmit}
+            disabled={loading === pending.plan}
+          >
+            {loading === pending.plan ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <>Ir a pagar con MercadoPago <ArrowRight className="w-4 h-4" /></>
+            )}
+          </Button>
+        </div>
+      </div>
+    )}
     <section id="pricing" className="py-24 px-4 sm:px-6">
       <div className="max-w-5xl mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-12">
@@ -284,5 +351,6 @@ export function PricingSection() {
         </div>
       </div>
     </section>
+    </>
   )
 }
