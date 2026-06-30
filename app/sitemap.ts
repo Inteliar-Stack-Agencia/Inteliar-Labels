@@ -17,6 +17,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
+      url: `${BASE_URL}/herramientas/etiqueta-envio`,
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+    },
+    {
       url: `${BASE_URL}/integracion-tiendanube`,
       lastModified: new Date(),
       changeFrequency: "monthly" as const,
