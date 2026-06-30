@@ -18,6 +18,7 @@ import {
   Download,
   ShoppingBag,
   Loader2,
+  RefreshCw,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import * as XLSX from "xlsx"
@@ -56,8 +57,14 @@ export default function UploadPage() {
   const [tnUrl, setTnUrl] = useState("")
   const [tnLoading, setTnLoading] = useState(false)
   const [tnError, setTnError] = useState("")
+  const [tnLastSync, setTnLastSync] = useState<{ url: string; syncedAt: string; total: number } | null>(null)
 
   useEffect(() => {
+    // Load last TN sync from localStorage
+    try {
+      const raw = localStorage.getItem("tn_last_sync")
+      if (raw) setTnLastSync(JSON.parse(raw))
+    } catch {}
     loadSavedLists()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -260,6 +267,9 @@ export default function UploadPage() {
         setTnError(result.error || "Error al importar productos.")
         return
       }
+      const syncInfo = { url: tnUrl.trim(), syncedAt: new Date().toISOString(), total: result.total }
+      localStorage.setItem("tn_last_sync", JSON.stringify(syncInfo))
+      setTnLastSync(syncInfo)
       setData({ columns: result.columns, rows: result.rows, fileName: `Tiendanube · ${tnUrl.trim()}`, totalRows: result.total })
       setExcludedRows(new Set())
       setQuantityColumn("cantidad")
@@ -489,19 +499,78 @@ export default function UploadPage() {
 
             {/* Tiendanube import */}
             <div className="rounded-xl border border-border bg-card p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <ShoppingBag className="h-4 w-4 text-[#14cce4]" />
-                    Importar desde Tiendanube
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Traé tus productos directo sin pasar por Excel</p>
+              {tnLastSync ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                        <ShoppingBag className="h-4 w-4 text-[#14cce4]" />
+                        Tiendanube conectada
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[200px]">{tnLastSync.url}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-xs text-muted-foreground">
+                        {tnLastSync.total} productos
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {new Date(tnLastSync.syncedAt).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 gap-2"
+                      disabled={tnLoading}
+                      onClick={async () => {
+                        setTnUrl(tnLastSync.url)
+                        setTnError("")
+                        setTnLoading(true)
+                        try {
+                          const res = await fetch("/api/tiendanube/products", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ storeUrl: tnLastSync.url }),
+                          })
+                          const result = await res.json()
+                          if (!res.ok) { setError(result.error || "Error al sincronizar."); return }
+                          const syncInfo = { url: tnLastSync.url, syncedAt: new Date().toISOString(), total: result.total }
+                          localStorage.setItem("tn_last_sync", JSON.stringify(syncInfo))
+                          setTnLastSync(syncInfo)
+                          setData({ columns: result.columns, rows: result.rows, fileName: `Tiendanube · ${tnLastSync.url}`, totalRows: result.total })
+                          setExcludedRows(new Set())
+                          setQuantityColumn("cantidad")
+                          setStep(2)
+                          loadTemplates(result.columns)
+                        } catch { setError("No se pudo sincronizar.") }
+                        finally { setTnLoading(false) }
+                      }}
+                    >
+                      {tnLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                      Sincronizar ahora
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setShowTNModal(true)}>
+                      Cambiar tienda
+                    </Button>
+                  </div>
                 </div>
-                <Button variant="outline" size="sm" className="gap-2 flex-shrink-0" onClick={() => setShowTNModal(true)}>
-                  <ShoppingBag className="h-4 w-4" />
-                  Conectar tienda
-                </Button>
-              </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                      <ShoppingBag className="h-4 w-4 text-[#14cce4]" />
+                      Importar desde Tiendanube
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Traé tus productos directo sin pasar por Excel</p>
+                  </div>
+                  <Button variant="outline" size="sm" className="gap-2 flex-shrink-0" onClick={() => setShowTNModal(true)}>
+                    <ShoppingBag className="h-4 w-4" />
+                    Conectar tienda
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Saved lists */}
