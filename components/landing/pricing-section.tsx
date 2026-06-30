@@ -2,15 +2,15 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Check, ArrowRight, Loader2 } from "lucide-react"
+import { Check, ArrowRight, Loader2, Globe, MapPin } from "lucide-react"
 import { analytics } from "@/lib/analytics"
 
-const plans = [
+const plansARS = [
   {
     name: "Mensual",
-    price: "US$10",
+    price: "$14.999",
     period: "/mes",
-    description: "Ideal para arrancar. Pagás mes a mes y cancelás cuando quieras.",
+    description: "Ideal para arrancar. Suscripción automática, cancelás cuando quieras.",
     features: [
       "1 sucursal",
       "Hasta 2.000 impresiones/mes",
@@ -21,6 +21,71 @@ const plans = [
     ],
     cta: "Comprar plan Mensual",
     plan: "monthly" as const,
+    currency: "ARS" as const,
+    popular: false,
+    highlight: false,
+  },
+  {
+    name: "Pro",
+    price: "$29.999",
+    period: "/mes",
+    description: "Para negocios con mayor volumen o múltiples puntos de venta.",
+    features: [
+      "Hasta 3 sucursales",
+      "Impresiones ilimitadas",
+      "Diseñador visual + IA",
+      "Plantillas predeterminadas",
+      "Importación de Excel y CSV",
+      "Actualizaciones de software incluidas",
+      "Gestión de dispositivos desde el panel",
+      "Soporte prioritario",
+    ],
+    cta: "Comprar plan Pro",
+    plan: "pro" as const,
+    currency: "ARS" as const,
+    popular: true,
+    highlight: true,
+  },
+  {
+    name: "De por vida",
+    price: "$449.999",
+    period: "pago único",
+    description: "Pagás una vez y es tuyo para siempre. Sin renovaciones.",
+    features: [
+      "Hasta 5 sucursales",
+      "Impresiones ilimitadas",
+      "Diseñador visual + IA",
+      "Plantillas predeterminadas",
+      "Importación de Excel y CSV",
+      "Todas las actualizaciones futuras",
+      "Gestión de dispositivos desde el panel",
+      "Soporte prioritario",
+    ],
+    cta: "Comprar de por vida",
+    plan: "lifetime" as const,
+    currency: "ARS" as const,
+    popular: false,
+    highlight: false,
+  },
+]
+
+const plansUSD = [
+  {
+    name: "Mensual",
+    price: "US$10",
+    period: "/mes",
+    description: "Ideal para arrancar. Suscripción automática, cancelás cuando quieras.",
+    features: [
+      "1 sucursal",
+      "Hasta 2.000 impresiones/mes",
+      "Diseñador visual + IA",
+      "Plantillas predeterminadas",
+      "Importación de Excel y CSV",
+      "Soporte por email",
+    ],
+    cta: "Comprar plan Mensual",
+    plan: "monthly" as const,
+    currency: "USD" as const,
     popular: false,
     highlight: false,
   },
@@ -41,6 +106,7 @@ const plans = [
     ],
     cta: "Comprar plan Pro",
     plan: "pro" as const,
+    currency: "USD" as const,
     popular: true,
     highlight: true,
   },
@@ -61,6 +127,7 @@ const plans = [
     ],
     cta: "Comprar de por vida",
     plan: "lifetime" as const,
+    currency: "USD" as const,
     popular: false,
     highlight: false,
   },
@@ -68,15 +135,18 @@ const plans = [
 
 export function PricingSection() {
   const [loading, setLoading] = useState<string | null>(null)
+  const [region, setRegion] = useState<"ARS" | "USD">("ARS")
 
-  async function handleCheckout(plan: "monthly" | "pro" | "lifetime") {
+  const plans = region === "ARS" ? plansARS : plansUSD
+
+  async function handleCheckout(plan: "monthly" | "pro" | "lifetime", currency: "ARS" | "USD") {
     setLoading(plan)
     analytics.pricingClick(plan)
     try {
       const res = await fetch("/api/checkout/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, currency }),
       })
       const data = await res.json()
       if (data.url) {
@@ -102,16 +172,49 @@ export function PricingSection() {
           <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 text-balance">
             Elegí el plan que mejor te queda
           </h2>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-lg text-muted-foreground mb-8">
             15 días de prueba gratuita. Después, elegí el plan que mejor te queda.
             La clave te llega por email apenas pagás.
           </p>
+
+          {/* Region toggle */}
+          <div className="inline-flex items-center bg-muted rounded-full p-1 gap-1">
+            <button
+              onClick={() => setRegion("ARS")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                region === "ARS"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <MapPin className="w-3.5 h-3.5" />
+              Argentina · ARS
+            </button>
+            <button
+              onClick={() => setRegion("USD")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                region === "USD"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Globe className="w-3.5 h-3.5" />
+              Internacional · USD
+            </button>
+          </div>
+
+          {region === "ARS" && (
+            <p className="text-xs text-muted-foreground mt-3">Pagá con MercadoPago · Débito, crédito y más</p>
+          )}
+          {region === "USD" && (
+            <p className="text-xs text-muted-foreground mt-3">Pagá con Stripe · Tarjeta internacional</p>
+          )}
         </div>
 
         <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
           {plans.map((plan, index) => (
             <div
-              key={index}
+              key={`${region}-${index}`}
               className={`relative bg-card border rounded-2xl p-6 sm:p-8 flex flex-col ${
                 plan.highlight
                   ? "border-primary shadow-xl md:-translate-y-2 z-10"
@@ -147,7 +250,7 @@ export function PricingSection() {
                   plan.highlight ? "" : "bg-foreground hover:bg-foreground/90 text-background"
                 }`}
                 variant={plan.highlight ? "default" : "secondary"}
-                onClick={() => handleCheckout(plan.plan)}
+                onClick={() => handleCheckout(plan.plan, plan.currency)}
                 disabled={loading === plan.plan}
               >
                 {loading === plan.plan ? (
