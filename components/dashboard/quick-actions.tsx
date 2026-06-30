@@ -21,7 +21,7 @@ const actions = [
   {
     title: "Imprimir etiquetas",
     description: "Iniciá un nuevo trabajo de impresión con tus templates",
-    href: "/jobs/new",
+    href: "/upload",
     icon: Printer,
     color: "bg-chart-4/10 text-chart-4",
   },

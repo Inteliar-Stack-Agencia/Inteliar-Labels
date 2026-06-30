@@ -130,9 +130,9 @@ export default function UploadPage() {
       const cols = columns.map((c) => c.toLowerCase().trim())
       let best: { id: string; name: string; matched: number; total: number } | null = null
       for (const t of tmpl) {
-        const vars = (t.variables ?? []).map((v) => v.toLowerCase().trim())
+        const vars = (t.variables ?? []).map((v: string) => v.toLowerCase().trim())
         if (vars.length === 0) continue
-        const matched = vars.filter((v) => cols.includes(v)).length
+        const matched = vars.filter((v: string) => cols.includes(v)).length
         if (!best || matched > best.matched) {
           best = { id: t.id, name: t.name, matched, total: vars.length }
         }
