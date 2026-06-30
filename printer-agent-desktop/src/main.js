@@ -366,6 +366,19 @@ app.whenReady().then(async () => {
   // License OK — start agent
   startAgent()
 
+  // Re-check license every 4 hours while running
+  setInterval(async () => {
+    const recheck = await checkLicense()
+    if (!recheck.valid) {
+      stopAgent()
+      dialog.showErrorBox(
+        'Inteliar Label — Licencia vencida',
+        recheck.message || 'Tu licencia venció. Renová tu suscripción para continuar imprimiendo.'
+      )
+      openActivationWindow(false)
+    }
+  }, 4 * 60 * 60 * 1000)
+
   // Auto-start on login
   app.setLoginItemSettings({
     openAtLogin: true,
