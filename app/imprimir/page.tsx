@@ -7,7 +7,7 @@ import { Header } from "@/components/dashboard/header"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
 import { generateZPL, downloadZPL, prepareImages } from "@/lib/zpl"
-import { sendToPrinterAgent } from "@/lib/printer-agent-client"
+import { printLabels } from "@/lib/print-label"
 import { analytics } from "@/lib/analytics"
 import { PrinterAgentStatus } from "@/components/printer/agent-status"
 import { PrinterSelector } from "@/components/printer/printer-selector"
@@ -124,20 +124,17 @@ export default function ImprimirPage() {
   }
 
   const handlePrintNow = async () => {
-    const zpl = await buildZPL()
-    if (!zpl) return
+    if (!selectedTemplate) return
     setPrinting(true)
     setPrintResult(null)
     setRetryStatus(null)
     analytics.printJobStarted(totalLabels)
     try {
-      const result = await sendToPrinterAgent(zpl, "zpl", {
-        printerId,
-        retries: 2,
-        onRetry: (attempt, error) => {
-          setRetryStatus(`Falló el envío (${error.message}). Reintentando… (intento ${attempt + 1} de 3)`)
-        },
-      })
+      const result = await printLabels(
+        { width_mm: selectedTemplate.width_mm, height_mm: selectedTemplate.height_mm, canvas_data: selectedTemplate.canvas_data },
+        rows.map((r) => ({ row_data: r.data, quantity: r.quantity })),
+        { printerId, retries: 2 },
+      )
       analytics.printJobCompleted(totalLabels)
       setPrintResult({ ok: true, message: result.message ?? "Enviado a la impresora" })
     } catch (err) {

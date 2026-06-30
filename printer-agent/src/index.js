@@ -371,6 +371,84 @@ function printViaUsb(data, printer) {
   })
 }
 
+// ── Connection: USB via Windows driver (GDI image) ───────────────────────────
+// Prints rendered label images THROUGH the printer's Windows driver, exactly
+// like the Windows test page. Works with any printer that has a working driver
+// (Honeywell/Seagull graphics drivers, etc.) that does NOT interpret raw ZPL.
+// Each image is drawn to fill a page sized to the label's physical dimensions.
+
+const IMAGE_PRINT_PS = `
+param([string]$printerName,[string]$listFile,[int]$wMm,[int]$hMm)
+Add-Type -AssemblyName System.Drawing
+$files = @(Get-Content -LiteralPath $listFile | Where-Object { $_ -ne "" })
+if($files.Count -eq 0){ throw "No hay imagenes para imprimir" }
+$wHund = [int]([math]::Round($wMm / 25.4 * 100))
+$hHund = [int]([math]::Round($hMm / 25.4 * 100))
+$pd = New-Object System.Drawing.Printing.PrintDocument
+$pd.PrinterSettings.PrinterName = $printerName
+if(-not $pd.PrinterSettings.IsValid){ throw "Impresora invalida: $printerName" }
+$pd.DocumentName = "InteliarLabel"
+$ps = New-Object System.Drawing.Printing.PaperSize("InteliarLabel", $wHund, $hHund)
+$pd.DefaultPageSettings.PaperSize = $ps
+$pd.DefaultPageSettings.Margins = New-Object System.Drawing.Printing.Margins(0,0,0,0)
+$pd.OriginAtMargins = $false
+$script:idx = 0
+$pd.add_PrintPage({
+  param($s,$e)
+  $img = [System.Drawing.Image]::FromFile($files[$script:idx])
+  try {
+    $e.Graphics.DrawImage($img, 0, 0, $e.PageBounds.Width, $e.PageBounds.Height)
+  } finally { $img.Dispose() }
+  $script:idx++
+  $e.HasMorePages = ($script:idx -lt $files.Count)
+})
+$pd.Print()
+Write-Output "OK:$($files.Count)"
+`
+
+function printImagesViaDriver(images, printer, widthMm, heightMm) {
+  return new Promise((resolve, reject) => {
+    if (process.platform !== 'win32') {
+      return reject(new Error('Impresión por driver (imagen) solo disponible en Windows'))
+    }
+    const queueName = printer.usbQueue || printer.name
+    const stamp = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+    const tmpScript = path.join(os.tmpdir(), `inteliar_img_${stamp}.ps1`)
+    const listFile = path.join(os.tmpdir(), `inteliar_list_${stamp}.txt`)
+    const imgFiles = []
+    try {
+      images.forEach((b64, i) => {
+        const clean = b64.replace(/^data:image\/\w+;base64,/, '')
+        const f = path.join(os.tmpdir(), `inteliar_img_${stamp}_${i}.png`)
+        fs.writeFileSync(f, Buffer.from(clean, 'base64'))
+        imgFiles.push(f)
+      })
+      fs.writeFileSync(listFile, imgFiles.join('\r\n'), 'utf8')
+      fs.writeFileSync(tmpScript, IMAGE_PRINT_PS, 'utf8')
+    } catch (e) {
+      return reject(new Error(`No se pudieron preparar las imágenes: ${e.message}`))
+    }
+    const cleanup = () => {
+      try { fs.unlinkSync(tmpScript) } catch {}
+      try { fs.unlinkSync(listFile) } catch {}
+      imgFiles.forEach((f) => { try { fs.unlinkSync(f) } catch {} })
+    }
+    execFile('powershell', [
+      '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+      '-File', tmpScript,
+      '-printerName', queueName,
+      '-listFile', listFile,
+      '-wMm', String(Math.round(widthMm)),
+      '-hMm', String(Math.round(heightMm)),
+    ], { timeout: 60000 }, (err, stdout, stderr) => {
+      cleanup()
+      if (err) return reject(new Error(`Driver print: ${stderr || err.message}`))
+      if (!String(stdout).includes('OK:')) return reject(new Error(`Driver print: respuesta inesperada: ${stdout}`))
+      resolve(imgFiles.length)
+    })
+  })
+}
+
 // ── Dispatcher ────────────────────────────────────────────────────────────────
 
 async function doPrint(rawData, printer) {
@@ -496,6 +574,48 @@ app.post('/printers/:id/test', async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, error: err.message })
   }
+})
+
+// Print rendered label images through the Windows driver (GDI).
+// Body: { images: [base64Png, ...], widthMm, heightMm }
+// Used for printers whose driver does not interpret raw ZPL.
+async function handlePrintImage(printer, req, res) {
+  if (!printer) return res.status(404).json({ error: 'Impresora no encontrada' })
+  const { images, widthMm, heightMm } = req.body || {}
+  if (!Array.isArray(images) || images.length === 0) {
+    return res.status(400).json({ error: 'Faltan imágenes (campo images)' })
+  }
+  if (!widthMm || !heightMm) {
+    return res.status(400).json({ error: 'Faltan dimensiones (widthMm, heightMm)' })
+  }
+  const start = Date.now()
+  try {
+    const count = await printImagesViaDriver(images, printer, widthMm, heightMm)
+    const job = {
+      printer: printer.id, printerName: printer.name, labels: count,
+      format: 'image', bytes: 0, mode: 'driver',
+      durationMs: Date.now() - start, status: 'ok',
+    }
+    logJob(job)
+    res.json({ success: true, ...job })
+  } catch (err) {
+    logJob({
+      printer: printer.id, printerName: printer.name, labels: images.length,
+      format: 'image', bytes: 0, mode: 'driver',
+      durationMs: Date.now() - start, status: 'error', error: err.message,
+    })
+    res.status(500).json({ success: false, error: err.message })
+  }
+}
+
+app.post('/print-image', (req, res) => {
+  const printer = config.printers.find(p => p.id === config.defaultPrinterId)
+  return handlePrintImage(printer, req, res)
+})
+
+app.post('/print-image/:id', (req, res) => {
+  const printer = config.printers.find(p => p.id === req.params.id)
+  return handlePrintImage(printer, req, res)
 })
 
 // Discover USB/OS print queues
