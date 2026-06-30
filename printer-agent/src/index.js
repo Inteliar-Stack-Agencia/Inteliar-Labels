@@ -292,35 +292,44 @@ $bytes = [System.Convert]::FromBase64String($dataBase64)
 Add-Type -TypeDefinition @"
 using System;using System.Runtime.InteropServices;
 public class WinSpool {
-  [DllImport("winspool.drv",CharSet=CharSet.Auto,SetLastError=true)]
+  [DllImport("winspool.drv",CharSet=CharSet.Ansi,SetLastError=true)]
   public static extern bool OpenPrinter(string n,out IntPtr h,IntPtr d);
-  [DllImport("winspool.drv",CharSet=CharSet.Auto,SetLastError=true)]
+  [DllImport("winspool.drv",SetLastError=true)]
   public static extern bool ClosePrinter(IntPtr h);
-  [DllImport("winspool.drv",CharSet=CharSet.Auto,SetLastError=true)]
+  [DllImport("winspool.drv",CharSet=CharSet.Ansi,SetLastError=true)]
   public static extern int StartDocPrinter(IntPtr h,int lv,ref DOCINFO d);
-  [DllImport("winspool.drv",CharSet=CharSet.Auto,SetLastError=true)]
+  [DllImport("winspool.drv",SetLastError=true)]
   public static extern bool EndDocPrinter(IntPtr h);
-  [DllImport("winspool.drv",CharSet=CharSet.Auto,SetLastError=true)]
+  [DllImport("winspool.drv",SetLastError=true)]
   public static extern bool StartPagePrinter(IntPtr h);
-  [DllImport("winspool.drv",CharSet=CharSet.Auto,SetLastError=true)]
+  [DllImport("winspool.drv",SetLastError=true)]
   public static extern bool EndPagePrinter(IntPtr h);
-  [DllImport("winspool.drv",CharSet=CharSet.Auto,SetLastError=true)]
-  public static extern bool WritePrinter(IntPtr h,byte[] buf,int cb,out int written);
-  [StructLayout(LayoutKind.Sequential)] public struct DOCINFO {
-    public string pDocName; public string pOutputFile; public string pDatatype;
+  [DllImport("winspool.drv",SetLastError=true)]
+  public static extern bool WritePrinter(IntPtr h,IntPtr buf,int cb,out int written);
+  [StructLayout(LayoutKind.Sequential,CharSet=CharSet.Ansi)] public struct DOCINFO {
+    [MarshalAs(UnmanagedType.LPStr)] public string pDocName;
+    [MarshalAs(UnmanagedType.LPStr)] public string pOutputFile;
+    [MarshalAs(UnmanagedType.LPStr)] public string pDatatype;
   }
 }
 "@ -ErrorAction Stop
 $h=[IntPtr]::Zero
 if(-not [WinSpool]::OpenPrinter($printerName,[ref]$h,[IntPtr]::Zero)){throw "OpenPrinter failed: $([System.Runtime.InteropServices.Marshal]::GetLastWin32Error())"}
-$di=New-Object WinSpool+DOCINFO; $di.pDocName="InteliarLabel"; $di.pOutputFile=$null; $di.pDatatype="RAW"
-[WinSpool]::StartDocPrinter($h,1,[ref]$di)|Out-Null
-[WinSpool]::StartPagePrinter($h)|Out-Null
-$written=0; [WinSpool]::WritePrinter($h,$bytes,$bytes.Length,[ref]$written)|Out-Null
-[WinSpool]::EndPagePrinter($h)|Out-Null
-[WinSpool]::EndDocPrinter($h)|Out-Null
-[WinSpool]::ClosePrinter($h)|Out-Null
-Write-Output "OK:$written"
+try {
+  $di=New-Object WinSpool+DOCINFO; $di.pDocName="InteliarLabel"; $di.pOutputFile=$null; $di.pDatatype="RAW"
+  if([WinSpool]::StartDocPrinter($h,1,[ref]$di) -eq 0){throw "StartDocPrinter failed: $([System.Runtime.InteropServices.Marshal]::GetLastWin32Error())"}
+  [WinSpool]::StartPagePrinter($h)|Out-Null
+  $ptr=[System.Runtime.InteropServices.Marshal]::AllocHGlobal($bytes.Length)
+  [System.Runtime.InteropServices.Marshal]::Copy($bytes,0,$ptr,$bytes.Length)
+  $written=0
+  [WinSpool]::WritePrinter($h,$ptr,$bytes.Length,[ref]$written)|Out-Null
+  [System.Runtime.InteropServices.Marshal]::FreeHGlobal($ptr)
+  [WinSpool]::EndPagePrinter($h)|Out-Null
+  [WinSpool]::EndDocPrinter($h)|Out-Null
+  Write-Output "OK:$written"
+} finally {
+  [WinSpool]::ClosePrinter($h)|Out-Null
+}
 `
 
 function printViaUsb(data, printer) {
