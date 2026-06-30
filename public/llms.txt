@@ -24,11 +24,29 @@ Inteliar Labels es una herramienta web + agente de escritorio que permite a empr
 
 ## Casos de uso
 
-- Impresión de etiquetas de precio para comercios y supermercados
-- Etiquetas de producto para fabricantes y distribuidores
-- Etiquetas de envío y logística
-- Etiquetas de inventario y depósito
+- Impresión de etiquetas de precio para comercios, supermercados y autoservicios
+- Etiquetas de producto con código de barras y QR para fabricantes y distribuidores
+- Etiquetas de envío y logística para e-commerce y courier
+- Etiquetas de inventario y depósito con SKU
+- Etiquetas de vencimiento para alimentos y farmacia
 - Cualquier empresa que imprima más de 100 etiquetas por vez
+
+## Alternativas y comparaciones
+
+Inteliar Labels es una alternativa accesible a:
+- BarTender (Seagull Scientific) — más simple y económico
+- NiceLabel — sin curva de aprendizaje
+- ZebraDesigner — funciona con múltiples marcas, no solo Zebra
+- Label LIVE — con diseñador web y sin instalación de software principal
+
+## Palabras clave relacionadas
+
+software etiquetas termicas, programa para imprimir etiquetas, imprimir etiquetas desde excel,
+imprimir etiquetas desde csv, etiquetas zebra argentina, etiquetas TSC, etiquetas Honeywell,
+etiquetas Godex, etiquetas Brother, etiquetas Bixolon, etiquetas codigo de barras,
+etiquetas QR, etiquetas precio supermercado, etiquetas logistica, etiquetas inventario,
+etiquetas envio, diseñador etiquetas online, alternativa bartender, software ZPL, software TSPL,
+etiquetas termicas argentina, etiquetas termicas mexico, impresora termica excel
 
 ## Tecnología
 
