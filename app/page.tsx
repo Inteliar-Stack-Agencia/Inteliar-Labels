@@ -1,4 +1,5 @@
 import { HeroSection } from "@/components/landing/hero-section"
+import { TrustBar } from "@/components/landing/trust-bar"
 import { PrintersSection } from "@/components/landing/printers-section"
 import { HowItWorksSection } from "@/components/landing/how-it-works-section"
 import { FeaturesSection } from "@/components/landing/features-section"
@@ -18,6 +19,7 @@ export default function LandingPage() {
       <Navbar />
       <main>
         <HeroSection />
+        <TrustBar />
         <PrintersSection />
         <HowItWorksSection />
         <FeaturesSection />
