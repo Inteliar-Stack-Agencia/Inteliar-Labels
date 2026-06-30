@@ -23,6 +23,7 @@ import {
 import { cn } from "@/lib/utils"
 import * as XLSX from "xlsx"
 import { PRESET_TEMPLATES } from "@/lib/preset-templates"
+import { analytics } from "@/lib/analytics"
 
 interface ParsedData {
   columns: string[]
@@ -270,6 +271,7 @@ export default function UploadPage() {
       const syncInfo = { url: tnUrl.trim(), syncedAt: new Date().toISOString(), total: result.total }
       localStorage.setItem("tn_last_sync", JSON.stringify(syncInfo))
       setTnLastSync(syncInfo)
+      analytics.tiendanubeConnected(result.total)
       setData({ columns: result.columns, rows: result.rows, fileName: `Tiendanube · ${tnUrl.trim()}`, totalRows: result.total })
       setExcludedRows(new Set())
       setQuantityColumn("cantidad")
@@ -539,6 +541,7 @@ export default function UploadPage() {
                           const syncInfo = { url: tnLastSync.url, syncedAt: new Date().toISOString(), total: result.total }
                           localStorage.setItem("tn_last_sync", JSON.stringify(syncInfo))
                           setTnLastSync(syncInfo)
+                          analytics.tiendanubeSynced(result.total)
                           setData({ columns: result.columns, rows: result.rows, fileName: `Tiendanube · ${tnLastSync.url}`, totalRows: result.total })
                           setExcludedRows(new Set())
                           setQuantityColumn("cantidad")

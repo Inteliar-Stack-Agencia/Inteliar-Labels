@@ -6,6 +6,7 @@ import Link from "next/link"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
+import { analytics } from "@/lib/analytics"
 import {
   ArrowLeft,
   CheckCircle2,
@@ -259,6 +260,13 @@ export default function JobDetailPage() {
           .update({ status: "completed", printed_labels: total, completed_at: new Date().toISOString() })
           .eq("id", jobId)
         setJob((prev) => prev ? { ...prev, status: "completed", printed_labels: prev.total_labels } : prev)
+        analytics.printJobCompleted(total)
+        // Track first print if this is the first completed job
+        const firstPrintKey = "first_print_done"
+        if (!localStorage.getItem(firstPrintKey)) {
+          analytics.firstPrint()
+          localStorage.setItem(firstPrintKey, "1")
+        }
       }
     } catch (err) {
       setPrintResult({ ok: false, message: (err as Error).message })
