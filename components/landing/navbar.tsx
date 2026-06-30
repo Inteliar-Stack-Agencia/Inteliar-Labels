@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { usePathname } from "next/navigation"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Menu, X, Printer } from "lucide-react"
 import { analytics } from "@/lib/analytics"
@@ -8,6 +10,11 @@ import { analytics } from "@/lib/analytics"
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const pathname = usePathname()
+  const isHome = pathname === "/"
+
+  // On secondary pages, anchor links need the "/" prefix
+  const href = (anchor: string) => isHome ? anchor : `/${anchor}`
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 80)
@@ -15,33 +22,31 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", fn)
   }, [])
 
+  const navLinks = [
+    { label: "Cómo funciona", anchor: "#how-it-works" },
+    { label: "Funcionalidades", anchor: "#features" },
+    { label: "Descarga", anchor: "#descargar" },
+    { label: "Precios", anchor: "#pricing" },
+    { label: "FAQ", anchor: "#faq" },
+  ]
+
   return (
     <header className={`fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border transition-shadow duration-300 ${scrolled ? "shadow-lg" : ""}`}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
-          <div className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <Printer className="w-4 h-4 text-primary-foreground" />
             </div>
             <span className="font-semibold text-lg text-foreground">Inteliar Labels</span>
-          </div>
+          </Link>
 
           <nav className="hidden md:flex items-center gap-8">
-            <a href="#how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Cómo funciona
-            </a>
-            <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Funcionalidades
-            </a>
-            <a href="#descargar" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Descarga
-            </a>
-            <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Precios
-            </a>
-            <a href="#faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              FAQ
-            </a>
+            {navLinks.map((l) => (
+              <a key={l.anchor} href={href(l.anchor)} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                {l.label}
+              </a>
+            ))}
             <a href="/manual" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Manual
             </a>
@@ -52,7 +57,9 @@ export function Navbar() {
               <a href="/auth/login">Iniciar sesión</a>
             </Button>
             <Button size="sm" asChild className={scrolled ? "ring-2 ring-primary/30 animate-pulse" : ""}>
-              <a href="/auth/register">{scrolled ? "Empezá gratis · 15 días" : "Probar gratis"}</a>
+              <a href="/auth/register" onClick={() => analytics.ctaClick("navbar")}>
+                {scrolled ? "Empezá gratis · 15 días" : "Probar gratis"}
+              </a>
             </Button>
           </div>
 
@@ -68,22 +75,12 @@ export function Navbar() {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-border">
             <nav className="flex flex-col gap-4">
-              <a href="#how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Cómo funciona
-              </a>
-              <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Funcionalidades
-              </a>
-              <a href="#descargar" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Descarga
-              </a>
-              <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Precios
-              </a>
-              <a href="#faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                FAQ
-              </a>
-              <a href="/manual" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              {navLinks.map((l) => (
+                <a key={l.anchor} href={href(l.anchor)} className="text-sm text-muted-foreground hover:text-foreground transition-colors" onClick={() => setIsMenuOpen(false)}>
+                  {l.label}
+                </a>
+              ))}
+              <a href="/manual" className="text-sm text-muted-foreground hover:text-foreground transition-colors" onClick={() => setIsMenuOpen(false)}>
                 Manual
               </a>
               <div className="flex flex-col gap-2 pt-4">
