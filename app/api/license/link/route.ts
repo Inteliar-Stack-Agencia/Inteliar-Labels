@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     .update({ user_id: user.id })
     .eq("email", user.email!)
     .is("user_id", null)
-    .select("id", { count: "exact" })
+    .select("id", { count: "exact", head: true })
 
   return NextResponse.json({ ok: true, linked: count ?? 0 })
 }

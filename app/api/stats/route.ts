@@ -16,7 +16,7 @@ export async function GET() {
       supabase.from("templates").select("id", { count: "exact", head: true }),
     ])
 
-    const totalUsers = usersRes.data?.total ?? 0
+    const totalUsers = usersRes.data?.users?.length ?? 0
     const totalLabels = (labelsRes.data ?? []).reduce(
       (sum: number, j: { total_labels: number }) => sum + (j.total_labels ?? 0),
       0
