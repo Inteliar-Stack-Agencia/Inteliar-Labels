@@ -16,6 +16,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.8,
     },
+    ...["dieteticas", "logistica", "mayoristas", "farmacias", "indumentaria", "ferreterias"].map((slug) => ({
+      url: `${BASE_URL}/${slug}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+    })),
     {
       url: `${BASE_URL}/privacidad`,
       lastModified: new Date(),
