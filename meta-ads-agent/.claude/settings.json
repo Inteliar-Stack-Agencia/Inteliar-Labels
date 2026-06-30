@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "Bash(pip:*)",
+      "Bash(cat logs/*)"
+    ],
+    "deny": [
+      "Bash(cat .env*)",
+      "Bash(echo *TOKEN*)",
+      "Bash(printenv)"
+    ]
+  }
+}
