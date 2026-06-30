@@ -13,6 +13,7 @@ import {
   Cable,
   FlaskConical,
   Plus,
+  Pencil,
   Trash2,
   Star,
   Play,
@@ -113,6 +114,7 @@ export default function SettingsPage() {
   const [printers, setPrinters] = useState<PrinterConfig[]>([])
   const [loadingPrinters, setLoadingPrinters] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState({ ...emptyForm })
   const [saving, setSaving] = useState(false)
   const [testResults, setTestResults] = useState<Record<string, { ok: boolean; msg: string }>>({})
@@ -268,6 +270,7 @@ export default function SettingsPage() {
       await savePrinter(config)
       await loadPrinters()
       setForm({ ...emptyForm })
+      setEditingId(null)
       setShowAddForm(false)
     } catch (err) {
       alert(`Error al guardar: ${err instanceof Error ? err.message : err}`)
@@ -284,6 +287,23 @@ export default function SettingsPage() {
     } catch (err) {
       alert(`Error al eliminar: ${err instanceof Error ? err.message : err}`)
     }
+  }
+
+  function handleEdit(printer: PrinterConfig) {
+    setForm({
+      id: printer.id,
+      name: printer.name,
+      brand: (printer.brand ?? "generic") as Brand,
+      language: (printer.language ?? "auto") as Language,
+      connection: printer.connection as ConnectionType,
+      host: printer.host ?? "",
+      port: printer.port ?? 9100,
+      usbQueue: printer.usbQueue ?? "",
+      serialPort: printer.serialPort ?? "",
+      baudRate: printer.baudRate ?? 9600,
+    })
+    setEditingId(printer.id)
+    setShowAddForm(true)
   }
 
   async function handleSetDefault(id: string) {
@@ -303,7 +323,7 @@ export default function SettingsPage() {
       const res = await testPrinter(id)
       setTestResults((prev) => ({
         ...prev,
-        [id]: { ok: res.success, msg: res.message ?? (res.success ? "OK" : "Error") }
+        [id]: { ok: res.success, msg: res.error ?? res.message ?? (res.success ? "OK" : "Error al imprimir") }
       }))
     } catch (err) {
       setTestResults((prev) => ({
@@ -529,7 +549,7 @@ export default function SettingsPage() {
                     onSubmit={handleSavePrinter}
                     className="rounded-xl border border-primary bg-card p-5 space-y-4"
                   >
-                    <h3 className="font-semibold text-card-foreground">Nueva impresora</h3>
+                    <h3 className="font-semibold text-card-foreground">{editingId ? "Editar impresora" : "Nueva impresora"}</h3>
 
                     <div className="grid gap-3 sm:grid-cols-2">
                       {/* ID */}
@@ -739,12 +759,12 @@ export default function SettingsPage() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => { setShowAddForm(false); setForm({ ...emptyForm }) }}
+                        onClick={() => { setShowAddForm(false); setEditingId(null); setForm({ ...emptyForm }) }}
                       >
                         Cancelar
                       </Button>
                       <Button type="submit" size="sm" disabled={saving}>
-                        {saving ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />Guardando…</> : "Guardar impresora"}
+                        {saving ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />Guardando…</> : editingId ? "Guardar cambios" : "Agregar impresora"}
                       </Button>
                     </div>
                   </form>
@@ -849,6 +869,15 @@ export default function SettingsPage() {
                             </div>
 
                             <div className="flex items-center gap-1 flex-shrink-0">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                onClick={() => handleEdit(printer)}
+                                title="Editar impresora"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
