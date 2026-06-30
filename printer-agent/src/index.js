@@ -287,8 +287,8 @@ async function printViaSerial(data, printer) {
 // Linux/macOS: uses lpr -P <queue> -l (raw passthrough)
 
 const WINSPOOL_PS = `
-param([string]$printerName, [string]$dataBase64)
-$bytes = [System.Convert]::FromBase64String($dataBase64)
+param([string]$printerName, [string]$dataFile)
+$bytes = [System.IO.File]::ReadAllBytes($dataFile)
 Add-Type -TypeDefinition @"
 using System;using System.Runtime.InteropServices;
 public class WinSpool {
@@ -338,19 +338,23 @@ function printViaUsb(data, printer) {
     const queueName = printer.usbQueue || printer.name
 
     if (platform === 'win32') {
-      const b64 = Buffer.from(data, 'binary').toString('base64')
-      // Write script to a temp .ps1 file so -File can be used instead of -Command.
-      // Printer names with parentheses (e.g. "Honeywell PC42t plus (203 dpi)") break
-      // PowerShell expression parsing when passed inline via -Command.
-      const tmpScript = path.join(os.tmpdir(), `inteliar_print_${Date.now()}.ps1`)
+      // Write both the PS script and the raw print data to temp files.
+      // Passing data as a command-line arg breaks for large jobs (logos, many
+      // labels) with spawn ENAMETOOLONG, since Windows caps argv at ~32k chars.
+      // The script reads the bytes from the data file instead.
+      const stamp = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+      const tmpScript = path.join(os.tmpdir(), `inteliar_print_${stamp}.ps1`)
+      const tmpData = path.join(os.tmpdir(), `inteliar_data_${stamp}.bin`)
       fs.writeFileSync(tmpScript, WINSPOOL_PS, 'utf8')
+      fs.writeFileSync(tmpData, Buffer.from(data, 'binary'))
       execFile('powershell', [
         '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
         '-File', tmpScript,
         '-printerName', queueName,
-        '-dataBase64', b64,
-      ], { timeout: 15000 }, (err, stdout, stderr) => {
+        '-dataFile', tmpData,
+      ], { timeout: 30000 }, (err, stdout, stderr) => {
         try { fs.unlinkSync(tmpScript) } catch {}
+        try { fs.unlinkSync(tmpData) } catch {}
         if (err) return reject(new Error(`USB WinSpool: ${stderr || err.message}`))
         if (!stdout.includes('OK:')) return reject(new Error(`USB WinSpool: respuesta inesperada: ${stdout}`))
         resolve()
