@@ -81,6 +81,8 @@ export async function renderLabelToPng(
         const scale = Math.min(bw / img.width, bh / img.height)
         const dw = img.width * scale
         const dh = img.height * scale
+        ctx.imageSmoothingEnabled = true
+        ctx.imageSmoothingQuality = "high"
         ctx.drawImage(img, x + (bw - dw) / 2, y + (bh - dh) / 2, dw, dh)
       } catch {
         // skip logo if it can't load
@@ -99,7 +101,14 @@ export async function renderLabelToPng(
           ? serialValue(el, Number(row.__labelIndex ?? 0))
           : substituteVars(el.content, row)
       const fd = fontDots(el.fontSize)
-      ctx.font = `${el.bold ? "bold " : ""}${fd}px Arial, sans-serif`
+      // Match the editor preview and printer's condensed bitmap font (ZPL ^A0)
+      // by using Arial Narrow with slight negative letter-spacing. Regular
+      // Arial is noticeably wider, which can wrap a line that fit in the
+      // preview/ZPL output into two lines and shift it into elements below.
+      ctx.font = `${el.bold ? "bold " : ""}${fd}px "Arial Narrow", Arial, sans-serif`
+      if ("letterSpacing" in ctx) {
+        ;(ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${-Math.round(fd * 0.04)}px`
+      }
       ctx.fillStyle = "#000000"
       if (align === "center") {
         ctx.textAlign = "center"
