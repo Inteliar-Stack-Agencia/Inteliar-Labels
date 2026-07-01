@@ -378,7 +378,7 @@ function printViaUsb(data, printer) {
 // Each image is drawn to fill a page sized to the label's physical dimensions.
 
 const IMAGE_PRINT_PS = `
-param([string]$printerName,[string]$listFile,[int]$wMm,[int]$hMm)
+param([string]$printerName,[string]$listFile,[int]$wMm,[int]$hMm,[string]$flip)
 Add-Type -AssemblyName System.Drawing
 $files = @(Get-Content -LiteralPath $listFile | Where-Object { $_ -ne "" })
 if($files.Count -eq 0){ throw "No hay imagenes para imprimir" }
@@ -397,6 +397,9 @@ $pd.add_PrintPage({
   param($s,$e)
   $img = [System.Drawing.Image]::FromFile($files[$script:idx])
   try {
+    if($flip -eq "v"){ $img.RotateFlip([System.Drawing.RotateFlipType]::RotateNoneFlipY) }
+    elseif($flip -eq "h"){ $img.RotateFlip([System.Drawing.RotateFlipType]::RotateNoneFlipX) }
+    elseif($flip -eq "both"){ $img.RotateFlip([System.Drawing.RotateFlipType]::RotateNoneFlipXY) }
     $e.Graphics.DrawImage($img, 0, 0, $e.PageBounds.Width, $e.PageBounds.Height)
   } finally { $img.Dispose() }
   $script:idx++
@@ -406,12 +409,16 @@ $pd.Print()
 Write-Output "OK:$($files.Count)"
 `
 
+// flip: 'none' | 'v' (vertical, top<->bottom) | 'h' (horizontal, left<->right) | 'both'
+// Some Windows drivers (e.g. Honeywell/Seagull) mirror the page on one axis;
+// this lets a printer be configured to compensate without affecting others.
 function printImagesViaDriver(images, printer, widthMm, heightMm) {
   return new Promise((resolve, reject) => {
     if (process.platform !== 'win32') {
       return reject(new Error('Impresión por driver (imagen) solo disponible en Windows'))
     }
     const queueName = printer.usbQueue || printer.name
+    const flip = printer.imageFlip || 'none'
     const stamp = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
     const tmpScript = path.join(os.tmpdir(), `inteliar_img_${stamp}.ps1`)
     const listFile = path.join(os.tmpdir(), `inteliar_list_${stamp}.txt`)
@@ -440,6 +447,7 @@ function printImagesViaDriver(images, printer, widthMm, heightMm) {
       '-listFile', listFile,
       '-wMm', String(Math.round(widthMm)),
       '-hMm', String(Math.round(heightMm)),
+      '-flip', flip,
     ], { timeout: 60000 }, (err, stdout, stderr) => {
       cleanup()
       if (err) return reject(new Error(`Driver print: ${stderr || err.message}`))

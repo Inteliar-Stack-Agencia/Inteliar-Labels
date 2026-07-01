@@ -133,7 +133,26 @@ export async function renderLabelToPng(
     // barcode / qr: not yet rendered as image — handled by ZPL path
   }
 
+  thresholdToBlackAndWhite(ctx, w, h)
   return canvas.toDataURL("image/png")
+}
+
+// Thermal heads are effectively 1-bit (burn or don't burn a dot). Antialiased
+// grey edges from canvas text/shape rendering print as faint smudges instead
+// of clean lines, and can make barcodes unreadable. Snap every pixel to pure
+// black or white so the printed result matches what a real ZPL bitmap looks
+// like.
+function thresholdToBlackAndWhite(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  const imageData = ctx.getImageData(0, 0, w, h)
+  const d = imageData.data
+  const THRESHOLD = 200 // 0-255; anything darker than this becomes solid black
+  for (let i = 0; i < d.length; i += 4) {
+    const gray = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114)
+    const v = gray < THRESHOLD ? 0 : 255
+    d[i] = d[i + 1] = d[i + 2] = v
+    d[i + 3] = 255
+  }
+  ctx.putImageData(imageData, 0, 0)
 }
 
 // Simple word-wrap up to 3 lines, matching ^FB...,3 behaviour in the ZPL path.

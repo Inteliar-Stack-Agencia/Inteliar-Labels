@@ -14,6 +14,9 @@ export interface PrinterConfig {
   usbQueue?: string
   serialPort?: string
   baudRate?: number
+  /** For USB printers using the Windows-driver image path: some drivers
+   * (e.g. Honeywell/Seagull) mirror the printed page on one axis. */
+  imageFlip?: 'none' | 'v' | 'h' | 'both'
 }
 
 export interface AgentStatus {

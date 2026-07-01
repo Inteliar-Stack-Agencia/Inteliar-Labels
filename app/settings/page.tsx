@@ -82,6 +82,7 @@ const emptyForm: Omit<PrinterConfig, "id"> & { id: string } = {
   usbQueue: "",
   serialPort: "",
   baudRate: 9600,
+  imageFlip: "none",
 }
 
 function connectionIcon(conn: ConnectionType) {
@@ -261,6 +262,7 @@ export default function SettingsPage() {
         } : {}),
         ...(form.connection === "usb" ? {
           usbQueue: form.usbQueue || undefined,
+          imageFlip: form.imageFlip && form.imageFlip !== "none" ? form.imageFlip : undefined,
         } : {}),
         ...(form.connection === "serial" ? {
           serialPort: form.serialPort || undefined,
@@ -301,6 +303,7 @@ export default function SettingsPage() {
       usbQueue: printer.usbQueue ?? "",
       serialPort: printer.serialPort ?? "",
       baudRate: printer.baudRate ?? 9600,
+      imageFlip: printer.imageFlip ?? "none",
     })
     setEditingId(printer.id)
     setShowAddForm(true)
@@ -718,6 +721,21 @@ export default function SettingsPage() {
                               ))}
                             </div>
                           )}
+                          <div className="pt-2">
+                            <label className="mb-1 block text-xs font-medium text-foreground">
+                              Orientación de imagen (solo si sale espejada o al revés)
+                            </label>
+                            <select
+                              value={form.imageFlip ?? "none"}
+                              onChange={(e) => setForm({ ...form, imageFlip: e.target.value as typeof form.imageFlip })}
+                              className="w-full rounded-lg border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                            >
+                              <option value="none">Normal</option>
+                              <option value="v">Volteada verticalmente (arriba/abajo)</option>
+                              <option value="h">Volteada horizontalmente (izq/der)</option>
+                              <option value="both">Volteada en ambos ejes (180°)</option>
+                            </select>
+                          </div>
                         </div>
                       )}
 
