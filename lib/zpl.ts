@@ -143,7 +143,7 @@ function buildLabelZpl(
 
     } else if (el.type === "ellipse") {
       const ew = tenthMmToDots(el.lineWidth ?? 200)
-      const eh = tenthMmToDots(el.lineHeight ?? 200)
+      const eh = tenthMmToDots(el.lineHeight ?? 100)
       const thickness = Math.max(1, tenthMmToDots(el.lineThickness ?? 5))
       fields.push(`^FO${x},${y}^GE${ew},${eh},${thickness},B^FS`)
     }

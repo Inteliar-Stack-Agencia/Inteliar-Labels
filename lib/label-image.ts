@@ -132,7 +132,7 @@ export async function renderLabelToPng(
       ctx.strokeRect(x + th / 2, y + th / 2, rw - th, rh - th)
     } else if (el.type === "ellipse") {
       const ew = tenthMmToDots(el.lineWidth ?? 200)
-      const eh = tenthMmToDots(el.lineHeight ?? 200)
+      const eh = tenthMmToDots(el.lineHeight ?? 100)
       const th = Math.max(1, tenthMmToDots(el.lineThickness ?? 5))
       ctx.lineWidth = th
       ctx.beginPath()
