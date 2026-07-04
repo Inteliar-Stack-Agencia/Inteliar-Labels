@@ -1159,7 +1159,7 @@ export default function TemplateEditPage() {
                   {element.type === "line" ? (
                     <div style={{ width: `${(element.lineWidth ?? (widthMm - 8) * 10) * 6 / 10}px`, height: `${Math.max(1, (element.lineThickness ?? 5) * 6 / 10)}px`, backgroundColor: "#333" }} />
                   ) : element.type === "rect" ? (
-                    <div style={{ width: `${(element.lineWidth ?? 200) * 6 / 10}px`, height: `${(element.lineHeight ?? 100) * 6 / 10}px`, border: `${Math.max(1, (element.lineThickness ?? 5) * 6 / 10)}px solid #333` }} />
+                    <div style={{ width: `${(element.lineWidth ?? 200) * 6 / 10}px`, height: `${(element.lineHeight ?? 100) * 6 / 10}px`, border: `${Math.max(1, (element.lineThickness ?? 5) * 6 / 10)}px solid #333`, boxSizing: "border-box" }} />
                   ) : element.type === "image" ? (
                     element.content ? <img src={element.content} alt="" style={{ width: `${(element.imgWidth ?? 200) * 6 / 10}px`, height: `${(element.imgHeight ?? 150) * 6 / 10}px`, objectFit: "contain" }} /> : null
                   ) : (
