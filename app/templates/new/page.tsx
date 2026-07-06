@@ -1135,7 +1135,7 @@ export default function NewTemplatePage() {
                   key={element.id}
                   className="absolute"
                   style={
-                    element.type === "line"
+                    element.type === "line" || (element.type === "text" && element.textAlign && element.textAlign !== "left")
                       ? { left: 0, top: `${element.y * 6 / 10}px`, width: `${widthMm * 6}px`, paddingLeft: `${2 * 6}px`, paddingRight: `${2 * 6}px` }
                       : { left: `${element.x * 6 / 10}px`, top: `${element.y * 6 / 10}px` }
                   }
@@ -1147,7 +1147,7 @@ export default function NewTemplatePage() {
                   ) : element.type === "image" ? (
                     element.imageUrl ? <img src={element.imageUrl} alt="" style={{ width: `${(element.imgWidth ?? 200) * 6 / 10}px`, height: `${(element.imgHeight ?? 150) * 6 / 10}px`, objectFit: "contain" }} /> : null
                   ) : (
-                    <div className="px-1.5 py-1">
+                    <div className="px-1.5 py-1" style={{ width: "100%" }}>
                       <span
                         className="text-gray-800"
                         style={{
@@ -1155,6 +1155,7 @@ export default function NewTemplatePage() {
                           fontWeight: element.bold ? "bold" : "normal",
                           textAlign: element.textAlign || "left",
                           display: "block",
+                          width: "100%",
                           fontFamily: "'Arial Narrow', Arial, sans-serif",
                           letterSpacing: "-0.03em",
                           lineHeight: 0.95,
