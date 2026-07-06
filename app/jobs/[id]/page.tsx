@@ -57,7 +57,7 @@ interface Template {
   canvas_data: { elements: LabelElement[]; cutBetweenLabels?: boolean }
 }
 
-const SCALE = 2
+const SCALE = 4
 
 function substituteVars(text: string, row: Record<string, string>): string {
   return text.replace(/\{\{(\w+)\}\}/g, (_, key) => row[key] ?? `{{${key}}}`)
@@ -72,6 +72,8 @@ function LabelPreview({
 }) {
   const w = template.width_mm * SCALE
   const h = template.height_mm * SCALE
+  const margin = (2 * SCALE)
+  const blockW = Math.max(1, w - 2 * margin)
 
   return (
     <div
@@ -88,10 +90,10 @@ function LabelPreview({
       {template.canvas_data.elements.map((el) => {
         const left = (el.x * SCALE) / 10
         const top = (el.y * SCALE) / 10
+        const align = el.textAlign ?? "left"
 
         if (el.type === "image" && el.imageUrl) {
           return (
-            // eslint-disable-next-line @next/next/no-img-element
             <img
               key={el.id}
               src={el.imageUrl}
@@ -107,23 +109,96 @@ function LabelPreview({
           )
         }
 
+        if (el.type === "line") {
+          return (
+            <div
+              key={el.id}
+              className="absolute bg-gray-800"
+              style={{
+                left,
+                top,
+                width: ((el.lineWidth ?? template.width_mm * 10 - 80) * SCALE) / 10,
+                height: Math.max(1, ((el.lineThickness ?? 5) * SCALE) / 10),
+              }}
+            />
+          )
+        }
+
+        if (el.type === "rect") {
+          return (
+            <div
+              key={el.id}
+              className="absolute border border-gray-800"
+              style={{
+                left,
+                top,
+                width: ((el.lineWidth ?? 200) * SCALE) / 10,
+                height: ((el.lineHeight ?? 100) * SCALE) / 10,
+                borderWidth: Math.max(1, ((el.lineThickness ?? 5) * SCALE) / 10),
+                boxSizing: "border-box",
+              }}
+            />
+          )
+        }
+
+        if (el.type === "ellipse") {
+          return (
+            <div
+              key={el.id}
+              className="absolute border border-gray-800 rounded-full"
+              style={{
+                left,
+                top,
+                width: ((el.lineWidth ?? 200) * SCALE) / 10,
+                height: ((el.lineHeight ?? 100) * SCALE) / 10,
+                borderWidth: Math.max(1, ((el.lineThickness ?? 5) * SCALE) / 10),
+                boxSizing: "border-box",
+              }}
+            />
+          )
+        }
+
         const content = substituteVars(el.content, row)
-        const Icon = el.type === "qr" ? QrCode : el.type === "barcode" ? Barcode : Type
+
+        if (align === "center" || align === "right") {
+          const justification = align === "center" ? "center" : "right"
+          return (
+            <div
+              key={el.id}
+              className="absolute"
+              style={{
+                left: margin,
+                top,
+                width: blockW,
+                textAlign: justification,
+              }}
+            >
+              <span
+                className="text-gray-800 leading-tight inline-block"
+                style={{
+                  fontSize: `${Math.max(6, (el.fontSize * SCALE) / 3)}px`,
+                  fontWeight: el.bold ? "bold" : "normal",
+                  fontFamily: "'Arial Narrow', Arial, sans-serif",
+                }}
+              >
+                {content}
+              </span>
+            </div>
+          )
+        }
 
         return (
           <div
             key={el.id}
-            className="absolute flex items-center gap-0.5"
+            className="absolute"
             style={{ left, top }}
           >
-            {el.type !== "text" && (
-              <Icon className="h-2.5 w-2.5 text-gray-400 shrink-0" />
-            )}
             <span
               className="text-gray-800 leading-tight"
               style={{
-                fontSize: `${Math.max(6, el.fontSize * SCALE / 3)}px`,
+                fontSize: `${Math.max(6, (el.fontSize * SCALE) / 3)}px`,
                 fontWeight: el.bold ? "bold" : "normal",
+                fontFamily: "'Arial Narrow', Arial, sans-serif",
               }}
             >
               {content}
