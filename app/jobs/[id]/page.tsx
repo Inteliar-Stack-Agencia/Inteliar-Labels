@@ -174,11 +174,12 @@ function LabelPreview({
               }}
             >
               <span
-                className="text-gray-800 leading-tight inline-block"
+                className="text-gray-800 inline-block"
                 style={{
                   fontSize: `${Math.max(6, (el.fontSize * SCALE) / 3)}px`,
                   fontWeight: el.bold ? "bold" : "normal",
                   fontFamily: "'Arial Narrow', Arial, sans-serif",
+                  lineHeight: 1.1,
                 }}
               >
                 {content}
@@ -194,11 +195,12 @@ function LabelPreview({
             style={{ left, top }}
           >
             <span
-              className="text-gray-800 leading-tight"
+              className="text-gray-800"
               style={{
                 fontSize: `${Math.max(6, (el.fontSize * SCALE) / 3)}px`,
                 fontWeight: el.bold ? "bold" : "normal",
                 fontFamily: "'Arial Narrow', Arial, sans-serif",
+                lineHeight: 1.1,
               }}
             >
               {content}
