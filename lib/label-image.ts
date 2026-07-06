@@ -51,7 +51,7 @@ export async function renderLabelToPng(
 ): Promise<string> {
   const w = mmToDots(template.width_mm)
   const h = mmToDots(template.height_mm)
-  const margin = mmToDots(2)
+  const margin = mmToDots(1)
   const blockW = Math.max(1, w - 2 * margin)
 
   const canvas = document.createElement("canvas")
@@ -118,7 +118,7 @@ export async function renderLabelToPng(
         wrapText(ctx, content, margin + blockW, y, blockW, fd)
       } else {
         ctx.textAlign = "left"
-        wrapText(ctx, content, x, y, w - x, fd)
+        wrapText(ctx, content, x, y, w - x - margin, fd)
       }
     } else if (el.type === "line") {
       const lw = tenthMmToDots(el.lineWidth ?? template.width_mm * 10 - 80)
@@ -187,7 +187,9 @@ function wrapText(
   }
   if (line) lines.push(line)
   lines = lines.slice(0, 3)
-  lines.forEach((ln, i) => ctx.fillText(ln, x, y + i * Math.round(lineHeight * 1.15)))
+  // Compact line spacing (0.95) so wrapped lines read as one element instead of
+  // looking like two separate lines with a big gap between them.
+  lines.forEach((ln, i) => ctx.fillText(ln, x, y + i * Math.round(lineHeight * 0.95)))
 }
 
 function serialValue(el: LabelElement, labelIndex: number): string {
