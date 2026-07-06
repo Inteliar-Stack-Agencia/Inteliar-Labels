@@ -286,6 +286,104 @@ const SECTIONS: Section[] = [
       },
     ],
   },
+  {
+    title: "Solución de problemas",
+    emoji: "🆘",
+    items: [
+      {
+        q: "La impresora no aparece en la lista de configuración",
+        a: (
+          <div className="space-y-3 text-xs text-muted-foreground">
+            <p>Checkeá esto en orden:</p>
+            <ol className="list-decimal pl-5 space-y-2">
+              <li><strong>¿Descargaste el Agente?</strong> Necesitás tener instalado el <strong>Agente de Impresión</strong> (InteliarPrinterAgent.exe en la landing). El agente detecta automáticamente las impresoras conectadas.</li>
+              <li><strong>¿El agente está corriendo?</strong> Abrí el .exe del agente. Debe aparecer una ventana o un ícono en la bandeja del sistema. Si no ves nada, reiniciá.</li>
+              <li><strong>¿La impresora está conectada?</strong> Verificá: USB bien enchufado, red conectada (para impresoras en red), o puerto serie activado si es ese el caso.</li>
+              <li><strong>¿Esperar 10 segundos?</strong> El agente tarda un momento en detectar las impresoras. Recargá la página de Configuración después de algunos segundos.</li>
+              <li><strong>Reinicios:</strong> Apagá la impresora (espera 5 segundos), encendela, y recargá la app web.</li>
+            </ol>
+            <p className="mt-2 font-medium text-foreground">Si ninguno de estos pasos funciona, probá descargar el agente nuevamente desde la landing — asegurate de que sea la última versión.</p>
+          </div>
+        ),
+      },
+      {
+        q: "Error de permisos en Windows al instalar el Agente",
+        a: (
+          <div className="space-y-3 text-xs text-muted-foreground">
+            <p>Windows puede bloquear la ejecución de archivos descargados de Internet.</p>
+            <ol className="list-decimal pl-5 space-y-2">
+              <li>Localizá el archivo <code className="text-primary">InteliarPrinterAgent.exe</code> en tu PC.</li>
+              <li>Hacé clic derecho → <strong>Propiedades</strong>.</li>
+              <li>En la parte inferior de la ventana, buscá la sección "Seguridad". Si dice algo como "Este archivo proviene de otra computadora...", hacé click en <strong>"Desbloquear"</strong> o tildar la opción.</li>
+              <li>Aplicá los cambios y ejecutá el archivo normalmente.</li>
+            </ol>
+            <p className="mt-2 font-medium text-foreground">Si Windows Defender sigue bloqueándolo, agregá una excepción: Windows Defender → Protección contra virus y amenazas → Administrar la configuración → Exclusiones → Agregar carpeta (seleccioná la carpeta donde está el .exe).</p>
+          </div>
+        ),
+      },
+      {
+        q: "El agente no responde (conexión rechazada en localhost:9638)",
+        a: (
+          <div className="space-y-3 text-xs text-muted-foreground">
+            <p>El agente debe estar escuchando en <code className="text-primary">http://localhost:9638</code>.</p>
+            <ol className="list-decimal pl-5 space-y-2">
+              <li><strong>¿Está el agente abierto?</strong> Abrí el InteliarPrinterAgent.exe. Debe mostrar una ventana indicando que está escuchando.</li>
+              <li><strong>¿Otro programa usa el puerto 9638?</strong> Esto es muy raro, pero podés verificar abriendo CMD y escribiendo: <code className="text-primary">netstat -ano | findstr :9638</code>. Si devuelve algo, hay otro proceso usando ese puerto.</li>
+              <li><strong>Cortafuegos de Windows:</strong> Abrí Windows Defender Firewall → Permitir que una aplicación se comunique → Busca "InteliarPrinterAgent" o agregá una excepción para el puerto 9638.</li>
+              <li><strong>Reiniciá el agente:</strong> Cerralo completamente (cerrar la ventana) y abrilo de nuevo.</li>
+            </ol>
+            <p className="mt-2 font-medium text-foreground">La app web debería detectar automáticamente que el agente está en línea. Si no pasa, recargá la página.</p>
+          </div>
+        ),
+      },
+      {
+        q: "La impresión sale pixelada o borrosa",
+        a: (
+          <div className="space-y-3 text-xs text-muted-foreground">
+            <p>Esto generalmente es un problema de la impresora, no del software. Checkeá:</p>
+            <ol className="list-decimal pl-5 space-y-2">
+              <li><strong>Limpieza de cabeza:</strong> Las impresoras térmicas acumulan suciedad. Limpiá la cabeza de impresión con alcohol isopropílico (al 90% o más) y un algodón suave. Apagá primero la impresora.</li>
+              <li><strong>Calidad del papel:</strong> Si usás papel de baja calidad, la impresión sufre. El papel de impresoras térmicas debe ser específico — no es cualquier papel térmico.</li>
+              <li><strong>Velocidad de impresión:</strong> Si imprimís muy rápido, la cabeza no tiene tiempo de secar bien. Bajá la velocidad en la configuración de la impresora (muchas impresoras lo permiten).</li>
+              <li><strong>Ribbon (si usás transfer printing):</strong> Si es un ribbon, asegurate de que esté bien colocado y sea de buena calidad. Los ribbons de mala calidad causan pixelación.</li>
+              <li><strong>Configuración de oscuridad:</strong> Algunos modelos permiten ajustar la oscuridad/temperatura de impresión. Probá aumentarla ligeramente si es muy clara.</li>
+            </ol>
+            <p className="mt-2 font-medium text-foreground">El sistema imprime a 203 DPI (8 puntos/mm), que es el estándar para impresoras térmicas. Si el problema persiste, es casi seguro que es algo del hardware.</p>
+          </div>
+        ),
+      },
+      {
+        q: "Error al cargar el Excel: 'Columnas no coinciden' o 'Encabezado no reconocido'",
+        a: (
+          <div className="space-y-3 text-xs text-muted-foreground">
+            <p>El Excel y la plantilla deben compartir los nombres de las variables exactamente.</p>
+            <ol className="list-decimal pl-5 space-y-2">
+              <li><strong>Descargá el Excel desde el editor:</strong> En Templates → Tu plantilla → botón "Descargar Excel". Así obtenés las columnas correctas con los nombres exactos.</li>
+              <li><strong>Checkeá mayúsculas/minúsculas:</strong> <code className="text-primary">{{empresa}}</code> NO es lo mismo que <code className="text-primary">{{Empresa}}</code>. Las variables deben coincidir exactamente con los nombres de las columnas del Excel.</li>
+              <li><strong>Sin espacios extras:</strong> Si la columna se llama "empresa " (con espacio al final), no va a funcionar. Borrá espacios.</li>
+              <li><strong>Primera fila es el encabezado:</strong> La primera fila DEBE contener los nombres de las columnas. Los datos empiezan en la segunda fila.</li>
+              <li><strong>Guardá el Excel:</strong> Si lo editaste en Google Sheets, descargá como .xlsx o .csv. Algunos formatos online pueden causar conflictos.</li>
+            </ol>
+            <p className="mt-2 font-medium text-foreground">Si modificaste el Excel manualmente, es fácil que un nombre de columna quede distinto. Mejor opción: usar siempre "Descargar Excel" del editor de la plantilla.</p>
+          </div>
+        ),
+      },
+      {
+        q: "Otros errores generales: qué hacer",
+        a: (
+          <div className="space-y-3 text-xs text-muted-foreground">
+            <p>Si encontrás un error no mencionado acá:</p>
+            <ol className="list-decimal pl-5 space-y-2">
+              <li><strong>Recargá la página:</strong> Muchos errores son temporales. Presioná F5 o hacé click en recarga.</li>
+              <li><strong>Borrá el caché del navegador:</strong> Algunos cambios requieren limpiar el caché. En Chrome: Ctrl+Shift+Delete, seleccioná "Todo" y borrá.</li>
+              <li><strong>Reiniciá el agente:</strong> Si el problema está en la impresión, cerrá y reabrí el InteliarPrinterAgent.exe.</li>
+              <li><strong>Probá en otro navegador:</strong> A veces un navegador tiene un problema pero otro funciona bien.</li>
+            </ol>
+          </div>
+        ),
+      },
+    ],
+  },
 ]
 
 function FAQRow({ item }: { item: FAQItem }) {
