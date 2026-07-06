@@ -110,15 +110,18 @@ export async function renderLabelToPng(
         ;(ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${-Math.round(fd * 0.04)}px`
       }
       ctx.fillStyle = "#000000"
+      // Extra safety inset on the right: thermal heads often don't print the
+      // last 1-2mm at the edge, which clipped the final letter of long lines.
+      const safety = mmToDots(2)
       if (align === "center") {
         ctx.textAlign = "center"
-        wrapText(ctx, content, margin + blockW / 2, y, blockW, fd)
+        wrapText(ctx, content, margin + blockW / 2, y, blockW - 2 * safety, fd)
       } else if (align === "right") {
         ctx.textAlign = "right"
-        wrapText(ctx, content, margin + blockW, y, blockW, fd)
+        wrapText(ctx, content, margin + blockW - safety, y, blockW - safety, fd)
       } else {
         ctx.textAlign = "left"
-        wrapText(ctx, content, x, y, w - x - margin, fd)
+        wrapText(ctx, content, x, y, w - x - margin - safety, fd)
       }
     } else if (el.type === "line") {
       const lw = tenthMmToDots(el.lineWidth ?? template.width_mm * 10 - 80)

@@ -75,7 +75,10 @@ function buildLabelZpl(
   const h = mmToDots(heightMm)
   // Inner margin so centered/right text never touches or exceeds the label edge
   const margin = mmToDots(1)
-  const blockW = Math.max(1, w - 2 * margin)
+  // Extra safety inset (2mm each side) so the printer's non-printable edge
+  // doesn't clip the last letter of long wrapped lines.
+  const safety = mmToDots(2)
+  const blockW = Math.max(1, w - 2 * margin - 2 * safety)
   const fields: string[] = []
 
   for (const el of canvasData.elements) {
