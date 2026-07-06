@@ -429,7 +429,7 @@ export default function AyudaPage() {
 
         <div className="rounded-xl border border-border bg-card p-5 text-center space-y-2">
           <p className="text-sm text-muted-foreground">¿Tenés una pregunta que no está acá?</p>
-          <p className="text-xs text-muted-foreground">Contactanos en <span className="text-primary">soporte@inteliar.com</span></p>
+          <p className="text-xs text-muted-foreground">Contactanos en <span className="text-primary">soporte@inteliarstack.com</span></p>
         </div>
       </div>
     </DashboardLayout>
