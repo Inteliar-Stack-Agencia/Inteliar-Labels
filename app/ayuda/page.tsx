@@ -359,7 +359,7 @@ const SECTIONS: Section[] = [
             <p>El Excel y la plantilla deben compartir los nombres de las variables exactamente.</p>
             <ol className="list-decimal pl-5 space-y-2">
               <li><strong>Descargá el Excel desde el editor:</strong> En Templates → Tu plantilla → botón "Descargar Excel". Así obtenés las columnas correctas con los nombres exactos.</li>
-              <li><strong>Checkeá mayúsculas/minúsculas:</strong> <code className="text-primary">{{empresa}}</code> NO es lo mismo que <code className="text-primary">{{Empresa}}</code>. Las variables deben coincidir exactamente con los nombres de las columnas del Excel.</li>
+              <li><strong>Checkeá mayúsculas/minúsculas:</strong> <code className="text-primary">{`{{empresa}}`}</code> NO es lo mismo que <code className="text-primary">{`{{Empresa}}`}</code>. Las variables deben coincidir exactamente con los nombres de las columnas del Excel.</li>
               <li><strong>Sin espacios extras:</strong> Si la columna se llama "empresa " (con espacio al final), no va a funcionar. Borrá espacios.</li>
               <li><strong>Primera fila es el encabezado:</strong> La primera fila DEBE contener los nombres de las columnas. Los datos empiezan en la segunda fila.</li>
               <li><strong>Guardá el Excel:</strong> Si lo editaste en Google Sheets, descargá como .xlsx o .csv. Algunos formatos online pueden causar conflictos.</li>
