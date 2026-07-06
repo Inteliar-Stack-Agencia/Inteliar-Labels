@@ -74,7 +74,7 @@ function buildLabelZpl(
   const w = mmToDots(widthMm)
   const h = mmToDots(heightMm)
   // Inner margin so centered/right text never touches or exceeds the label edge
-  const margin = mmToDots(2)
+  const margin = mmToDots(1)
   const blockW = Math.max(1, w - 2 * margin)
   const fields: string[] = []
 
