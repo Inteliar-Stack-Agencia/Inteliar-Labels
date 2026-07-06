@@ -698,7 +698,7 @@ export default function NewTemplatePage() {
                                 width: "100%",
                                 fontFamily: "'Arial Narrow', 'Liberation Sans Narrow', Arial, sans-serif",
                                 letterSpacing: "-0.03em",
-                                lineHeight: 1.1,
+                                lineHeight: 0.95,
                               }}
                             >
                               {element.type === "serial"
@@ -1145,7 +1145,7 @@ export default function NewTemplatePage() {
                   ) : element.type === "rect" ? (
                     <div style={{ width: `${(element.lineWidth ?? 200) * 6 / 10}px`, height: `${(element.lineHeight ?? 100) * 6 / 10}px`, border: `${Math.max(1, (element.lineThickness ?? 5) * 6 / 10)}px solid #333`, boxSizing: "border-box" }} />
                   ) : element.type === "image" ? (
-                    element.content ? <img src={element.content} alt="" style={{ width: `${(element.imgWidth ?? 200) * 6 / 10}px`, height: `${(element.imgHeight ?? 150) * 6 / 10}px`, objectFit: "contain" }} /> : null
+                    element.imageUrl ? <img src={element.imageUrl} alt="" style={{ width: `${(element.imgWidth ?? 200) * 6 / 10}px`, height: `${(element.imgHeight ?? 150) * 6 / 10}px`, objectFit: "contain" }} /> : null
                   ) : (
                     <div className="px-1.5 py-1">
                       <span
@@ -1157,7 +1157,7 @@ export default function NewTemplatePage() {
                           display: "block",
                           fontFamily: "'Arial Narrow', Arial, sans-serif",
                           letterSpacing: "-0.03em",
-                          lineHeight: 1.1,
+                          lineHeight: 0.95,
                         }}
                       >
                         {applyPreviewData(element.content ?? "")}
