@@ -80,13 +80,13 @@ export function DownloadSection() {
               ))}
             </ul>
             <Button className="w-full gap-2" asChild onClick={() => analytics.agentDownloaded()}>
-              <a href="https://github.com/Inteliar-Stack-Agencia/Inteliar-Labels/releases/latest/download/Inteliar.Label.Setup.1.0.0.exe">
+              <a href="https://github.com/Inteliar-Stack-Agencia/Inteliar-Labels/releases/latest/download/InteliarPrinterAgent.exe">
                 <Download className="h-4 w-4" />
                 Descargar para Windows
               </a>
             </Button>
             <p className="text-center text-xs text-muted-foreground -mt-2">
-              v1.0.0 · Windows 10/11 · 74 MB · No requiere Node.js
+              Última versión · Windows 10/11 · 74 MB · No requiere Node.js
             </p>
           </div>
         </div>
