@@ -164,6 +164,9 @@ export default function TemplateEditPage() {
       y: 20,
       fontSize: 12,
       bold: false,
+      // text/barcode get their own box; default to (near) full label width so a
+      // centered element still centers across the label until it's resized.
+      boxWidth: type === "text" ? (widthMm - 4) * 10 : type === "barcode" ? 400 : undefined,
       lineWidth: type === "line" ? (widthMm - 8) * 10 : type === "rect" || type === "ellipse" ? 200 : undefined,
       lineHeight: type === "rect" || type === "ellipse" ? 100 : undefined,
       lineThickness: type === "line" || type === "rect" || type === "ellipse" ? 5 : undefined,
@@ -280,11 +283,14 @@ export default function TemplateEditPage() {
     const origLineH = el.lineHeight ?? 10
     const origImgW = el.imgWidth ?? 30
     const origImgH = el.imgHeight ?? 20
+    const origBoxW = el.boxWidth ?? (widthMm - 4) * 10
 
     const onMouseMove = (ev: MouseEvent) => {
       const dx = (ev.clientX - startX) * 10 / SCALE
       const dy = (ev.clientY - startY) * 10 / SCALE
-      if (el.type === "line") {
+      if (el.type === "text" || el.type === "barcode") {
+        setElements(prev => prev.map(e => e.id === id ? { ...e, boxWidth: Math.max(40, Math.round(origBoxW + dx)) } : e))
+      } else if (el.type === "line") {
         setElements(prev => prev.map(e => e.id === id ? { ...e, lineWidth: Math.max(2, Math.round(origLineW + dx)) } : e))
       } else if (el.type === "rect" || el.type === "ellipse") {
         setElements(prev => prev.map(e => e.id === id ? { ...e, lineWidth: Math.max(2, Math.round(origLineW + dx)), lineHeight: Math.max(2, Math.round(origLineH + dy)) } : e))
@@ -575,9 +581,6 @@ export default function TemplateEditPage() {
               <Button variant="outline" size="sm" className="gap-2" onClick={() => addElement("rect")}>
                 <Square className="h-4 w-4" /> Rectángulo
               </Button>
-              <Button variant="outline" size="sm" className="gap-2" onClick={() => addElement("ellipse")}>
-                <Circle className="h-4 w-4" /> Elipse
-              </Button>
               <Button
                 variant="outline" size="sm" className="gap-2"
                 onClick={() => logoInputRef.current?.click()}
@@ -660,11 +663,18 @@ export default function TemplateEditPage() {
                               ? "border-primary bg-primary/10"
                               : "border-transparent hover:border-border"
                           )}
-                          style={
-                            element.type === "text" && element.textAlign && element.textAlign !== "left"
-                              ? { left: 0, top: `${element.y * SCALE / 10}px`, width: `${canvasW}px`, paddingLeft: `${2 * SCALE}px`, paddingRight: `${2 * SCALE}px` }
-                              : { left: `${element.x * SCALE / 10}px`, top: `${element.y * SCALE / 10}px` }
-                          }
+                          style={(() => {
+                            const top = `${element.y * SCALE / 10}px`
+                            // text/barcode with their own box: position at x with the box width
+                            if ((element.type === "text" || element.type === "barcode") && element.boxWidth != null) {
+                              return { left: `${element.x * SCALE / 10}px`, top, width: `${element.boxWidth * SCALE / 10}px` }
+                            }
+                            // legacy centered/right text without a box: align across the label
+                            if (element.type === "text" && element.textAlign && element.textAlign !== "left") {
+                              return { left: 0, top, width: `${canvasW}px`, paddingLeft: `${2 * SCALE}px`, paddingRight: `${2 * SCALE}px` }
+                            }
+                            return { left: `${element.x * SCALE / 10}px`, top }
+                          })()}
                         >
                           {selectedElement === element.id && (
                             <div className="absolute -top-5 left-0 flex items-center gap-1 rounded-t bg-primary px-1.5 py-0.5 text-[9px] font-medium text-primary-foreground whitespace-nowrap">
@@ -725,8 +735,22 @@ export default function TemplateEditPage() {
                                 <div onMouseDown={(e) => handleResizeMouseDown(e, element.id)} style={{ position: "absolute", right: -4, bottom: -4, width: 8, height: 8, background: "white", border: "2px solid hsl(var(--primary))", borderRadius: 2, cursor: "se-resize", zIndex: 10 }} />
                               )}
                             </div>
+                          ) : element.type === "barcode" ? (
+                            <div style={{ position: "relative", width: "100%" }}>
+                              <div style={{
+                                width: "100%",
+                                height: `${Math.max(20, 8 * SCALE)}px`,
+                                background: "repeating-linear-gradient(90deg, #111 0, #111 2px, #fff 2px, #fff 4px, #111 4px, #111 5px, #fff 5px, #fff 8px)",
+                              }} />
+                              <div className="text-center text-gray-600 truncate" style={{ fontSize: `${Math.max(8, 3 * SCALE / 2)}px`, fontFamily: "monospace" }}>
+                                {resolveDateVars(element.content ?? "")}
+                              </div>
+                              {selectedElement === element.id && (
+                                <div onMouseDown={(e) => handleResizeMouseDown(e, element.id)} style={{ position: "absolute", right: -4, top: "50%", transform: "translateY(-50%)", width: 8, height: 8, background: "white", border: "2px solid hsl(var(--primary))", borderRadius: 2, cursor: "ew-resize", zIndex: 10 }} />
+                              )}
+                            </div>
                           ) : (
-                            <div className="px-1.5 py-1" style={{ width: "100%" }}>
+                            <div className="px-1.5 py-1" style={{ position: "relative", width: "100%" }}>
                               <span
                                 className="text-gray-800"
                                 style={{
@@ -744,6 +768,9 @@ export default function TemplateEditPage() {
                                   ? `${element.serialPrefix ?? ""}${String(element.serialStart ?? 1).padStart(element.serialDigits ?? 4, "0")}${element.serialSuffix ?? ""}`
                                   : resolveDateVars(element.content ?? "")}
                               </span>
+                              {selectedElement === element.id && element.type === "text" && element.boxWidth != null && (
+                                <div onMouseDown={(e) => handleResizeMouseDown(e, element.id)} style={{ position: "absolute", right: -4, top: "50%", transform: "translateY(-50%)", width: 8, height: 8, background: "white", border: "2px solid hsl(var(--primary))", borderRadius: 2, cursor: "ew-resize", zIndex: 10 }} />
+                              )}
                             </div>
                           )}
                         </div>
@@ -1028,6 +1055,14 @@ export default function TemplateEditPage() {
                         )
                       })}
                     </div>
+                    <p className="mt-1 text-[10px] text-muted-foreground">La alineación es dentro de la caja del elemento. Arrastrá el borde derecho para cambiar el ancho.</p>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Ancho de caja (mm)</label>
+                    <input type="number" min={4} value={+(((selectedElementData.boxWidth ?? (widthMm - 4) * 10)) / 10).toFixed(1)}
+                      onChange={(e) => updateElement(selectedElementData.id, { boxWidth: Math.max(40, Math.round(Number(e.target.value) * 10)) })}
+                      className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
                   </div>
                 </>
               ) : (
@@ -1150,11 +1185,16 @@ export default function TemplateEditPage() {
                 <div
                   key={element.id}
                   className="absolute"
-                  style={
-                    element.type === "line" || (element.type === "text" && element.textAlign && element.textAlign !== "left")
-                      ? { left: 0, top: `${element.y * 6 / 10}px`, width: `${widthMm * 6}px`, paddingLeft: `${2 * 6}px`, paddingRight: `${2 * 6}px` }
-                      : { left: `${element.x * 6 / 10}px`, top: `${element.y * 6 / 10}px` }
-                  }
+                  style={(() => {
+                    const top = `${element.y * 6 / 10}px`
+                    if ((element.type === "text" || element.type === "barcode") && element.boxWidth != null) {
+                      return { left: `${element.x * 6 / 10}px`, top, width: `${element.boxWidth * 6 / 10}px` }
+                    }
+                    if (element.type === "line" || (element.type === "text" && element.textAlign && element.textAlign !== "left")) {
+                      return { left: 0, top, width: `${widthMm * 6}px`, paddingLeft: `${2 * 6}px`, paddingRight: `${2 * 6}px` }
+                    }
+                    return { left: `${element.x * 6 / 10}px`, top }
+                  })()}
                 >
                   {element.type === "line" ? (
                     <div style={{ width: `${(element.lineWidth ?? (widthMm - 8) * 10) * 6 / 10}px`, height: `${Math.max(1, (element.lineThickness ?? 5) * 6 / 10)}px`, backgroundColor: "#333" }} />
@@ -1162,6 +1202,13 @@ export default function TemplateEditPage() {
                     <div style={{ width: `${(element.lineWidth ?? 200) * 6 / 10}px`, height: `${(element.lineHeight ?? 100) * 6 / 10}px`, border: `${Math.max(1, (element.lineThickness ?? 5) * 6 / 10)}px solid #333`, boxSizing: "border-box" }} />
                   ) : element.type === "image" ? (
                     element.imageUrl ? <img src={element.imageUrl} alt="" style={{ width: `${(element.imgWidth ?? 200) * 6 / 10}px`, height: `${(element.imgHeight ?? 150) * 6 / 10}px`, objectFit: "contain" }} /> : null
+                  ) : element.type === "barcode" ? (
+                    <div style={{ width: "100%" }}>
+                      <div style={{ width: "100%", height: "48px", background: "repeating-linear-gradient(90deg, #111 0, #111 2px, #fff 2px, #fff 4px, #111 4px, #111 5px, #fff 5px, #fff 8px)" }} />
+                      <div className="text-center truncate" style={{ fontSize: "10px", fontFamily: "monospace", color: "#555" }}>
+                        {applyPreviewData(element.content ?? "")}
+                      </div>
+                    </div>
                   ) : (
                     <div className="px-1.5 py-1" style={{ width: "100%" }}>
                       <span

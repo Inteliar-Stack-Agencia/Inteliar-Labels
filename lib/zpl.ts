@@ -103,9 +103,13 @@ function buildLabelZpl(
     if (el.type === "text") {
       // 3rd ^FB param is line spacing (negative = compact). ^LS is Label Shift
       // (horizontal), NOT line spacing — do not use it here.
-      if (align === "center" || align === "right") {
-        const justification = align === "center" ? "C" : "R"
-        fields.push(`^FO${margin},${y}${fontSizeToZpl(el.fontSize)}^FB${blockW},3,-8,${justification},0^FD${content}^FS`)
+      const just = align === "center" ? "C" : align === "right" ? "R" : "L"
+      if (el.boxWidth != null) {
+        // Align INSIDE the element's own box, anchored at x.
+        const bw = Math.max(1, tenthMmToDots(el.boxWidth))
+        fields.push(`^FO${x},${y}${fontSizeToZpl(el.fontSize)}^FB${bw},3,-8,${just},0^FD${content}^FS`)
+      } else if (align === "center" || align === "right") {
+        fields.push(`^FO${margin},${y}${fontSizeToZpl(el.fontSize)}^FB${blockW},3,-8,${just},0^FD${content}^FS`)
       } else {
         fields.push(`^FO${x},${y}${fontSizeToZpl(el.fontSize)}^FB${blockW},3,-8,L,0^FD${content}^FS`)
       }

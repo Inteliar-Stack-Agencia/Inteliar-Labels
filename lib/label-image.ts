@@ -113,7 +113,20 @@ export async function renderLabelToPng(
       // Extra safety inset on the right: thermal heads often don't print the
       // last 1-2mm at the edge, which clipped the final letter of long lines.
       const safety = mmToDots(2)
-      if (align === "center") {
+      if (el.boxWidth != null) {
+        // Align INSIDE the element's own box, anchored at x.
+        const bw = Math.max(1, tenthMmToDots(el.boxWidth))
+        if (align === "center") {
+          ctx.textAlign = "center"
+          wrapText(ctx, content, x + bw / 2, y, bw, fd)
+        } else if (align === "right") {
+          ctx.textAlign = "right"
+          wrapText(ctx, content, x + bw, y, bw, fd)
+        } else {
+          ctx.textAlign = "left"
+          wrapText(ctx, content, x, y, bw, fd)
+        }
+      } else if (align === "center") {
         ctx.textAlign = "center"
         wrapText(ctx, content, margin + blockW / 2, y, blockW - 2 * safety, fd)
       } else if (align === "right") {

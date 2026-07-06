@@ -12,6 +12,11 @@ export interface LabelElement {
   fontSize: number
   bold: boolean
   textAlign?: "left" | "center" | "right"
+  // text / barcode: width of the element's own box in tenths-of-mm. When set,
+  // alignment (left/center/right) happens INSIDE this box, anchored at x — so a
+  // word can be centered inside a rectangle at any position. When undefined,
+  // legacy behaviour applies (center/right align across the whole label).
+  boxWidth?: number
   // image
   imageUrl?: string
   imgWidth?: number
