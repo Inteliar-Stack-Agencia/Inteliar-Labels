@@ -100,9 +100,9 @@ function buildLabelZpl(
     if (el.type === "text") {
       if (align === "center" || align === "right") {
         const justification = align === "center" ? "C" : "R"
-        fields.push(`^FO${margin},${y}${fontSizeToZpl(el.fontSize)}^FB${blockW},3,-10,${justification},0^FD${content}^FS`)
+        fields.push(`^FO${margin},${y}${fontSizeToZpl(el.fontSize)}^FB${blockW},3,-20,${justification},0^FD${content}^FS`)
       } else {
-        fields.push(`^FO${x},${y}${fontSizeToZpl(el.fontSize)}^FB${blockW},3,-10,L,0^FD${content}^FS`)
+        fields.push(`^FO${x},${y}${fontSizeToZpl(el.fontSize)}^FB${blockW},3,-20,L,0^FD${content}^FS`)
       }
 
     } else if (el.type === "barcode") {
