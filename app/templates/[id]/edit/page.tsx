@@ -63,6 +63,9 @@ export default function TemplateEditPage() {
   const [cutEveryN, setCutEveryN] = useState(1)
   const [elements, setElements] = useState<LabelElement[]>([])
   const [selectedElement, setSelectedElement] = useState<string | null>(null)
+  // Alignment guides shown while dragging (like Figma/Canva): vertical line when
+  // the element is horizontally centered on the label, horizontal when vertically centered.
+  const [dragGuides, setDragGuides] = useState<{ v: boolean; h: boolean }>({ v: false, h: false })
   const [saving, setSaving] = useState(false)
   const [showSizePanel, setShowSizePanel] = useState(false)
   const dragRef = useRef<{ id: string; startX: number; startY: number; origX: number; origY: number } | null>(null)
@@ -252,25 +255,46 @@ export default function TemplateEditPage() {
     if (!el) return
     dragRef.current = { id, startX: e.clientX, startY: e.clientY, origX: el.x, origY: el.y }
 
+    // element footprint (tenths-of-mm) for center-snapping
+    const elW = el.type === "text" || el.type === "barcode" ? (el.boxWidth ?? (widthMm - 4) * 10)
+      : el.type === "image" ? (el.imgWidth ?? 200)
+      : el.type === "rect" || el.type === "ellipse" ? (el.lineWidth ?? 200)
+      : el.type === "line" ? (el.lineWidth ?? (widthMm - 8) * 10)
+      : (el.boxWidth ?? 400)
+    const elH = el.type === "image" ? (el.imgHeight ?? 150)
+      : el.type === "rect" || el.type === "ellipse" ? (el.lineHeight ?? 100)
+      : el.type === "line" ? (el.lineThickness ?? 5)
+      : Math.round((el.fontSize ?? 12) * 10 / 3)
+    const labelCx = (widthMm * 10) / 2
+    const labelCy = (heightMm * 10) / 2
+    const SNAP = 20 // tenths-of-mm (2mm) snapping tolerance
+
     const onMouseMove = (ev: MouseEvent) => {
       const drag = dragRef.current
       if (!drag) return
       const dx = (ev.clientX - drag.startX) * 10 / SCALE
       const dy = (ev.clientY - drag.startY) * 10 / SCALE
-      const newX = Math.max(0, Math.round(drag.origX + dx))
-      const newY = Math.max(0, Math.round(drag.origY + dy))
+      let newX = Math.max(0, Math.round(drag.origX + dx))
+      let newY = Math.max(0, Math.round(drag.origY + dy))
+      // snap to label center (horizontal / vertical)
+      const vSnap = Math.abs(newX + elW / 2 - labelCx) < SNAP
+      const hSnap = Math.abs(newY + elH / 2 - labelCy) < SNAP
+      if (vSnap) newX = Math.round(labelCx - elW / 2)
+      if (hSnap) newY = Math.round(labelCy - elH / 2)
+      setDragGuides({ v: vSnap, h: hSnap })
       setElements((prev) => prev.map((el) => el.id === drag.id ? { ...el, x: newX, y: newY } : el))
     }
 
     const onMouseUp = () => {
       dragRef.current = null
+      setDragGuides({ v: false, h: false })
       window.removeEventListener("mousemove", onMouseMove)
       window.removeEventListener("mouseup", onMouseUp)
     }
 
     window.addEventListener("mousemove", onMouseMove)
     window.addEventListener("mouseup", onMouseUp)
-  }, [elements, SCALE])
+  }, [elements, SCALE, widthMm, heightMm])
 
   const handleResizeMouseDown = useCallback((e: React.MouseEvent, id: string) => {
     e.stopPropagation()
@@ -650,6 +674,14 @@ export default function TemplateEditPage() {
                       backgroundImage: `linear-gradient(to right, #888 1px, transparent 1px), linear-gradient(to bottom, #888 1px, transparent 1px)`,
                       backgroundSize: `${SCALE * 10}px ${SCALE * 10}px`,
                     }} />
+
+                    {/* Alignment guides (center) shown while dragging */}
+                    {dragGuides.v && (
+                      <div className="absolute top-0 bottom-0 pointer-events-none z-20" style={{ left: "50%", width: 1, background: "#ec4899", transform: "translateX(-0.5px)" }} />
+                    )}
+                    {dragGuides.h && (
+                      <div className="absolute left-0 right-0 pointer-events-none z-20" style={{ top: "50%", height: 1, background: "#ec4899", transform: "translateY(-0.5px)" }} />
+                    )}
 
                     {elements.filter(Boolean).map((element) => {
                       return (
