@@ -416,6 +416,7 @@ export default function AdminPage() {
                       <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Email</th>
                       <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Registro</th>
                       <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Último acceso</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Actividad</th>
                       <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Trial</th>
                       <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Licencia</th>
                       <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Acciones</th>
@@ -432,6 +433,24 @@ export default function AdminPage() {
                         <td className="px-4 py-3 text-muted-foreground">{formatDate(u.created_at)}</td>
                         <td className="px-4 py-3 text-muted-foreground">
                           {u.last_sign_in_at ? timeAgo(u.last_sign_in_at) : "—"}
+                        </td>
+                        <td className="px-4 py-3">
+                          {(() => {
+                            const s = userStats[u.id]
+                            if (!s || (s.templates === 0 && s.labelsMonth === 0 && !s.lastActive)) {
+                              return <span className="text-[11px] text-muted-foreground italic">Sin actividad</span>
+                            }
+                            return (
+                              <div className="flex flex-col gap-0.5 text-[11px] text-muted-foreground whitespace-nowrap">
+                                <span>
+                                  <span className="font-medium text-foreground">{s.templates}</span> plantillas
+                                  {" · "}
+                                  <span className="font-medium text-foreground">{s.labelsMonth.toLocaleString("es-AR")}</span> etiq/mes
+                                </span>
+                                <span>{s.lastActive ? `últ. impresión ${timeAgo(s.lastActive)}` : "sin impresiones"}</span>
+                              </div>
+                            )
+                          })()}
                         </td>
                         <td className="px-4 py-3">
                           {u.license ? (
