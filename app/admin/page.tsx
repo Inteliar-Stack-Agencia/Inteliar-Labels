@@ -87,6 +87,24 @@ export default function AdminPage() {
   }
   const [userStats, setUserStats] = useState<Record<string, UserStats>>({})
 
+  interface UserTemplate { name: string; width_mm: number; height_mm: number; created_at: string }
+  interface UserJob { name: string; total_labels: number; status: string; printer_name: string | null; created_at: string }
+  const [detailUser, setDetailUser] = useState<AdminUser | null>(null)
+  const [detailData, setDetailData] = useState<{ templates: UserTemplate[]; jobs: UserJob[] } | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+
+  const openUserDetail = useCallback(async (u: AdminUser) => {
+    setDetailUser(u)
+    setDetailData(null)
+    setDetailLoading(true)
+    try {
+      const res = await fetch(`/api/admin/user-detail?userId=${u.id}`)
+      if (res.ok) setDetailData(await res.json())
+    } finally {
+      setDetailLoading(false)
+    }
+  }, [])
+
   // Users tab
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([])
   const [usersLoading, setUsersLoading] = useState(false)
@@ -429,7 +447,11 @@ export default function AdminPage() {
                       const trialExpired = trialDaysLeft === 0 && !u.license
                       return (
                       <tr key={u.id} className="hover:bg-muted/20 transition-colors">
-                        <td className="px-4 py-3 font-medium text-foreground">{u.email}</td>
+                        <td className="px-4 py-3 font-medium">
+                          <button onClick={() => openUserDetail(u)} className="text-foreground hover:text-primary hover:underline text-left">
+                            {u.email}
+                          </button>
+                        </td>
                         <td className="px-4 py-3 text-muted-foreground">{formatDate(u.created_at)}</td>
                         <td className="px-4 py-3 text-muted-foreground">
                           {u.last_sign_in_at ? timeAgo(u.last_sign_in_at) : "—"}
@@ -761,6 +783,74 @@ export default function AdminPage() {
         )}
 
       </div>
+
+      {/* User detail modal: what a user builds and prints (demand insight) */}
+      {detailUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setDetailUser(null)}>
+          <div className="relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border border-border bg-card shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 flex items-center justify-between border-b border-border bg-card px-5 py-3.5">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">{detailUser.email}</h3>
+                <p className="text-[11px] text-muted-foreground">Registrado {formatDate(detailUser.created_at)}</p>
+              </div>
+              <button onClick={() => setDetailUser(null)} className="text-muted-foreground hover:text-foreground">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {detailLoading || !detailData ? (
+              <div className="flex items-center justify-center py-16">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              </div>
+            ) : (
+              <div className="p-5 space-y-6">
+                {/* Templates */}
+                <div>
+                  <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-foreground">
+                    <FileStack className="h-4 w-4 text-primary" /> Plantillas ({detailData.templates.length})
+                  </div>
+                  {detailData.templates.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic">No creó plantillas todavía.</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {detailData.templates.map((t, i) => (
+                        <div key={i} className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-xs">
+                          <span className="font-medium text-foreground">{t.name || "Sin nombre"}</span>
+                          <span className="text-muted-foreground">{t.width_mm}×{t.height_mm}mm · {formatDate(t.created_at)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Print jobs */}
+                <div>
+                  <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-foreground">
+                    <Printer className="h-4 w-4 text-primary" /> Impresiones ({detailData.jobs.length})
+                  </div>
+                  {detailData.jobs.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic">No imprimió nada todavía.</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {detailData.jobs.map((j, i) => (
+                        <div key={i} className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-xs">
+                          <div className="min-w-0">
+                            <span className="font-medium text-foreground">{j.name || "Trabajo"}</span>
+                            <span className="text-muted-foreground"> · {j.printer_name || "sin impresora (ZPL)"}</span>
+                          </div>
+                          <span className="whitespace-nowrap text-muted-foreground">
+                            <span className="font-medium text-foreground">{j.total_labels}</span> etiq · {timeAgo(j.created_at)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
