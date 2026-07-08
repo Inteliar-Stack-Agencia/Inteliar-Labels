@@ -92,6 +92,8 @@ export default function AdminPage() {
   const [detailUser, setDetailUser] = useState<AdminUser | null>(null)
   const [detailData, setDetailData] = useState<{ templates: UserTemplate[]; jobs: UserJob[]; milestones?: { excelDownloaded: string | null; agentDownloaded: string | null } } | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
+  interface PrinterAgg { name: string; jobs: number; users: number }
+  const [printerStats, setPrinterStats] = useState<{ models: PrinterAgg[]; brands: PrinterAgg[] } | null>(null)
 
   const openUserDetail = useCallback(async (u: AdminUser) => {
     setDetailUser(u)
@@ -168,7 +170,10 @@ export default function AdminPage() {
   useEffect(() => { checkAuth() }, [checkAuth])
   useEffect(() => { if (authorized) fetchLicenses() }, [authorized, fetchLicenses])
   useEffect(() => {
-    if (authorized && activeTab === "users") fetchUsers()
+    if (authorized && activeTab === "users") {
+      fetchUsers()
+      fetch("/api/admin/printer-stats").then((r) => r.ok ? r.json() : null).then((d) => d && setPrinterStats(d)).catch(() => {})
+    }
     if (authorized && activeTab === "payments") fetchPayments()
   }, [authorized, activeTab, fetchUsers, fetchPayments])
 
@@ -418,6 +423,36 @@ export default function AdminPage() {
         {/* ── USERS TAB ── */}
         {activeTab === "users" && (
           <div className="space-y-3">
+            {printerStats && (printerStats.brands.length > 0 || printerStats.models.length > 0) && (
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-xl border border-border bg-background p-4">
+                  <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-foreground">
+                    <Printer className="h-4 w-4 text-primary" /> Marcas más usadas
+                  </div>
+                  <div className="space-y-1.5">
+                    {printerStats.brands.slice(0, 6).map((b) => (
+                      <div key={b.name} className="flex items-center justify-between text-xs">
+                        <span className="font-medium text-foreground">{b.name}</span>
+                        <span className="text-muted-foreground">{b.users} {b.users === 1 ? "usuario" : "usuarios"} · {b.jobs} impr.</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-border bg-background p-4">
+                  <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-foreground">
+                    <Printer className="h-4 w-4 text-primary" /> Modelos más usados
+                  </div>
+                  <div className="space-y-1.5">
+                    {printerStats.models.slice(0, 6).map((m) => (
+                      <div key={m.name} className="flex items-center justify-between text-xs">
+                        <span className="font-medium text-foreground truncate pr-2">{m.name}</span>
+                        <span className="text-muted-foreground whitespace-nowrap">{m.users} · {m.jobs} impr.</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
             {usersLoading ? (
               <div className="flex items-center justify-center py-16">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
