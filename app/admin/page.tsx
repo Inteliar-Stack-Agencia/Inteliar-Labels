@@ -804,6 +804,30 @@ export default function AdminPage() {
               </div>
             ) : (
               <div className="p-5 space-y-6">
+                {/* Printers used */}
+                {(() => {
+                  const printers = Array.from(new Set(
+                    detailData.jobs.map((j) => j.printer_name).filter((p): p is string => !!p)
+                  ))
+                  return (
+                    <div className="flex items-start gap-2 rounded-lg border border-border px-3 py-2.5">
+                      <Printer className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <div className="text-[11px] font-medium text-foreground mb-1">Impresoras usadas</div>
+                        {printers.length === 0 ? (
+                          <span className="text-[11px] text-muted-foreground italic">Ninguna (aún no imprimió a una impresora real / solo ZPL)</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {printers.map((p) => (
+                              <span key={p} className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">{p}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })()}
+
                 {/* Milestones */}
                 <div className="grid grid-cols-2 gap-2">
                   {([
