@@ -287,6 +287,66 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    title: "Tamaño de etiqueta y calibración",
+    emoji: "📐",
+    items: [
+      {
+        q: "¿Cómo cambio el tamaño de la etiqueta (ej: 70×30)?",
+        a: (
+          <div className="space-y-2 text-xs text-muted-foreground">
+            <p>Se configura en <strong>dos lugares</strong> y deben coincidir con tu rollo físico:</p>
+            <p className="font-medium text-foreground">1. En la plantilla (Inteliar):</p>
+            <ol className="list-decimal pl-5 space-y-1">
+              <li>Abrí la plantilla → botón <strong>&quot;Tamaño&quot;</strong> (arriba a la derecha)</li>
+              <li>Elegí <strong>&quot;Personalizado&quot;</strong></li>
+              <li>Poné el <strong>Ancho</strong> y <strong>Alto</strong> en mm (ej: 70 y 30)</li>
+              <li>Guardá la plantilla</li>
+            </ol>
+            <p className="font-medium text-foreground mt-2">2. En el driver de Windows (¡clave!):</p>
+            <ol className="list-decimal pl-5 space-y-1">
+              <li>Panel de control → <strong>Dispositivos e impresoras</strong></li>
+              <li>Clic derecho en tu impresora → <strong>Preferencias de impresión</strong></li>
+              <li>Pestaña <strong>&quot;Preparar página&quot;</strong> → sección <strong>&quot;Material&quot;</strong></li>
+              <li>Clic en <strong>&quot;Nuevo...&quot;</strong>, poné Ancho 70mm y Alto 30mm, nombralo (ej: &quot;70x30&quot;) y Aceptar</li>
+              <li>Seleccioná ese material en <strong>&quot;Nombre&quot;</strong> → Aplicar → Aceptar</li>
+            </ol>
+            <p className="mt-2 font-medium text-foreground">Si el tamaño del driver no coincide con la plantilla, la etiqueta sale corrida o cortada.</p>
+          </div>
+        ),
+      },
+      {
+        q: "⚠️ Cada rollo nuevo se debe CALIBRAR",
+        a: (
+          <div className="space-y-2 text-xs text-muted-foreground">
+            <p>Cuando ponés un <strong>rollo nuevo</strong> (o cambiás de tamaño de etiqueta), la impresora tiene que <strong>calibrarse</strong> para detectar dónde termina cada etiqueta (el &quot;gap&quot; entre etiquetas). Si no la calibrás, las etiquetas salen <strong>corridas</strong> y el contenido se va desplazando de a poco.</p>
+            <p className="font-medium text-foreground">Cómo calibrar (Honeywell PC42t y similares):</p>
+            <ol className="list-decimal pl-5 space-y-1">
+              <li>Cargá el rollo con la impresora encendida y la tapa bien cerrada</li>
+              <li>Mantené presionado el <strong>botón de avance (FEED)</strong> unos 5 segundos, hasta que la impresora avance 1-2 etiquetas sola y se detenga justo en el borde</li>
+              <li>Soltá. Ya quedó calibrada para ese rollo</li>
+            </ol>
+            <p className="mt-1">Algunas impresoras traen una utilidad del fabricante (ej: <em>PrintSet</em> de Honeywell) con la opción &quot;Media Calibration&quot; / &quot;Calibrar&quot;.</p>
+            <p className="mt-2 font-medium text-foreground">Regla de oro: rollo nuevo = calibrar antes de imprimir el lote.</p>
+          </div>
+        ),
+      },
+      {
+        q: "Las etiquetas se corren / desalinean al imprimir varias",
+        a: (
+          <div className="space-y-2 text-xs text-muted-foreground">
+            <p>Es el síntoma típico de <strong>falta de calibración</strong> o de un <strong>tamaño mal configurado</strong>. Checkeá en orden:</p>
+            <ol className="list-decimal pl-5 space-y-1">
+              <li><strong>Calibrá el rollo</strong> (mantené FEED ~5 seg, ver pregunta anterior). Esto resuelve el 90% de los casos.</li>
+              <li>Verificá que el <strong>tamaño en el driver de Windows</strong> coincida exactamente con tu rollo (ej: 70×30) y con la plantilla.</li>
+              <li>Asegurate de que el <strong>tipo de material</strong> en el driver sea <strong>&quot;Etiquetas troqueladas&quot;</strong> (con gap), no &quot;continuo&quot;.</li>
+              <li>Revisá que el <strong>sensor de gap</strong> esté limpio y el rollo bien colocado (el sensor debe pasar por encima de la separación entre etiquetas).</li>
+            </ol>
+          </div>
+        ),
+      },
+    ],
+  },
+  {
     title: "Solución de problemas",
     emoji: "🆘",
     items: [
