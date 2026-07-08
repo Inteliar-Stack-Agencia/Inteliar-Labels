@@ -37,6 +37,7 @@ import { cn } from "@/lib/utils"
 import type { LabelElement, ElementType } from "@/lib/label-types"
 import { PRESET_TEMPLATES } from "@/lib/preset-templates"
 import { resolveDateVars, DATE_SHORTCUTS, isDateToken } from "@/lib/date-vars"
+import { analytics } from "@/lib/analytics"
 import * as XLSX from "xlsx"
 
 const PRESET_SIZES = [
@@ -387,6 +388,7 @@ export default function NewTemplatePage() {
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, "Etiquetas")
     XLSX.writeFile(wb, `${templateName.replace(/\s+/g, "_")}.xlsx`)
+    analytics.excelDownloaded()
   }
 
   const handleSave = async () => {

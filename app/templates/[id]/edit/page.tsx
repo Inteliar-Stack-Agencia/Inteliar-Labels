@@ -35,6 +35,7 @@ import {
 import { cn } from "@/lib/utils"
 import type { LabelElement, ElementType, BarcodeType } from "@/lib/label-types"
 import { resolveDateVars, DATE_SHORTCUTS, isDateToken } from "@/lib/date-vars"
+import { analytics } from "@/lib/analytics"
 import * as XLSX from "xlsx"
 
 const PRESET_SIZES = [
@@ -409,6 +410,7 @@ export default function TemplateEditPage() {
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, "Etiquetas")
     XLSX.writeFile(wb, `${templateName.replace(/\s+/g, "_")}.xlsx`)
+    analytics.excelDownloaded()
   }
 
   const handleSave = async () => {

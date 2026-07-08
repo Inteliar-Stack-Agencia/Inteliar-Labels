@@ -90,7 +90,7 @@ export default function AdminPage() {
   interface UserTemplate { name: string; width_mm: number; height_mm: number; created_at: string }
   interface UserJob { name: string; total_labels: number; status: string; printer_name: string | null; created_at: string }
   const [detailUser, setDetailUser] = useState<AdminUser | null>(null)
-  const [detailData, setDetailData] = useState<{ templates: UserTemplate[]; jobs: UserJob[] } | null>(null)
+  const [detailData, setDetailData] = useState<{ templates: UserTemplate[]; jobs: UserJob[]; milestones?: { excelDownloaded: string | null; agentDownloaded: string | null } } | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
 
   const openUserDetail = useCallback(async (u: AdminUser) => {
@@ -804,6 +804,24 @@ export default function AdminPage() {
               </div>
             ) : (
               <div className="p-5 space-y-6">
+                {/* Milestones */}
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    ["Descargó Excel", detailData.milestones?.excelDownloaded ?? null],
+                    ["Descargó agente", detailData.milestones?.agentDownloaded ?? null],
+                    ["Creó plantilla", detailData.templates.length > 0 ? detailData.templates[detailData.templates.length - 1].created_at : null],
+                    ["Imprimió", detailData.jobs.length > 0 ? detailData.jobs[detailData.jobs.length - 1].created_at : null],
+                  ] as [string, string | null][]).map(([label, date]) => (
+                    <div key={label} className={cn("flex items-center gap-2 rounded-lg border px-3 py-2 text-xs", date ? "border-success/30 bg-success/10" : "border-border")}>
+                      {date ? <Check className="h-4 w-4 text-success flex-shrink-0" /> : <X className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+                      <div className="min-w-0">
+                        <div className={cn("font-medium", date ? "text-foreground" : "text-muted-foreground")}>{label}</div>
+                        {date && <div className="text-[10px] text-muted-foreground">{timeAgo(date)}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
                 {/* Templates */}
                 <div>
                   <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-foreground">

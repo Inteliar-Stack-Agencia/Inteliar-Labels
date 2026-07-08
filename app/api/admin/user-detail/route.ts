@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   const userId = req.nextUrl.searchParams.get("userId")
   if (!userId) return NextResponse.json({ error: "userId requerido" }, { status: 400 })
 
-  const [{ data: templates }, { data: jobs }] = await Promise.all([
+  const [{ data: templates }, { data: jobs }, { data: events }] = await Promise.all([
     supabaseAdmin
       .from("templates")
       .select("name, width_mm, height_mm, created_at")
@@ -38,10 +38,27 @@ export async function GET(req: NextRequest) {
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(30),
+    // user_events may not exist until the migration is applied — errors here
+    // just yield null and the milestones show as "not done".
+    supabaseAdmin
+      .from("user_events")
+      .select("event, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false }),
   ])
+
+  const evs = events ?? []
+  const firstOf = (name: string) => {
+    const matches = evs.filter((e: { event: string }) => e.event === name)
+    return matches.length ? matches[matches.length - 1].created_at : null
+  }
 
   return NextResponse.json({
     templates: templates ?? [],
     jobs: jobs ?? [],
+    milestones: {
+      excelDownloaded: firstOf("excel_downloaded"),
+      agentDownloaded: firstOf("agent_downloaded"),
+    },
   })
 }

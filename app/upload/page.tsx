@@ -330,6 +330,7 @@ export default function UploadPage() {
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, "Etiquetas")
     XLSX.writeFile(wb, `plantilla_${tmpl.name.replace(/\s+/g, "_")}.xlsx`)
+    analytics.excelDownloaded()
     setShowSamplePicker(false)
   }
 

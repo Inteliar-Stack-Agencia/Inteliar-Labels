@@ -6,6 +6,22 @@ function event(name: string, params?: Record<string, any>) {
   gtagEvent(name, params)
 }
 
+// Persist an engagement milestone for the logged-in user (fire-and-forget).
+// Anonymous callers are silently ignored server-side.
+function persist(name: string, metadata?: Record<string, any>) {
+  if (typeof window === "undefined") return
+  try {
+    fetch("/api/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event: name, metadata }),
+      keepalive: true,
+    }).catch(() => {})
+  } catch {
+    /* ignore */
+  }
+}
+
 // Conversion funnel events
 export const analytics = {
   // ── Landing ──────────────────────────────────────────────────────────────
@@ -24,7 +40,9 @@ export const analytics = {
   },
 
   // ── Onboarding (embudo paso 3) ────────────────────────────────────────────
-  agentDownloaded: () => event("agent_downloaded"),  // clic en descargar .exe
+  agentDownloaded: () => { event("agent_downloaded"); persist("agent_downloaded") },  // clic en descargar .exe
+
+  excelDownloaded: () => { event("excel_downloaded"); persist("excel_downloaded") },  // clic en descargar plantilla Excel
 
   // ── Core actions (embudo paso 4 y 5) ─────────────────────────────────────
   templateCreated: () => event("template_created"),
