@@ -26,8 +26,11 @@ const SENDERS: Record<number, (email: string) => Promise<void>> = {
 }
 
 export async function GET(req: NextRequest) {
-  const secret = req.headers.get("x-cron-secret") ?? new URL(req.url).searchParams.get("secret")
-  if (secret !== process.env.CRON_SECRET) {
+  // Verify request comes from Vercel Cron — same convention as
+  // /api/cron/license-reminders. Never accept the secret via query string:
+  // it would leak into server access logs, browser history and Referer headers.
+  const authHeader = req.headers.get("authorization")
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 })
   }
 
