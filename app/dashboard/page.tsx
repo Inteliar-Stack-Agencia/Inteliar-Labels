@@ -5,11 +5,15 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Header } from "@/components/dashboard/header"
 import { KpiCard } from "@/components/dashboard/kpi-card"
 import { QuickActions } from "@/components/dashboard/quick-actions"
-import { Tag, Printer, FileStack, CheckCircle2, Clock, AlertCircle, Rocket, X, Timer, Download, Loader2, ShieldCheck } from "lucide-react"
+import { Tag, Printer, FileStack, CheckCircle2, Circle, Clock, AlertCircle, Rocket, X, Timer, Download, Loader2, ShieldCheck, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import { usePlanLimits } from "@/lib/use-plan-limits"
+import { checkPrinterAgent } from "@/lib/printer-agent-client"
+import { analytics } from "@/lib/analytics"
+
+const AGENT_DOWNLOAD_URL = "https://github.com/Inteliar-Stack-Agencia/Inteliar-Labels/releases/latest/download/InteliarPrinterAgent.exe"
 
 interface RecentJob {
   id: string
@@ -43,7 +47,8 @@ export default function DashboardPage() {
   const [totalTemplates, setTotalTemplates] = useState<number | null>(null)
   const [recentJobs, setRecentJobs] = useState<RecentJob[]>([])
   const [loading, setLoading] = useState(true)
-  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [hideOnboarding, setHideOnboarding] = useState(false)
+  const [agentOnline, setAgentOnline] = useState<boolean | null>(null)
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
   const planLimits = usePlanLimits()
 
@@ -118,11 +123,8 @@ export default function DashboardPage() {
         setTotalTemplates(templatesCount ?? 0)
         setRecentJobs(recent ?? [])
 
-        // Show onboarding if user has no templates and no jobs yet
-        if ((templatesCount ?? 0) === 0 && (jobsCount ?? 0) === 0) {
-          const dismissed = localStorage.getItem("onboarding_dismissed")
-          if (!dismissed) setShowOnboarding(true)
-        }
+        // Detect whether the print agent is running (for the onboarding step)
+        checkPrinterAgent().then(() => setAgentOnline(true)).catch(() => setAgentOnline(false))
       } catch {
         // silent
       } finally {
@@ -142,50 +144,68 @@ export default function DashboardPage() {
 
       <div className="p-6 space-y-6">
 
-        {/* Onboarding banner */}
-        {showOnboarding && (
-          <div className="relative rounded-xl border border-primary/30 bg-primary/5 p-5">
-            <button
-              onClick={() => { setShowOnboarding(false); localStorage.setItem("onboarding_dismissed", "1") }}
-              className="absolute right-3 top-3 rounded p-1 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-            <div className="flex items-start gap-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 flex-shrink-0">
-                <Rocket className="h-5 w-5 text-primary" />
-              </div>
-              <div className="space-y-3 flex-1">
-                <div>
-                  <p className="font-semibold text-foreground">Bienvenido a Inteliar Labels</p>
-                  <p className="text-sm text-muted-foreground mt-0.5">Seguí estos pasos para imprimir tu primera etiqueta:</p>
+        {/* Onboarding checklist — auto-ticks as the user completes each step */}
+        {!loading && !hideOnboarding && (() => {
+          const steps = [
+            { key: "tpl", label: "Creá tu primera plantilla", help: "Diseñá el formato de tu etiqueta", href: "/templates/new", cta: "Crear plantilla", done: (totalTemplates ?? 0) > 0 },
+            { key: "agent", label: "Descargá e instalá el agente", help: "Necesario para enviar a tu impresora térmica", href: AGENT_DOWNLOAD_URL, cta: "Descargar agente", done: agentOnline === true, external: true },
+            { key: "print", label: "Imprimí tu primera etiqueta", help: "Cargá datos (o usá 'Imprimir') y enviá a la impresora", href: "/imprimir", cta: "Imprimir", done: (totalJobs ?? 0) > 0 },
+          ]
+          const doneCount = steps.filter((s) => s.done).length
+          if (doneCount === steps.length) return null
+          const nextStep = steps.find((s) => !s.done)
+          return (
+            <div className="relative rounded-xl border border-primary/30 bg-primary/5 p-5">
+              <button
+                onClick={() => setHideOnboarding(true)}
+                className="absolute right-3 top-3 rounded p-1 text-muted-foreground hover:text-foreground"
+                title="Ocultar por ahora"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              <div className="flex items-start gap-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 flex-shrink-0">
+                  <Rocket className="h-5 w-5 text-primary" />
                 </div>
-                <ol className="space-y-1.5 text-sm text-foreground">
-                  <li className="flex items-center gap-2">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground font-bold flex-shrink-0">1</span>
-                    <Link href="/templates/new" className="text-primary hover:underline font-medium">Creá una plantilla</Link>
-                    <span className="text-muted-foreground">— definí el diseño de la etiqueta</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground font-bold flex-shrink-0">2</span>
-                    <Link href="/upload" className="text-primary hover:underline font-medium">Cargá tu Excel</Link>
-                    <span className="text-muted-foreground">— subí la lista de datos a imprimir</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground font-bold flex-shrink-0">3</span>
-                    <Link href="/settings" className="text-primary hover:underline font-medium">Configurá tu impresora</Link>
-                    <span className="text-muted-foreground">— conectá el agente de impresión</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground font-bold flex-shrink-0">4</span>
-                    <Link href="/imprimir" className="text-primary hover:underline font-medium">Imprimí</Link>
-                    <span className="text-muted-foreground">— seleccioná plantilla y lanzá el trabajo</span>
-                  </li>
-                </ol>
+                <div className="space-y-3 flex-1 min-w-0">
+                  <div>
+                    <p className="font-semibold text-foreground">Primeros pasos · {doneCount} de {steps.length} completados</p>
+                    <div className="mt-2 h-1.5 w-full max-w-xs rounded-full bg-primary/15 overflow-hidden">
+                      <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${(doneCount / steps.length) * 100}%` }} />
+                    </div>
+                  </div>
+                  <ul className="space-y-2">
+                    {steps.map((s) => (
+                      <li key={s.key} className="flex items-center gap-2.5">
+                        {s.done
+                          ? <CheckCircle2 className="h-5 w-5 text-success flex-shrink-0" />
+                          : <Circle className="h-5 w-5 text-muted-foreground/40 flex-shrink-0" />}
+                        <div className="flex-1 min-w-0">
+                          <span className={cn("text-sm font-medium", s.done ? "text-muted-foreground line-through" : "text-foreground")}>{s.label}</span>
+                          {!s.done && <span className="block text-xs text-muted-foreground">{s.help}</span>}
+                        </div>
+                        {!s.done && nextStep?.key === s.key && (
+                          s.external ? (
+                            <a href={s.href} onClick={() => analytics.agentDownloaded()} className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 whitespace-nowrap">
+                              {s.cta} <ArrowRight className="h-3.5 w-3.5" />
+                            </a>
+                          ) : (
+                            <Link href={s.href} className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 whitespace-nowrap">
+                              {s.cta} <ArrowRight className="h-3.5 w-3.5" />
+                            </Link>
+                          )
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-muted-foreground">
+                    ¿Dudas? Mirá la <Link href="/ayuda" className="text-primary hover:underline">guía de ayuda</Link>.
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )
+        })()}
 
         {/* Active license banner */}
         {!planLimits.loading && !["trial", "expired"].includes(planLimits.plan) && (
@@ -289,11 +309,12 @@ export default function DashboardPage() {
             <Download className="h-5 w-5 text-primary flex-shrink-0" />
             <div>
               <p className="text-sm font-medium text-foreground">Agente de impresión para Windows</p>
-              <p className="text-xs text-muted-foreground">Necesario para enviar a tu impresora térmica · v1.0.0 · 74 MB</p>
+              <p className="text-xs text-muted-foreground">Necesario para enviar a tu impresora térmica · Última versión · Windows 10/11</p>
             </div>
           </div>
           <a
-            href="https://github.com/Inteliar-Stack-Agencia/Inteliar-Labels/releases/latest/download/Inteliar.Label.Setup.1.0.0.exe"
+            href={AGENT_DOWNLOAD_URL}
+            onClick={() => analytics.agentDownloaded()}
             className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap"
           >
             <Download className="h-3.5 w-3.5" />
