@@ -7,6 +7,17 @@ const supabaseAdmin = createSupabaseClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+// cta_url gets rendered as <a href={cta_url}> on the dashboard — React does
+// not block "javascript:" hrefs, so an unvalidated URL here would let
+// whoever creates an announcement run script in every viewer's browser.
+function isSafeHttpUrl(url: string): boolean {
+  try {
+    return ["http:", "https:"].includes(new URL(url).protocol)
+  } catch {
+    return false
+  }
+}
+
 async function requireAdmin() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -31,6 +42,9 @@ export async function POST(req: NextRequest) {
   if (!(await requireAdmin())) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
   const body = await req.json().catch(() => null)
   if (!body?.title) return NextResponse.json({ error: "Falta el título" }, { status: 400 })
+  if (body.cta_url && !isSafeHttpUrl(String(body.cta_url))) {
+    return NextResponse.json({ error: "El link del botón debe ser una URL http(s) válida" }, { status: 400 })
+  }
 
   // Only one active at a time by default: deactivate others when creating active.
   if (body.active !== false) {
