@@ -54,10 +54,16 @@ NEXT_PUBLIC_APP_URL=https://v0-inteliar-labels-ui.vercel.app
 https://<tu-dominio>/api/webhooks/mercadopago
 ```
 
+   Al crear el webhook, MercadoPago te muestra una **Clave secreta** (signature
+   secret) — copiala, la necesitás en el paso 5. Sin esto el webhook rechaza
+   todas las notificaciones (por seguridad, para que nadie pueda simular pagos
+   falsos y generar licencias gratis).
+
 5. Variables en Vercel:
 
 ```
 MERCADOPAGO_ACCESS_TOKEN=APP_USR-xxxxxxxx
+MERCADOPAGO_WEBHOOK_SECRET=xxxxxxxxxxxxxxxx
 NEXT_PUBLIC_CHECKOUT_MONTHLY_URL=https://mpago.la/xxxxx
 NEXT_PUBLIC_CHECKOUT_LIFETIME_URL=https://mpago.la/yyyyy
 ```
@@ -112,6 +118,7 @@ prefijo `[mp-webhook]` o `[stripe-webhook]`.
 | `LICENSE_EMAIL_FROM` | Remitente del email | No |
 | `NEXT_PUBLIC_APP_URL` | Link "Ir a la app" en el email | No |
 | `MERCADOPAGO_ACCESS_TOKEN` | Validar pagos de MercadoPago | Sí (si usás MP) |
+| `MERCADOPAGO_WEBHOOK_SECRET` | Verificar firma del webhook de MP | Sí (si usás MP) |
 | `STRIPE_WEBHOOK_SECRET` | Validar pagos de Stripe | Sí (si usás Stripe) |
 | `NEXT_PUBLIC_CHECKOUT_MONTHLY_URL` | Botón comprar mensual | Recomendada |
 | `NEXT_PUBLIC_CHECKOUT_LIFETIME_URL` | Botón comprar de por vida | Recomendada |

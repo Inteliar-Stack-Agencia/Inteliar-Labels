@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import crypto from "crypto"
 import { createClient } from "@supabase/supabase-js"
 import { createLicense } from "@/lib/create-license"
 
@@ -8,6 +9,10 @@ const supabaseAdmin = createClient(
 )
 
 const MP_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN
+const MP_WEBHOOK_SECRET = process.env.MERCADOPAGO_WEBHOOK_SECRET
+
+// We need the raw query params + headers for signature verification
+export const runtime = "nodejs"
 
 function inferPlan(text: string): "monthly" | "pro" | "lifetime" {
   if (/vida|lifetime|por.?vida/i.test(text)) return "lifetime"
@@ -15,9 +20,41 @@ function inferPlan(text: string): "monthly" | "pro" | "lifetime" {
   return "monthly"
 }
 
+// MercadoPago signature scheme:
+//   header x-signature: "ts=<timestamp>,v1=<hmac>"
+//   header x-request-id: "<request id>"
+//   manifest = `id:<data.id>;request-id:<x-request-id>;ts:<ts>;`
+//   hmac = HMAC-SHA256(manifest, secret)
+// https://www.mercadopago.com.ar/developers/es/docs/your-integrations/notifications/webhooks
+function verifyMercadopagoSignature(req: NextRequest, dataId: string, secret: string): boolean {
+  const xSignature = req.headers.get("x-signature") || ""
+  const xRequestId = req.headers.get("x-request-id") || ""
+  if (!xSignature || !xRequestId || !dataId) return false
+
+  const parts = Object.fromEntries(
+    xSignature.split(",").map((p) => p.trim().split("=") as [string, string])
+  )
+  const ts = parts["ts"]
+  const expectedSig = parts["v1"]
+  if (!ts || !expectedSig) return false
+
+  const manifest = `id:${dataId.toLowerCase()};request-id:${xRequestId};ts:${ts};`
+  const computed = crypto.createHmac("sha256", secret).update(manifest).digest("hex")
+
+  try {
+    return crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(expectedSig))
+  } catch {
+    return false
+  }
+}
+
 export async function POST(req: NextRequest) {
   if (!MP_TOKEN) {
     console.error("[mp-webhook] MERCADOPAGO_ACCESS_TOKEN no configurada")
+    return NextResponse.json({ error: "not configured" }, { status: 500 })
+  }
+  if (!MP_WEBHOOK_SECRET) {
+    console.error("[mp-webhook] MERCADOPAGO_WEBHOOK_SECRET no configurada")
     return NextResponse.json({ error: "not configured" }, { status: 500 })
   }
 
@@ -26,6 +63,13 @@ export async function POST(req: NextRequest) {
     body = await req.json()
   } catch {
     return NextResponse.json({ ok: true })
+  }
+
+  // data.id used in the notification body doubles as the value signed in x-signature
+  const signedDataId: string = body.data?.id ?? req.nextUrl.searchParams.get("data.id") ?? ""
+  if (!verifyMercadopagoSignature(req, signedDataId, MP_WEBHOOK_SECRET)) {
+    console.error("[mp-webhook] firma inválida")
+    return NextResponse.json({ error: "invalid signature" }, { status: 401 })
   }
 
   const type = body.type || body.topic
