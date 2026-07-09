@@ -48,6 +48,7 @@ interface PrintJob {
   created_at: string
   template_id: string
   error_message: string | null
+  printer_name?: string | null
 }
 
 interface Template {
@@ -321,6 +322,12 @@ export default function JobDetailPage() {
       )
       const printedCount = result.labels ?? 0
       const total = job?.total_labels ?? 0
+      // Record which printer was actually used (for admin insight/demand).
+      const usedPrinter = result.printerName ?? result.printer ?? null
+      if (usedPrinter) {
+        await supabase.from("print_jobs").update({ printer_name: usedPrinter }).eq("id", jobId)
+        setJob((prev) => prev ? { ...prev, printer_name: usedPrinter } : prev)
+      }
       const isFullRange = startFromLabel <= 1 && (endAtLabel === "" || endAtLabel >= total)
       setPrintResult({
         ok: true,
