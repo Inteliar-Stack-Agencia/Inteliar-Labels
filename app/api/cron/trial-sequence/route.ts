@@ -16,6 +16,16 @@ const supabase = createClient(
 
 const TARGET_DAYS = [1, 3, 7, 10, 13, 14]
 
+// Vercel logs the response body of cron invocations. Never put full emails
+// in there — mask them so the log is still useful for debugging without
+// being a plaintext PII dump.
+function maskEmail(email: string): string {
+  const [local, domain] = email.split("@")
+  if (!domain) return "***"
+  const visible = local.slice(0, 2)
+  return `${visible}${"*".repeat(Math.max(local.length - 2, 1))}@${domain}`
+}
+
 const SENDERS: Record<number, (email: string) => Promise<void>> = {
   1: sendTrialDay1,
   3: sendTrialDay3,
@@ -82,9 +92,9 @@ export async function GET(req: NextRequest) {
       try {
         await SENDERS[day](email)
         await supabase.from("trial_emails_sent").insert({ user_id: user.id, day, sent_at: now.toISOString() })
-        sent.push(`day${day}:${email}`)
+        sent.push(`day${day}:${maskEmail(email)}`)
       } catch (e: any) {
-        errors.push(`day${day}:${email}: ${e.message}`)
+        errors.push(`day${day}:${maskEmail(email)}: ${e.message}`)
       }
     }
   }
