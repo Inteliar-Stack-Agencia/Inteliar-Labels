@@ -2,7 +2,6 @@
 
 import { Sidebar } from "./sidebar"
 import { TrialGate } from "./trial-gate"
-import { SupportButton } from "./support-button"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -17,7 +16,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {children}
         </main>
       </TrialGate>
-      <SupportButton />
     </div>
   )
 }
