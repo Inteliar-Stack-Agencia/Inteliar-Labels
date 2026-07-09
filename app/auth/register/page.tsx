@@ -12,8 +12,11 @@ import { analytics } from "@/lib/analytics"
 
 export default function RegisterPage() {
   const supabase = createClient()
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
+  const [countryCode, setCountryCode] = useState("+54")
+  const [phone, setPhone] = useState("")
   const [email, setEmail] = useState("")
-  const [whatsapp, setWhatsapp] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -25,12 +28,19 @@ export default function RegisterPage() {
     setError(null)
     analytics.registerStart()
 
+    const whatsapp = `${countryCode}${phone.replace(/\D/g, "")}`
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
-        data: whatsapp.trim() ? { whatsapp: whatsapp.trim() } : undefined,
+        data: {
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          full_name: `${firstName.trim()} ${lastName.trim()}`.trim(),
+          whatsapp,
+        },
       },
     })
 
@@ -94,6 +104,63 @@ export default function RegisterPage() {
                 {error}
               </div>
             )}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">Nombre</Label>
+                <Input
+                  id="firstName"
+                  type="text"
+                  placeholder="Juan"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Apellido</Label>
+                <Input
+                  id="lastName"
+                  type="text"
+                  placeholder="Pérez"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">WhatsApp</Label>
+              <div className="flex gap-2">
+                <select
+                  aria-label="Código de país"
+                  value={countryCode}
+                  onChange={(e) => setCountryCode(e.target.value)}
+                  className="rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="+54">🇦🇷 +54</option>
+                  <option value="+598">🇺🇾 +598</option>
+                  <option value="+56">🇨🇱 +56</option>
+                  <option value="+595">🇵🇾 +595</option>
+                  <option value="+591">🇧🇴 +591</option>
+                  <option value="+51">🇵🇪 +51</option>
+                  <option value="+57">🇨🇴 +57</option>
+                  <option value="+52">🇲🇽 +52</option>
+                  <option value="+55">🇧🇷 +55</option>
+                  <option value="+34">🇪🇸 +34</option>
+                  <option value="+1">🇺🇸 +1</option>
+                </select>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="9 11 1234 5678"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  required
+                  className="flex-1"
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground">Te contactamos para ayudarte con la instalación y el soporte.</p>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -104,17 +171,6 @@ export default function RegisterPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="whatsapp">WhatsApp <span className="text-muted-foreground font-normal">(opcional)</span></Label>
-              <Input
-                id="whatsapp"
-                type="tel"
-                placeholder="+54 9 11 1234 5678"
-                value={whatsapp}
-                onChange={(e) => setWhatsapp(e.target.value)}
-              />
-              <p className="text-[11px] text-muted-foreground">Para ayudarte con la instalación y el soporte.</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Contraseña</Label>

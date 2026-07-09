@@ -40,6 +40,8 @@ export async function GET() {
     created_at: u.created_at,
     last_sign_in_at: u.last_sign_in_at,
     whatsapp: (u.user_metadata?.whatsapp as string | undefined) ?? u.phone ?? null,
+    name: ((u.user_metadata?.full_name as string | undefined)
+      ?? [u.user_metadata?.first_name, u.user_metadata?.last_name].filter(Boolean).join(" ")).trim() || null,
     license: licenseByUser[u.id] ?? null,
   }))
 

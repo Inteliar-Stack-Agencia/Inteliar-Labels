@@ -46,6 +46,7 @@ interface AdminUser {
   created_at: string
   last_sign_in_at: string | null
   whatsapp: string | null
+  name: string | null
   license: { key: string; plan: string; status: string; expires_at: string | null } | null
 }
 
@@ -484,8 +485,9 @@ export default function AdminPage() {
                       return (
                       <tr key={u.id} className="hover:bg-muted/20 transition-colors">
                         <td className="px-4 py-3 font-medium">
-                          <button onClick={() => openUserDetail(u)} className="text-foreground hover:text-primary hover:underline text-left">
-                            {u.email}
+                          <button onClick={() => openUserDetail(u)} className="text-left">
+                            {u.name && <span className="block text-foreground hover:text-primary">{u.name}</span>}
+                            <span className={cn("block hover:text-primary hover:underline", u.name ? "text-[11px] text-muted-foreground" : "text-foreground")}>{u.email}</span>
                           </button>
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">{formatDate(u.created_at)}</td>
@@ -846,8 +848,13 @@ export default function AdminPage() {
           <div className="relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border border-border bg-card shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 flex items-center justify-between border-b border-border bg-card px-5 py-3.5">
               <div>
-                <h3 className="text-sm font-semibold text-foreground">{detailUser.email}</h3>
-                <p className="text-[11px] text-muted-foreground">Registrado {formatDate(detailUser.created_at)}</p>
+                <h3 className="text-sm font-semibold text-foreground">{detailUser.name || detailUser.email}</h3>
+                <p className="text-[11px] text-muted-foreground">
+                  {detailUser.name ? `${detailUser.email} · ` : ""}Registrado {formatDate(detailUser.created_at)}
+                  {detailUser.whatsapp ? (
+                    <> · <a href={`https://wa.me/${detailUser.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="text-success hover:underline">{detailUser.whatsapp}</a></>
+                  ) : null}
+                </p>
               </div>
               <button onClick={() => setDetailUser(null)} className="text-muted-foreground hover:text-foreground">
                 <X className="h-5 w-5" />
