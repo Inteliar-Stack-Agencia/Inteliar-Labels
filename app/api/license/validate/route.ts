@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { isValidKeyFormat, maxDevicesForPlan } from "@/lib/license-utils"
 import type { LicenseActivation } from "@/lib/license-utils"
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit"
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,6 +15,15 @@ const supabase = createClient(
 // Returns: { valid, plan, status, message, devices_used, max_devices }
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req)
+    const { allowed } = await checkRateLimit(supabase, "license-validate", ip, 20, 5 * 60)
+    if (!allowed) {
+      return NextResponse.json(
+        { valid: false, message: "Demasiados intentos. Probá de nuevo en unos minutos." },
+        { status: 429 }
+      )
+    }
+
     const { key, device_id, hostname } = await req.json()
 
     if (!key || !isValidKeyFormat(key)) {
