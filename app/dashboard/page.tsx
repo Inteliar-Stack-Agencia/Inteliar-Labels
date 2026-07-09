@@ -235,7 +235,8 @@ export default function DashboardPage() {
                     ))}
                   </ul>
                   <p className="text-xs text-muted-foreground">
-                    ¿Dudas? Mirá la <Link href="/ayuda" className="text-primary hover:underline">guía de ayuda</Link>.
+                    ¿Preferís que te guiemos paso a paso? <Link href="/setup" className="text-primary hover:underline">Iniciar asistente</Link>{" "}
+                    · ¿Dudas? Mirá la <Link href="/ayuda" className="text-primary hover:underline">guía de ayuda</Link>.
                   </p>
                 </div>
               </div>
