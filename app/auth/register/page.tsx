@@ -13,6 +13,7 @@ import { analytics } from "@/lib/analytics"
 export default function RegisterPage() {
   const supabase = createClient()
   const [email, setEmail] = useState("")
+  const [whatsapp, setWhatsapp] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -27,7 +28,10 @@ export default function RegisterPage() {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        data: whatsapp.trim() ? { whatsapp: whatsapp.trim() } : undefined,
+      },
     })
 
     if (error) {
@@ -100,6 +104,17 @@ export default function RegisterPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="whatsapp">WhatsApp <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+              <Input
+                id="whatsapp"
+                type="tel"
+                placeholder="+54 9 11 1234 5678"
+                value={whatsapp}
+                onChange={(e) => setWhatsapp(e.target.value)}
+              />
+              <p className="text-[11px] text-muted-foreground">Para ayudarte con la instalación y el soporte.</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Contraseña</Label>

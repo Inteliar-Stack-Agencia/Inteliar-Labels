@@ -8,7 +8,7 @@ import {
   Shield, Plus, Search, RefreshCw, Copy, Check, Trash2,
   ChevronDown, ChevronUp, MonitorSmartphone, X, Pencil,
   Calendar, RotateCcw, LogOut, Tag, FileStack, Printer, Activity,
-  Users, CreditCard, Key, Settings, ExternalLink, Info,
+  Users, CreditCard, Key, Settings, ExternalLink, Info, MessageCircle, Mail,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { License, LicenseActivation } from "@/lib/license-utils"
@@ -45,6 +45,7 @@ interface AdminUser {
   email: string
   created_at: string
   last_sign_in_at: string | null
+  whatsapp: string | null
   license: { key: string; plan: string; status: string; expires_at: string | null } | null
 }
 
@@ -538,21 +539,41 @@ export default function AdminPage() {
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          {!u.license && (
-                            <button
-                              onClick={async () => {
-                                await fetch("/api/admin/extend-trial", {
-                                  method: "POST",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ userId: u.id, days: 7 }),
-                                })
-                                fetchUsers()
-                              }}
-                              className="text-xs text-primary hover:underline whitespace-nowrap"
+                          <div className="flex items-center gap-3">
+                            {u.whatsapp && (
+                              <a
+                                href={`https://wa.me/${u.whatsapp.replace(/\D/g, "")}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title={`WhatsApp: ${u.whatsapp}`}
+                                className="text-success hover:text-success/80"
+                              >
+                                <MessageCircle className="h-4 w-4" />
+                              </a>
+                            )}
+                            <a
+                              href={`mailto:${u.email}`}
+                              title={`Email: ${u.email}`}
+                              className="text-muted-foreground hover:text-foreground"
                             >
-                              +7 días trial
-                            </button>
-                          )}
+                              <Mail className="h-4 w-4" />
+                            </a>
+                            {!u.license && (
+                              <button
+                                onClick={async () => {
+                                  await fetch("/api/admin/extend-trial", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ userId: u.id, days: 7 }),
+                                  })
+                                  fetchUsers()
+                                }}
+                                className="text-xs text-primary hover:underline whitespace-nowrap"
+                              >
+                                +7 días trial
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                       )

@@ -39,6 +39,7 @@ export async function GET() {
     email: u.email,
     created_at: u.created_at,
     last_sign_in_at: u.last_sign_in_at,
+    whatsapp: (u.user_metadata?.whatsapp as string | undefined) ?? u.phone ?? null,
     license: licenseByUser[u.id] ?? null,
   }))
 
