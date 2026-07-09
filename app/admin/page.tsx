@@ -92,7 +92,7 @@ export default function AdminPage() {
   interface UserTemplate { name: string; width_mm: number; height_mm: number; created_at: string }
   interface UserJob { name: string; total_labels: number; status: string; printer_name: string | null; created_at: string }
   const [detailUser, setDetailUser] = useState<AdminUser | null>(null)
-  const [detailData, setDetailData] = useState<{ templates: UserTemplate[]; jobs: UserJob[]; milestones?: { excelDownloaded: string | null; agentDownloaded: string | null } } | null>(null)
+  const [detailData, setDetailData] = useState<{ templates: UserTemplate[]; jobs: UserJob[]; milestones?: { excelDownloaded: string | null; agentDownloaded: string | null; agentConnected: string | null } } | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   interface PrinterAgg { name: string; jobs: number; users: number }
   const [printerStats, setPrinterStats] = useState<{ models: PrinterAgg[]; brands: PrinterAgg[] } | null>(null)
@@ -896,6 +896,7 @@ export default function AdminPage() {
                   {([
                     ["Descargó Excel", detailData.milestones?.excelDownloaded ?? null],
                     ["Descargó agente", detailData.milestones?.agentDownloaded ?? null],
+                    ["Agente conectado", detailData.milestones?.agentConnected ?? null],
                     ["Creó plantilla", detailData.templates.length > 0 ? detailData.templates[detailData.templates.length - 1].created_at : null],
                     ["Imprimió", detailData.jobs.length > 0 ? detailData.jobs[detailData.jobs.length - 1].created_at : null],
                   ] as [string, string | null][]).map(([label, date]) => (

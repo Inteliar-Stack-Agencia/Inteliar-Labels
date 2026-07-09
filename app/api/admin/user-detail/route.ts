@@ -59,6 +59,7 @@ export async function GET(req: NextRequest) {
     milestones: {
       excelDownloaded: firstOf("excel_downloaded"),
       agentDownloaded: firstOf("agent_downloaded"),
+      agentConnected: firstOf("agent_connected"),
     },
   })
 }

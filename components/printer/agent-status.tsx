@@ -24,6 +24,20 @@ export function PrinterAgentStatus({ onStatusChange, className }: Props) {
       setStatus(s)
       const isSimulate = s.defaultPrinter?.connection === 'simulate' || s.printer?.simulate === true
       onStatusChange?.(true, isSimulate)
+      // Record that this user actually has the agent running (once per day),
+      // so the admin can see who really installed & connected it.
+      if (typeof window !== "undefined") {
+        const key = `agent_connected_${new Date().toISOString().slice(0, 10)}`
+        if (!localStorage.getItem(key)) {
+          localStorage.setItem(key, "1")
+          fetch("/api/track", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ event: "agent_connected", metadata: { printer: s.defaultPrinter?.name ?? null } }),
+            keepalive: true,
+          }).catch(() => {})
+        }
+      }
     } catch {
       setOnline(false)
       setStatus(null)
