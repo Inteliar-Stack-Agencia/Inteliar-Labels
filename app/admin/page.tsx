@@ -97,6 +97,31 @@ export default function AdminPage() {
   interface PrinterAgg { name: string; jobs: number; users: number }
   const [printerStats, setPrinterStats] = useState<{ models: PrinterAgg[]; brands: PrinterAgg[] } | null>(null)
 
+  interface Announcement { id: string; title: string; body: string | null; cta_label: string | null; cta_url: string | null; variant: string; active: boolean; created_at: string }
+  const [announcements, setAnnouncements] = useState<Announcement[]>([])
+  const [annForm, setAnnForm] = useState({ title: "", body: "", cta_label: "", cta_url: "", variant: "info" })
+  const [annSaving, setAnnSaving] = useState(false)
+
+  const fetchAnnouncements = useCallback(async () => {
+    const res = await fetch("/api/admin/announcements")
+    if (res.ok) setAnnouncements(await res.json())
+  }, [])
+
+  const createAnnouncement = useCallback(async () => {
+    if (!annForm.title.trim()) return
+    setAnnSaving(true)
+    const res = await fetch("/api/admin/announcements", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(annForm),
+    })
+    setAnnSaving(false)
+    if (res.ok) {
+      setAnnForm({ title: "", body: "", cta_label: "", cta_url: "", variant: "info" })
+      fetchAnnouncements()
+    }
+  }, [annForm, fetchAnnouncements])
+
   const openUserDetail = useCallback(async (u: AdminUser) => {
     setDetailUser(u)
     setDetailData(null)
@@ -194,7 +219,8 @@ export default function AdminPage() {
       fetch("/api/admin/printer-stats").then((r) => r.ok ? r.json() : null).then((d) => d && setPrinterStats(d)).catch(() => {})
     }
     if (authorized && activeTab === "payments") fetchPayments()
-  }, [authorized, activeTab, fetchUsers, fetchPayments])
+    if (authorized && activeTab === "config") fetchAnnouncements()
+  }, [authorized, activeTab, fetchUsers, fetchPayments, fetchAnnouncements])
 
   const copyKey = (key: string) => {
     navigator.clipboard.writeText(key)
@@ -684,6 +710,89 @@ export default function AdminPage() {
         {/* ── CONFIG TAB ── */}
         {activeTab === "config" && (
           <div className="space-y-6 max-w-2xl">
+
+            {/* Announcements */}
+            <div className="rounded-xl border border-border bg-background p-5 space-y-3">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <MessageCircle className="h-4 w-4 text-primary" />
+                Anuncios a usuarios
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Aparece como banner en el dashboard de todos los usuarios. Se puede cerrar (no molesto). Solo el más reciente activo se muestra.
+              </p>
+
+              <div className="space-y-2">
+                <input
+                  value={annForm.title}
+                  onChange={(e) => setAnnForm({ ...annForm, title: e.target.value })}
+                  placeholder="Título (ej: ¡Mejoramos el editor!)"
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+                <textarea
+                  value={annForm.body}
+                  onChange={(e) => setAnnForm({ ...annForm, body: e.target.value })}
+                  placeholder="Mensaje (opcional)"
+                  rows={2}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    value={annForm.cta_label}
+                    onChange={(e) => setAnnForm({ ...annForm, cta_label: e.target.value })}
+                    placeholder="Texto del botón (opcional)"
+                    className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                  <input
+                    value={annForm.cta_url}
+                    onChange={(e) => setAnnForm({ ...annForm, cta_url: e.target.value })}
+                    placeholder="Link del botón (opcional)"
+                    className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={annForm.variant}
+                    onChange={(e) => setAnnForm({ ...annForm, variant: e.target.value })}
+                    className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  >
+                    <option value="info">Info (azul)</option>
+                    <option value="promo">Promo (ámbar)</option>
+                    <option value="success">Novedad (verde)</option>
+                  </select>
+                  <Button size="sm" onClick={createAnnouncement} disabled={annSaving || !annForm.title.trim()}>
+                    {annSaving ? "Publicando..." : "Publicar anuncio"}
+                  </Button>
+                </div>
+              </div>
+
+              {announcements.length > 0 && (
+                <div className="space-y-1.5 pt-2 border-t border-border">
+                  {announcements.map((a) => (
+                    <div key={a.id} className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2">
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-foreground truncate">{a.title}</p>
+                        <p className="text-[10px] text-muted-foreground">{formatDate(a.created_at)} · {a.variant}</p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <button
+                          onClick={async () => { await fetch("/api/admin/announcements", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: a.id, active: !a.active }) }); fetchAnnouncements() }}
+                          className={cn("rounded-full border px-2 py-0.5 text-[10px] font-medium", a.active ? "border-success/30 bg-success/10 text-success" : "border-border text-muted-foreground")}
+                        >
+                          {a.active ? "Activo" : "Inactivo"}
+                        </button>
+                        <button
+                          onClick={async () => { await fetch(`/api/admin/announcements?id=${a.id}`, { method: "DELETE" }); fetchAnnouncements() }}
+                          className="text-muted-foreground hover:text-destructive"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Webhook URL info */}
             <div className="rounded-xl border border-border bg-background p-5 space-y-2">

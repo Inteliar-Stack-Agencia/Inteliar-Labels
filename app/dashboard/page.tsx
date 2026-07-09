@@ -51,6 +51,7 @@ export default function DashboardPage() {
   const [agentOnline, setAgentOnline] = useState<boolean | null>(null)
   const [feedbackDismissed, setFeedbackDismissed] = useState(true)
   const [userEmail, setUserEmail] = useState("")
+  const [announcement, setAnnouncement] = useState<{ id: string; title: string; body: string | null; cta_label: string | null; cta_url: string | null; variant: string } | null>(null)
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
   const planLimits = usePlanLimits()
 
@@ -76,6 +77,14 @@ export default function DashboardPage() {
     fetch("/api/license/link", { method: "POST" }).catch(() => {})
     // Feedback banner dismissal (persisted locally)
     setFeedbackDismissed(localStorage.getItem("feedback_banner_dismissed") === "1")
+    // Admin announcement (dismissible per announcement id)
+    fetch("/api/announcements")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => {
+        const a = d?.announcement
+        if (a && localStorage.getItem(`announcement_dismissed_${a.id}`) !== "1") setAnnouncement(a)
+      })
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -211,6 +220,40 @@ export default function DashboardPage() {
             </div>
           )
         })()}
+
+        {/* Admin announcement banner */}
+        {announcement && (
+          <div className={cn(
+            "relative rounded-xl border px-5 py-4",
+            announcement.variant === "promo" ? "border-amber-500/40 bg-amber-500/10"
+              : announcement.variant === "success" ? "border-green-500/40 bg-green-500/10"
+              : "border-primary/30 bg-primary/5"
+          )}>
+            <div className="flex items-start gap-3 pr-6">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground">{announcement.title}</p>
+                {announcement.body && <p className="text-xs text-muted-foreground mt-0.5 whitespace-pre-line">{announcement.body}</p>}
+                {announcement.cta_url && (
+                  <a
+                    href={announcement.cta_url}
+                    target={announcement.cta_url.startsWith("http") ? "_blank" : undefined}
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+                  >
+                    {announcement.cta_label || "Ver más"} <ArrowRight className="h-3.5 w-3.5" />
+                  </a>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={() => { localStorage.setItem(`announcement_dismissed_${announcement.id}`, "1"); setAnnouncement(null) }}
+              className="absolute right-3 top-3 rounded p-1 text-muted-foreground hover:text-foreground"
+              title="Cerrar"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
         {/* Feedback / suggestions banner */}
         {!feedbackDismissed && (
