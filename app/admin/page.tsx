@@ -158,7 +158,24 @@ export default function AdminPage() {
   const fetchUsers = useCallback(async () => {
     setUsersLoading(true)
     const res = await fetch("/api/admin/users")
-    if (res.ok) setAdminUsers(await res.json())
+    if (res.ok) {
+      const users: AdminUser[] = await res.json()
+      setAdminUsers(users)
+      // Fetch activity stats for ALL users (not just those with a license),
+      // so trial users' templates/labels show up too.
+      const userIds = users.map((u) => u.id)
+      if (userIds.length > 0) {
+        const statsRes = await fetch("/api/admin/user-stats", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userIds }),
+        })
+        if (statsRes.ok) {
+          const stats = await statsRes.json()
+          setUserStats((prev) => ({ ...prev, ...stats }))
+        }
+      }
+    }
     setUsersLoading(false)
   }, [])
 
