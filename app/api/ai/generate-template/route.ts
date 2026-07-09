@@ -1,7 +1,18 @@
 import Anthropic from "@anthropic-ai/sdk"
 import { NextRequest, NextResponse } from "next/server"
+import { createServerClient } from "@supabase/ssr"
+import { createClient } from "@supabase/supabase-js"
+import { cookies } from "next/headers"
+import { checkRateLimit } from "@/lib/rate-limit"
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
+
+const DAILY_LIMIT = 20
 
 const SYSTEM_PROMPT = `Eres un experto en diseño de etiquetas térmicas.
 El usuario te describe la etiqueta que necesita y vos generás un JSON con los elementos posicionados en el canvas.
@@ -35,6 +46,27 @@ Respondé SOLO con JSON válido, sin explicaciones, con esta estructura exacta:
 
 export async function POST(req: NextRequest) {
   try {
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() { return cookieStore.getAll() },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+          },
+        },
+      }
+    )
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 })
+
+    const { allowed } = await checkRateLimit(supabaseAdmin, "ai-generate-template", user.id, DAILY_LIMIT, 24 * 60 * 60)
+    if (!allowed) {
+      return NextResponse.json({ error: `Límite diario de ${DAILY_LIMIT} generaciones con IA alcanzado. Probá de nuevo mañana.` }, { status: 429 })
+    }
+
     const { description, widthMm, heightMm } = await req.json()
 
     if (!description?.trim()) {
