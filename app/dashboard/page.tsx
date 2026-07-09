@@ -5,7 +5,7 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Header } from "@/components/dashboard/header"
 import { KpiCard } from "@/components/dashboard/kpi-card"
 import { QuickActions } from "@/components/dashboard/quick-actions"
-import { Tag, Printer, FileStack, CheckCircle2, Circle, Clock, AlertCircle, Rocket, X, Timer, Download, Loader2, ShieldCheck, ArrowRight, MessageCircle } from "lucide-react"
+import { Tag, Printer, FileStack, CheckCircle2, Circle, Clock, AlertCircle, Rocket, X, Timer, Download, Loader2, ShieldCheck, ArrowRight, MessageCircle, Star, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
@@ -21,6 +21,13 @@ interface RecentJob {
   status: string
   total_labels: number
   created_at: string
+}
+
+interface Favorite {
+  id: string
+  name: string
+  total_labels: number
+  use_count: number
 }
 
 const statusConfig: Record<string, { icon: React.ElementType; label: string; className: string }> = {
@@ -46,6 +53,7 @@ export default function DashboardPage() {
   const [totalJobs, setTotalJobs] = useState<number | null>(null)
   const [totalTemplates, setTotalTemplates] = useState<number | null>(null)
   const [recentJobs, setRecentJobs] = useState<RecentJob[]>([])
+  const [favorites, setFavorites] = useState<Favorite[]>([])
   const [loading, setLoading] = useState(true)
   const [hideOnboarding, setHideOnboarding] = useState(false)
   const [agentOnline, setAgentOnline] = useState<boolean | null>(null)
@@ -104,6 +112,7 @@ export default function DashboardPage() {
           { count: jobsCount },
           { count: templatesCount },
           { data: recent },
+          { data: favs },
         ] = await Promise.all([
           supabase
             .from("print_jobs")
@@ -125,6 +134,12 @@ export default function DashboardPage() {
             .eq("user_id", user.id)
             .order("created_at", { ascending: false })
             .limit(5),
+          supabase
+            .from("print_favorites")
+            .select("id, name, total_labels, use_count")
+            .eq("user_id", user.id)
+            .order("use_count", { ascending: false })
+            .limit(6),
         ])
 
         const labelsToday = (todayJobs ?? []).reduce(
@@ -136,6 +151,7 @@ export default function DashboardPage() {
         setTotalJobs(jobsCount ?? 0)
         setTotalTemplates(templatesCount ?? 0)
         setRecentJobs(recent ?? [])
+        setFavorites(favs ?? [])
 
         // Detect whether the print agent is running (for the onboarding step)
         checkPrinterAgent().then(() => setAgentOnline(true)).catch(() => setAgentOnline(false))
@@ -148,6 +164,12 @@ export default function DashboardPage() {
 
     loadData()
   }, [])
+
+  async function deleteFavorite(id: string) {
+    const supabase = createClient()
+    await supabase.from("print_favorites").delete().eq("id", id)
+    setFavorites((prev) => prev.filter((f) => f.id !== id))
+  }
 
   return (
     <DashboardLayout>
@@ -443,6 +465,44 @@ export default function DashboardPage() {
 
         {/* Quick Actions */}
         <QuickActions />
+
+        {/* Favorites — one click to reprint the same thing every day */}
+        {favorites.length > 0 && (
+          <div className="rounded-xl border border-border bg-card">
+            <div className="flex items-center justify-between border-b border-border px-6 py-4">
+              <h2 className="text-base font-semibold text-card-foreground flex items-center gap-2">
+                <Star className="h-4 w-4 text-amber-500" />
+                Impresiones frecuentes
+              </h2>
+              <span className="text-sm text-muted-foreground">Un clic y listo</span>
+            </div>
+            <div className="grid gap-3 p-6 sm:grid-cols-2 lg:grid-cols-3">
+              {favorites.map((fav) => (
+                <div
+                  key={fav.id}
+                  className="group relative flex items-center gap-3 rounded-lg border border-border bg-background p-3 hover:border-primary transition-colors"
+                >
+                  <Link href={`/imprimir?favorite=${fav.id}`} className="flex flex-1 items-center gap-3 min-w-0">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 flex-shrink-0">
+                      <Printer className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{fav.name}</p>
+                      <p className="text-xs text-muted-foreground">{fav.total_labels} etiquetas</p>
+                    </div>
+                  </Link>
+                  <button
+                    onClick={() => deleteFavorite(fav.id)}
+                    className="text-muted-foreground hover:text-destructive flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Eliminar de favoritos"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Recent Activity */}
         <div className="rounded-xl border border-border bg-card">

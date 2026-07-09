@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Header } from "@/components/dashboard/header"
 import { Button } from "@/components/ui/button"
@@ -21,6 +21,7 @@ import {
   ChevronLeft,
   CheckCircle2,
   XCircle,
+  Star,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { usePlanLimits } from "@/lib/use-plan-limits"
@@ -41,7 +42,16 @@ interface DataRow {
 }
 
 export default function ImprimirPage() {
+  return (
+    <Suspense fallback={null}>
+      <ImprimirPageInner />
+    </Suspense>
+  )
+}
+
+function ImprimirPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
 
   const [step, setStep] = useState<1 | 2 | 3>(1)
@@ -50,6 +60,13 @@ export default function ImprimirPage() {
   const [rows, setRows] = useState<DataRow[]>([])
   const [saving, setSaving] = useState(false)
   const [loadingTemplates, setLoadingTemplates] = useState(true)
+  const [loadingFavorite, setLoadingFavorite] = useState(false)
+
+  // "Save as favorite" (quick reprint from the dashboard)
+  const [showFavoriteForm, setShowFavoriteForm] = useState(false)
+  const [favoriteName, setFavoriteName] = useState("")
+  const [savingFavorite, setSavingFavorite] = useState(false)
+  const [favoriteSaved, setFavoriteSaved] = useState(false)
 
   // Printer agent state
   const [agentOnline, setAgentOnline] = useState(false)
@@ -70,10 +87,67 @@ export default function ImprimirPage() {
         .order("created_at", { ascending: false })
       if (data) setTemplates(data)
       setLoadingTemplates(false)
+
+      const favoriteId = searchParams.get("favorite")
+      if (favoriteId) await loadFavorite(favoriteId)
     }
     load()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const loadFavorite = async (favoriteId: string) => {
+    setLoadingFavorite(true)
+    const { data: favorite } = await supabase
+      .from("print_favorites")
+      .select("*")
+      .eq("id", favoriteId)
+      .maybeSingle()
+
+    if (favorite) {
+      const { data: tmpl } = await supabase
+        .from("templates")
+        .select("id, name, variables, width_mm, height_mm, canvas_data")
+        .eq("id", favorite.template_id)
+        .maybeSingle()
+
+      if (tmpl) {
+        setSelectedTemplate(tmpl)
+        setRows((favorite.rows as { data: Record<string, string>; quantity: number }[]).map((r, i) => ({
+          id: `${Date.now()}-${i}`,
+          data: r.data,
+          quantity: r.quantity,
+        })))
+        setStep(3)
+        // Fire-and-forget usage tracking — don't block the UI on it
+        supabase.from("print_favorites").update({
+          last_used_at: new Date().toISOString(),
+          use_count: (favorite.use_count ?? 0) + 1,
+        }).eq("id", favoriteId).then(() => {})
+      }
+    }
+    setLoadingFavorite(false)
+  }
+
+  const handleSaveFavorite = async () => {
+    if (!selectedTemplate || !favoriteName.trim()) return
+    setSavingFavorite(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { router.push("/auth/login"); return }
+
+    await supabase.from("print_favorites").insert({
+      user_id: user.id,
+      template_id: selectedTemplate.id,
+      name: favoriteName.trim().slice(0, 60),
+      rows: rows.map((r) => ({ data: r.data, quantity: r.quantity })),
+      total_labels: totalLabels,
+    })
+
+    setSavingFavorite(false)
+    setShowFavoriteForm(false)
+    setFavoriteName("")
+    setFavoriteSaved(true)
+    setTimeout(() => setFavoriteSaved(false), 3000)
+  }
 
   const selectTemplate = (tmpl: Template) => {
     setSelectedTemplate(tmpl)
@@ -184,6 +258,12 @@ export default function ImprimirPage() {
       />
 
       <div className="p-6 space-y-6">
+        {loadingFavorite ? (
+          <div className="flex h-40 items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          </div>
+        ) : (
+        <>
         {/* Steps */}
         <div className="flex items-center gap-2">
           {[
@@ -425,6 +505,42 @@ export default function ImprimirPage() {
                 </div>
               )}
 
+              {/* Save as favorite — quick reprint shortcut for the dashboard */}
+              <div className="rounded-lg border border-dashed border-border p-4">
+                {favoriteSaved ? (
+                  <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4" /> Guardado en tus impresiones frecuentes
+                  </p>
+                ) : showFavoriteForm ? (
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      autoFocus
+                      value={favoriteName}
+                      onChange={(e) => setFavoriteName(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSaveFavorite()}
+                      placeholder={`Ej: "${selectedTemplate.name} diario"`}
+                      className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                      maxLength={60}
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={handleSaveFavorite} disabled={!favoriteName.trim() || savingFavorite}>
+                        {savingFavorite ? "Guardando..." : "Guardar"}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setShowFavoriteForm(false)}>Cancelar</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowFavoriteForm(true)}
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    <Star className="h-4 w-4" />
+                    Guardar como impresión frecuente — para volver a imprimir esto en un clic desde el panel
+                  </button>
+                )}
+              </div>
+
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button
                   size="lg"
@@ -456,6 +572,8 @@ export default function ImprimirPage() {
               </div>
             </div>
           </div>
+        )}
+        </>
         )}
       </div>
     </DashboardLayout>
