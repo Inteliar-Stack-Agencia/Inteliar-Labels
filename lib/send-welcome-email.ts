@@ -65,7 +65,7 @@ export async function sendWelcomeEmail(to: string): Promise<void> {
       </table>
 
       <div style="text-align: center; margin: 24px 0;">
-        <a href="${APP_URL}/dashboard" style="background: #1e78dc; color: #fff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px;">Ir al dashboard →</a>
+        <a href="${APP_URL}/auth/login" style="background: #1e78dc; color: #fff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px;">Iniciar sesión →</a>
       </div>
 
       <p style="font-size: 13px; color: #555; line-height: 1.6;">
