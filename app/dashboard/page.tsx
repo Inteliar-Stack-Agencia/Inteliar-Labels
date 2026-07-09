@@ -148,7 +148,7 @@ export default function DashboardPage() {
         {!loading && !hideOnboarding && (() => {
           const steps = [
             { key: "tpl", label: "Creá tu primera plantilla", help: "Diseñá el formato de tu etiqueta", href: "/templates/new", cta: "Crear plantilla", done: (totalTemplates ?? 0) > 0 },
-            { key: "agent", label: "Descargá e instalá el agente", help: "Necesario para enviar a tu impresora térmica", href: AGENT_DOWNLOAD_URL, cta: "Descargar agente", done: agentOnline === true, external: true },
+            { key: "agent", label: "Descargá e instalá el agente", help: "Necesario para enviar a tu impresora térmica", href: AGENT_DOWNLOAD_URL, cta: "Descargar agente", done: agentOnline === true || (totalJobs ?? 0) > 0, external: true },
             { key: "print", label: "Imprimí tu primera etiqueta", help: "Cargá datos (o usá 'Imprimir') y enviá a la impresora", href: "/imprimir", cta: "Imprimir", done: (totalJobs ?? 0) > 0 },
           ]
           const doneCount = steps.filter((s) => s.done).length
