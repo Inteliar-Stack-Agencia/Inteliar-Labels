@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button"
 import { Check, ArrowRight, Loader2, Globe, MapPin, X } from "lucide-react"
 import { analytics } from "@/lib/analytics"
 
+const EMPRESA_WA = "https://wa.me/5491165689145?text=Hola%2C%20quiero%20cotizar%20el%20plan%20Empresa%20de%20Inteliar%20Labels"
+
 const plansARS = [
   {
     name: "Mensual",
-    price: "$14.999",
+    price: "$17.999",
     period: "/mes",
     description: "Ideal para arrancar. Suscripción automática, cancelás cuando quieras.",
     features: [
@@ -27,7 +29,7 @@ const plansARS = [
   },
   {
     name: "Pro",
-    price: "$29.999",
+    price: "$39.999",
     period: "/mes",
     description: "Para negocios con mayor volumen o múltiples puntos de venta.",
     features: [
@@ -47,23 +49,19 @@ const plansARS = [
     highlight: true,
   },
   {
-    name: "De por vida",
-    price: "$449.999",
-    period: "pago único",
-    description: "Pagás una vez y es tuyo para siempre. Sin renovaciones.",
+    name: "Empresa",
+    price: "A medida",
+    period: "",
+    description: "Logística, multi-sucursal o alto volumen. Cotizamos según tu operación.",
     features: [
-      "Hasta 5 sucursales",
+      "Sucursales e impresoras ilimitadas",
       "Impresiones ilimitadas",
-      "Diseñador visual + IA",
-      "Plantillas predeterminadas",
-      "Importación de Excel y CSV",
-      "Todas las actualizaciones futuras",
-      "Gestión de dispositivos desde el panel",
-      "Soporte prioritario",
+      "Soporte prioritario con SLA",
+      "Onboarding asistido",
+      "Integraciones a medida",
     ],
-    cta: "Comprar de por vida",
-    plan: "lifetime" as const,
-    currency: "ARS" as const,
+    cta: "Hablar con ventas",
+    href: EMPRESA_WA,
     popular: false,
     highlight: false,
   },
@@ -72,7 +70,7 @@ const plansARS = [
 const plansUSD = [
   {
     name: "Mensual",
-    price: "US$10",
+    price: "US$12",
     period: "/mes",
     description: "Ideal para arrancar. Suscripción automática, cancelás cuando quieras.",
     features: [
@@ -91,7 +89,7 @@ const plansUSD = [
   },
   {
     name: "Pro",
-    price: "US$19",
+    price: "US$25",
     period: "/mes",
     description: "Para negocios con mayor volumen o múltiples puntos de venta.",
     features: [
@@ -111,29 +109,40 @@ const plansUSD = [
     highlight: true,
   },
   {
-    name: "De por vida",
-    price: "US$300",
-    period: "pago único",
-    description: "Pagás una vez y es tuyo para siempre. Sin renovaciones.",
+    name: "Empresa",
+    price: "A medida",
+    period: "",
+    description: "Logística, multi-sucursal o alto volumen. Cotizamos según tu operación.",
     features: [
-      "Hasta 5 sucursales",
+      "Sucursales e impresoras ilimitadas",
       "Impresiones ilimitadas",
-      "Diseñador visual + IA",
-      "Plantillas predeterminadas",
-      "Importación de Excel y CSV",
-      "Todas las actualizaciones futuras",
-      "Gestión de dispositivos desde el panel",
-      "Soporte prioritario",
+      "Soporte prioritario con SLA",
+      "Onboarding asistido",
+      "Integraciones a medida",
     ],
-    cta: "Comprar de por vida",
-    plan: "lifetime" as const,
-    currency: "USD" as const,
+    cta: "Hablar con ventas",
+    href: EMPRESA_WA,
     popular: false,
     highlight: false,
   },
 ]
 
-type PendingCheckout = { plan: "monthly" | "pro" | "lifetime"; currency: "ARS" | "USD" } | null
+// Prepaid multi-year Pro — replaces the old unlimited "lifetime" plan.
+// Same features as Pro, paid upfront at a discount, but with an expiry date.
+const termPlansARS = [
+  { name: "1 año", price: "$379.999", plan: "pro1y" as const, save: "Ahorrás ~21%" },
+  { name: "3 años", price: "$899.999", plan: "pro3y" as const, save: "Ahorrás ~37%" },
+  { name: "5 años", price: "$1.199.999", plan: "pro5y" as const, save: "Ahorrás ~50%" },
+]
+
+const termPlansUSD = [
+  { name: "1 año", price: "US$250", plan: "pro1y" as const, save: "Ahorrás ~17%" },
+  { name: "3 años", price: "US$600", plan: "pro3y" as const, save: "Ahorrás ~33%" },
+  { name: "5 años", price: "US$800", plan: "pro5y" as const, save: "Ahorrás ~47%" },
+]
+
+type PlanId = "monthly" | "pro" | "pro1y" | "pro3y" | "pro5y"
+type PendingCheckout = { plan: PlanId; currency: "ARS" | "USD" } | null
 
 export function PricingSection() {
   const [loading, setLoading] = useState<string | null>(null)
@@ -144,8 +153,9 @@ export function PricingSection() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const plans = region === "ARS" ? plansARS : plansUSD
+  const termPlans = region === "ARS" ? termPlansARS : termPlansUSD
 
-  async function submitCheckout(plan: "monthly" | "pro" | "lifetime", currency: "ARS" | "USD", email?: string) {
+  async function submitCheckout(plan: PlanId, currency: "ARS" | "USD", email?: string) {
     setLoading(plan)
     analytics.pricingClick(plan)
     try {
@@ -170,7 +180,7 @@ export function PricingSection() {
     }
   }
 
-  function handleCheckout(plan: "monthly" | "pro" | "lifetime", currency: "ARS" | "USD") {
+  function handleCheckout(plan: PlanId, currency: "ARS" | "USD") {
     if (currency === "ARS" && (plan === "monthly" || plan === "pro")) {
       setEmailInput("")
       setEmailError("")
@@ -317,10 +327,16 @@ export function PricingSection() {
                   plan.highlight ? "" : "bg-foreground hover:bg-foreground/90 text-background"
                 }`}
                 variant={plan.highlight ? "default" : "secondary"}
-                onClick={() => handleCheckout(plan.plan, plan.currency)}
-                disabled={loading === plan.plan}
+                asChild={"href" in plan}
+                onClick={"href" in plan ? undefined : () => handleCheckout(plan.plan!, plan.currency!)}
+                disabled={loading === ("plan" in plan ? plan.plan : undefined)}
               >
-                {loading === plan.plan ? (
+                {"href" in plan ? (
+                  <a href={plan.href} target="_blank" rel="noopener noreferrer">
+                    {plan.cta}
+                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                  </a>
+                ) : loading === plan.plan ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <>
@@ -331,6 +347,33 @@ export function PricingSection() {
               </Button>
             </div>
           ))}
+        </div>
+
+        {/* Prepaid multi-year Pro — replaces the old unlimited "lifetime" plan */}
+        <div className="mt-10 rounded-2xl border border-border bg-card p-6 sm:p-8">
+          <div className="text-center mb-6">
+            <h3 className="text-lg font-semibold text-foreground">¿Preferís pagar por adelantado?</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Llevate el plan Pro con descuento por varios años — mismo Pro, precio congelado por el plazo que elijas.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-4">
+            {termPlans.map((t) => (
+              <div key={t.plan} className="rounded-xl border border-border p-5 text-center flex flex-col">
+                <p className="text-sm font-medium text-muted-foreground">{t.name}</p>
+                <p className="text-2xl font-bold text-foreground mt-1">{t.price}</p>
+                <p className="text-xs text-green-600 dark:text-green-400 mt-1 mb-4">{t.save}</p>
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 mt-auto"
+                  onClick={() => handleCheckout(t.plan, region)}
+                  disabled={loading === t.plan}
+                >
+                  {loading === t.plan ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Comprar <ArrowRight className="w-4 h-4" /></>}
+                </Button>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="mt-12 text-center space-y-3">

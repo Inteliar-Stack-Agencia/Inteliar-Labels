@@ -16,10 +16,17 @@ export interface CreateLicenseInput {
   paymentRef?: string
   /** Whether to email the key to the customer */
   sendEmail?: boolean
+  /**
+   * For prepaid multi-year Pro purchases (1/3/5 años): how many months of
+   * access this payment covers. Defaults to 1 for the regular recurring
+   * monthly/pro subscriptions. Has no effect on "lifetime" (never expires).
+   */
+  termMonths?: number
 }
 
 export async function createLicense(input: CreateLicenseInput) {
-  const { plan, email = "", notes = "", paymentRef, sendEmail = false } = input
+  const { plan, email = "", notes = "", paymentRef, sendEmail = false, termMonths = 1 } = input
+  const termDays = Math.max(1, termMonths) * 30
 
   // Idempotency: if a license already exists for this payment, return it
   if (paymentRef) {
@@ -47,11 +54,11 @@ export async function createLicense(input: CreateLicenseInput) {
       .maybeSingle()
 
     if (renewTarget) {
-      // Extend from current expiry (or now if already past) by 30 days
+      // Extend from current expiry (or now if already past) by the term
       const base = renewTarget.expires_at && new Date(renewTarget.expires_at) > new Date()
         ? new Date(renewTarget.expires_at)
         : new Date()
-      const newExpiry = new Date(base.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      const newExpiry = new Date(base.getTime() + termDays * 24 * 60 * 60 * 1000).toISOString()
 
       const { data: renewed, error } = await supabaseAdmin
         .from("licenses")
@@ -78,7 +85,7 @@ export async function createLicense(input: CreateLicenseInput) {
   }
 
   const expires_at = (plan === "monthly" || plan === "pro")
-    ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    ? new Date(Date.now() + termDays * 24 * 60 * 60 * 1000).toISOString()
     : null
 
   const { data, error } = await supabaseAdmin.from("licenses").insert({

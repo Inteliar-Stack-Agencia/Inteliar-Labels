@@ -20,6 +20,15 @@ function inferPlan(text: string): "monthly" | "pro" | "lifetime" {
   return "monthly"
 }
 
+// Prepaid multi-year Pro purchases (1/3/5 años) encode their term in
+// external_reference as "pro:<months>" (see app/api/checkout/create).
+// Falls back to inferPlan()'s text-matching for older-style preferences.
+function inferPlanAndTerm(externalRef: string, descriptor: string): { plan: "monthly" | "pro" | "lifetime"; months: number } {
+  const match = /^pro:(\d+)$/.exec((externalRef || "").trim())
+  if (match) return { plan: "pro", months: Number(match[1]) }
+  return { plan: inferPlan(descriptor), months: 1 }
+}
+
 // MercadoPago signature scheme:
 //   header x-signature: "ts=<timestamp>,v1=<hmac>"
 //   header x-request-id: "<request id>"
@@ -128,7 +137,7 @@ export async function POST(req: NextRequest) {
 
     const email: string = payment.payer?.email || ""
     const descriptor = `${payment.description ?? ""} ${payment.external_reference ?? ""} ${payment.additional_info?.items?.[0]?.title ?? ""}`
-    const plan = inferPlan(descriptor)
+    const { plan, months } = inferPlanAndTerm(payment.external_reference ?? "", descriptor)
 
     const { license, created, renewed } = await createLicense({
       plan,
@@ -136,6 +145,7 @@ export async function POST(req: NextRequest) {
       notes: `MercadoPago payment ${resourceId}`,
       paymentRef: `mp:${resourceId}`,
       sendEmail: true,
+      termMonths: months,
     })
 
     await supabaseAdmin.from("payment_events").upsert({

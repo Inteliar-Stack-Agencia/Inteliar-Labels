@@ -4,31 +4,35 @@ const MP_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN || process.env.MP_ACCESS_T
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://etiquetar.app"
 
-const MP_PLANS_ARS = {
-  pro: {
-    title: "Inteliar Labels - Plan Pro",
-    unit_price: 29999,
-    currency_id: "ARS",
-    external_reference: "pro",
-  },
-  lifetime: {
-    title: "Inteliar Labels - Plan De por vida",
-    unit_price: 449999,
-    currency_id: "ARS",
-    external_reference: "lifetime",
-  },
+// One-time, prepaid "Pro" purchases for a fixed term (replaces the old
+// unlimited "lifetime" plan — see docs/PRICING.md for the reasoning).
+// external_reference/metadata carry "pro:<months>" so the webhooks know
+// how long to grant, without needing a new value in the licenses.plan
+// column (it stays "pro" — same features, just paid upfront for longer).
+const TERM_PLANS = {
+  pro1y: { months: 12, label: "Pro · 1 año" },
+  pro3y: { months: 36, label: "Pro · 3 años" },
+  pro5y: { months: 60, label: "Pro · 5 años" },
+} as const
+
+const MP_PLANS_ARS: Record<string, { title: string; unit_price: number; currency_id: string; external_reference: string }> = {
+  pro1y: { title: `Inteliar Labels - ${TERM_PLANS.pro1y.label}`, unit_price: 379999, currency_id: "ARS", external_reference: "pro:12" },
+  pro3y: { title: `Inteliar Labels - ${TERM_PLANS.pro3y.label}`, unit_price: 899999, currency_id: "ARS", external_reference: "pro:36" },
+  pro5y: { title: `Inteliar Labels - ${TERM_PLANS.pro5y.label}`, unit_price: 1199999, currency_id: "ARS", external_reference: "pro:60" },
 }
 
-const STRIPE_PLANS_USD: Record<string, { priceId?: string; amount: number; name: string; mode: "subscription" | "payment" }> = {
-  monthly: { amount: 1000, name: "Inteliar Labels - Plan Mensual", mode: "subscription" },
-  pro: { amount: 1900, name: "Inteliar Labels - Plan Pro", mode: "subscription" },
-  lifetime: { amount: 30000, name: "Inteliar Labels - Plan De por vida", mode: "payment" },
+const STRIPE_PLANS_USD: Record<string, { amount: number; name: string; mode: "subscription" | "payment"; months?: number }> = {
+  monthly: { amount: 1200, name: "Inteliar Labels - Plan Mensual", mode: "subscription" },
+  pro: { amount: 2500, name: "Inteliar Labels - Plan Pro", mode: "subscription" },
+  pro1y: { amount: 25000, name: `Inteliar Labels - ${TERM_PLANS.pro1y.label}`, mode: "payment", months: 12 },
+  pro3y: { amount: 60000, name: `Inteliar Labels - ${TERM_PLANS.pro3y.label}`, mode: "payment", months: 36 },
+  pro5y: { amount: 80000, name: `Inteliar Labels - ${TERM_PLANS.pro5y.label}`, mode: "payment", months: 60 },
 }
 
 // ── MercadoPago ───────────────────────────────────────────────────────────────
 
 async function createMPSubscription(plan: string, payerEmail?: string) {
-  const amountMap: Record<string, number> = { monthly: 14999, pro: 29999 }
+  const amountMap: Record<string, number> = { monthly: 17999, pro: 39999 }
   const nameMap: Record<string, string> = {
     monthly: "Inteliar Labels - Plan Mensual",
     pro: "Inteliar Labels - Plan Pro",
@@ -65,7 +69,7 @@ async function createMPSubscription(plan: string, payerEmail?: string) {
   return data.init_point as string
 }
 
-async function createMPPreference(plan: "pro" | "lifetime") {
+async function createMPPreference(plan: keyof typeof MP_PLANS_ARS) {
   const planData = MP_PLANS_ARS[plan]
 
   const preference = {
@@ -107,11 +111,17 @@ async function createStripeSession(plan: string, email?: string) {
 
   const isSubscription = planData.mode === "subscription"
 
+  // Term plans (pro1y/pro3y/pro5y) are prepaid one-time purchases of the
+  // "pro" plan for N months — the webhook reads metadata.months to know
+  // how far out to set expires_at, since licenses.plan itself stays "pro".
+  const metadata: Record<string, string> = { plan: planData.months ? "pro" : plan }
+  if (planData.months) metadata.months = String(planData.months)
+
   const body: Record<string, any> = {
     mode: planData.mode,
     success_url: `${APP_URL}/pago/exito?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${APP_URL}/#pricing`,
-    metadata: { plan },
+    metadata,
   }
 
   if (email) body.customer_email = email
@@ -181,8 +191,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ url })
     }
 
-    if (plan === "lifetime") {
-      const url = await createMPPreference("lifetime")
+    if (plan in MP_PLANS_ARS) {
+      const url = await createMPPreference(plan as keyof typeof MP_PLANS_ARS)
       return NextResponse.json({ url })
     }
 

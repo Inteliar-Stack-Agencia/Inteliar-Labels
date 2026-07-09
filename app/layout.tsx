@@ -78,11 +78,11 @@ export default function RootLayout({
       {
         "@type": "Offer",
         "name": "Plan Mensual",
-        "price": "10",
+        "price": "12",
         "priceCurrency": "USD",
         "priceSpecification": {
           "@type": "UnitPriceSpecification",
-          "price": "10",
+          "price": "12",
           "priceCurrency": "USD",
           "unitCode": "MON"
         }
@@ -90,13 +90,13 @@ export default function RootLayout({
       {
         "@type": "Offer",
         "name": "Plan Pro",
-        "price": "19",
+        "price": "25",
         "priceCurrency": "USD"
       },
       {
         "@type": "Offer",
-        "name": "Plan De por vida",
-        "price": "300",
+        "name": "Plan Pro · 5 años",
+        "price": "800",
         "priceCurrency": "USD"
       }
     ],

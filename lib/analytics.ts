@@ -28,7 +28,7 @@ export const analytics = {
   ctaClick: (location: "hero" | "navbar" | "pricing" | "final-cta") =>
     event("cta_click", { location }),
 
-  pricingClick: (plan: "monthly" | "pro" | "lifetime") =>
+  pricingClick: (plan: "monthly" | "pro" | "pro1y" | "pro3y" | "pro5y") =>
     event("pricing_click", { plan }),
 
   // ── Auth (embudo paso 1 y 2) ──────────────────────────────────────────────

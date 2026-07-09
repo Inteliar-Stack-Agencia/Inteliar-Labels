@@ -20,7 +20,7 @@ export default function MayoristasPage() {
         "Filtrado por categoría, proveedor o código de producto",
         "Código de barras EAN-13 y Code 128 en cada etiqueta",
         "Compatible con impresoras Zebra, TSC, Godex y Brother",
-        "Hasta 5 sucursales con el plan De por vida",
+        "Sucursales ilimitadas con el plan Empresa",
         "Historial de impresiones para control interno",
         "Trial 15 días gratis — sin tarjeta",
       ]}

@@ -80,6 +80,9 @@ export async function POST(req: NextRequest) {
       session.customer_details?.email || session.customer_email || ""
     const descriptor = `${session.metadata?.plan ?? ""} ${session.metadata?.product ?? ""}`
     const plan = inferPlan(descriptor)
+    // Prepaid multi-year Pro purchases (pro1y/pro3y/pro5y) send metadata.months
+    // — see app/api/checkout/create. Regular subscriptions omit it (= 1 month).
+    const months = Number(session.metadata?.months) || 1
 
     const { license, created } = await createLicense({
       plan,
@@ -87,6 +90,7 @@ export async function POST(req: NextRequest) {
       notes: `Stripe checkout ${session.id}`,
       paymentRef: `stripe:${session.id}`,
       sendEmail: true,
+      termMonths: months,
     })
 
     await supabaseAdmin.from("payment_events").upsert({

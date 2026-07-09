@@ -32,17 +32,17 @@ const faqs = [
   {
     question: "¿Puedo usar múltiples impresoras?",
     answer:
-      "Sí. Podés registrar varias impresoras y elegir a cuál enviar cada trabajo. El plan Mensual permite 1 sucursal; el Pro 3; De por vida 5.",
+      "Sí. Podés registrar varias impresoras y elegir a cuál enviar cada trabajo. El plan Mensual permite 1 sucursal, el Pro hasta 3, y el plan Empresa no tiene límite.",
   },
   {
     question: "¿Hay soporte si tengo problemas?",
     answer:
-      "Sí. Podés escribirnos a inteliarstack.ia@gmail.com y respondemos en menos de 24 horas. El plan Pro y De por vida tiene soporte prioritario.",
+      "Sí. Podés escribirnos a inteliarstack.ia@gmail.com y respondemos en menos de 24 horas. El plan Pro tiene soporte prioritario, y el plan Empresa incluye soporte con SLA garantizado.",
   },
   {
     question: "¿Puedo cancelar en cualquier momento?",
     answer:
-      "El plan Mensual se puede cancelar cuando quieras. El De por vida es un pago único sin renovaciones.",
+      "El plan Mensual se puede cancelar cuando quieras. El plan Pro también podés pagarlo por adelantado (1, 3 o 5 años) con descuento, con vencimiento al final del período.",
   },
   {
     question: "¿Es una alternativa a BarTender?",
