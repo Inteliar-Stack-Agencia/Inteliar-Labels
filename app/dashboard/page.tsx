@@ -5,7 +5,7 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Header } from "@/components/dashboard/header"
 import { KpiCard } from "@/components/dashboard/kpi-card"
 import { QuickActions } from "@/components/dashboard/quick-actions"
-import { Tag, Printer, FileStack, CheckCircle2, Circle, Clock, AlertCircle, Rocket, X, Timer, Download, Loader2, ShieldCheck, ArrowRight } from "lucide-react"
+import { Tag, Printer, FileStack, CheckCircle2, Circle, Clock, AlertCircle, Rocket, X, Timer, Download, Loader2, ShieldCheck, ArrowRight, MessageCircle } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
@@ -49,6 +49,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [hideOnboarding, setHideOnboarding] = useState(false)
   const [agentOnline, setAgentOnline] = useState<boolean | null>(null)
+  const [feedbackDismissed, setFeedbackDismissed] = useState(true)
+  const [userEmail, setUserEmail] = useState("")
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
   const planLimits = usePlanLimits()
 
@@ -72,6 +74,8 @@ export default function DashboardPage() {
   useEffect(() => {
     // Vincular licencias compradas con el email del usuario
     fetch("/api/license/link", { method: "POST" }).catch(() => {})
+    // Feedback banner dismissal (persisted locally)
+    setFeedbackDismissed(localStorage.getItem("feedback_banner_dismissed") === "1")
   }, [])
 
   useEffect(() => {
@@ -81,6 +85,7 @@ export default function DashboardPage() {
       try {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
+        setUserEmail(user.email ?? "")
 
         const today = new Date()
         today.setHours(0, 0, 0, 0)
@@ -206,6 +211,52 @@ export default function DashboardPage() {
             </div>
           )
         })()}
+
+        {/* Feedback / suggestions banner */}
+        {!feedbackDismissed && (
+          <div className="relative rounded-xl border border-border bg-card px-5 py-4">
+            <div className="flex items-start gap-3 pr-6">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 flex-shrink-0">
+                <MessageCircle className="h-4.5 w-4.5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0 space-y-2">
+                <div>
+                  <p className="text-sm font-medium text-foreground">¿Cómo venís con el sistema?</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    ¿Te falta alguna plantilla especial o tenés una sugerencia? Escribinos y te ayudamos.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <a
+                    href={`https://wa.me/5491165689145?text=${encodeURIComponent(
+                      `Hola! 👋 Te escribo desde *Inteliar Labels*${userEmail ? ` (${userEmail})` : ""}.\n` +
+                      `Quería comentarte / necesito una plantilla especial: `
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 rounded-lg bg-[#25D366] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#20bd5a] transition-colors"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    Escribinos por WhatsApp
+                  </a>
+                  <button
+                    onClick={() => { setFeedbackDismissed(true); localStorage.setItem("feedback_banner_dismissed", "1") }}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    No mostrar más
+                  </button>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => { setFeedbackDismissed(true); localStorage.setItem("feedback_banner_dismissed", "1") }}
+              className="absolute right-3 top-3 rounded p-1 text-muted-foreground hover:text-foreground"
+              title="Cerrar"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
         {/* Active license banner */}
         {!planLimits.loading && !["trial", "expired"].includes(planLimits.plan) && (
