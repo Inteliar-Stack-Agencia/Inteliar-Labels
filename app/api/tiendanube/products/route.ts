@@ -4,13 +4,22 @@ import { NextRequest, NextResponse } from "next/server"
 //   mitienda.mitiendanube.com
 //   https://mitienda.mitiendanube.com
 //   mitienda.tiendanube.com (AR short domain)
+//
+// The result gets concatenated straight into a fetch URL below
+// (`https://${slug}.mitiendanube.com/`) to resolve the store's numeric ID.
+// If parsing fails we used to fall back to the raw, unvalidated input —
+// which could smuggle characters like "/" or "@" into that fetch and make
+// it hit an attacker-chosen host instead of *.mitiendanube.com (SSRF).
+// Now every path is passed through a strict allowlist before use.
 function extractStoreSlug(input: string): string {
+  let candidate: string
   try {
     const url = input.startsWith("http") ? new URL(input) : new URL(`https://${input}`)
-    return url.hostname.split(".")[0]
+    candidate = url.hostname.split(".")[0]
   } catch {
-    return input.trim()
+    candidate = input.trim()
   }
+  return /^[a-zA-Z0-9-]{1,63}$/.test(candidate) ? candidate : ""
 }
 
 interface TNProduct {
@@ -105,6 +114,13 @@ export async function POST(req: NextRequest) {
   }
 
   const slug = extractStoreSlug(storeUrl)
+
+  if (!slug) {
+    return NextResponse.json({
+      error: "No pudimos interpretar esa URL. Pegá el ID numérico de tu tienda Tiendanube (lo encontrás en Configuración → Datos de la tienda).",
+      needsId: true,
+    }, { status: 422 })
+  }
 
   // Tiendanube public API requires a numeric store ID.
   // We resolve it by fetching the store info page and extracting the ID.
