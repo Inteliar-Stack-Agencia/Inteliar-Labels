@@ -577,6 +577,24 @@ export default function UploadPage() {
               )}
             </div>
 
+            {/* Mercado Libre import — backend is built and ready, waiting on
+                Client ID/Secret from the ML developer app before this can
+                actually connect. Shows as a teaser until then. */}
+            <div className="rounded-xl border border-dashed border-border bg-card/50 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <ShoppingBag className="h-4 w-4 text-[#FFE600]" />
+                    Importar desde Mercado Libre
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Traé tus órdenes pagas para imprimir etiquetas de envío o de producto</p>
+                </div>
+                <span className="text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full flex-shrink-0">
+                  Próximamente
+                </span>
+              </div>
+            </div>
+
             {/* Saved lists */}
             {savedLists.length > 0 && (
               <div className="rounded-xl border border-border bg-card p-4">
