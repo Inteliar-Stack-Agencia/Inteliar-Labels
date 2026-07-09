@@ -24,19 +24,7 @@ import { printLabels } from "@/lib/print-label"
 import { PrinterAgentStatus } from "@/components/printer/agent-status"
 import { PrinterSelector } from "@/components/printer/printer-selector"
 import { cn } from "@/lib/utils"
-
-interface LabelElement {
-  id: string
-  type: "text" | "qr" | "barcode" | "image"
-  content: string
-  x: number
-  y: number
-  fontSize: number
-  bold: boolean
-  imageUrl?: string
-  imgWidth?: number
-  imgHeight?: number
-}
+import type { LabelElement } from "@/lib/label-types"
 
 interface PrintJob {
   id: string

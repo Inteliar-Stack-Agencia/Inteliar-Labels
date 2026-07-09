@@ -29,10 +29,9 @@ export async function POST(req: NextRequest) {
   // Vincular licencias que tengan el email del usuario pero sin user_id
   const { count } = await supabaseAdmin
     .from("licenses")
-    .update({ user_id: user.id })
+    .update({ user_id: user.id }, { count: "exact" })
     .eq("email", user.email!)
     .is("user_id", null)
-    .select("id", { count: "exact", head: true })
 
   return NextResponse.json({ ok: true, linked: count ?? 0 })
 }
