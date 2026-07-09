@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 import { createClient } from "@/lib/supabase/server"
 import { createLicense } from "@/lib/create-license"
+import { logAdminAction } from "@/lib/admin-audit-log"
 
 const supabaseAdmin = createSupabaseClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
       notes,
       sendEmail: Boolean(body.sendEmail),
     })
+    await logAdminAction(supabaseAdmin, user.email ?? "unknown", "license.create", license.key, { plan, email })
     return NextResponse.json(license, { status: 201 })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })

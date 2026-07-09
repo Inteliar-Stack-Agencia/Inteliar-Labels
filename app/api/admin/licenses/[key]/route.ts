@@ -3,6 +3,7 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 import { createClient } from "@/lib/supabase/server"
 import { maxDevicesForPlan } from "@/lib/license-utils"
 import type { LicenseActivation } from "@/lib/license-utils"
+import { logAdminAction } from "@/lib/admin-audit-log"
 
 const supabaseAdmin = createSupabaseClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -63,6 +64,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ke
 
   const { data, error } = await supabaseAdmin.from("licenses").update(updates).eq("key", key).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  await logAdminAction(supabaseAdmin, user.email ?? "unknown", "license.update", key, updates)
   return NextResponse.json(data)
 }
 
@@ -74,5 +76,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ k
   const { key } = await params
   const { error } = await supabaseAdmin.from("licenses").delete().eq("key", key)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  await logAdminAction(supabaseAdmin, user.email ?? "unknown", "license.delete", key)
   return NextResponse.json({ success: true })
 }

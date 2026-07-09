@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { cookies } from "next/headers"
 import { createServerClient } from "@supabase/ssr"
+import { logAdminAction } from "@/lib/admin-audit-log"
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -43,6 +44,8 @@ export async function POST(req: NextRequest) {
     // Table may not exist yet — fallback: just log
     console.warn("[extend-trial] trial_extensions table missing:", error.message)
   }
+
+  await logAdminAction(supabaseAdmin, user.email ?? "unknown", "trial.extend", userId, { days })
 
   return NextResponse.json({ ok: true, userId, days })
 }

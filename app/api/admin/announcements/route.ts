@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 import { createClient } from "@/lib/supabase/server"
+import { logAdminAction } from "@/lib/admin-audit-log"
 
 const supabaseAdmin = createSupabaseClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,7 +40,8 @@ export async function GET() {
 
 // POST — create a new announcement (and optionally deactivate the rest)
 export async function POST(req: NextRequest) {
-  if (!(await requireAdmin())) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+  const admin = await requireAdmin()
+  if (!admin) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
   const body = await req.json().catch(() => null)
   if (!body?.title) return NextResponse.json({ error: "Falta el título" }, { status: 400 })
   if (body.cta_url && !isSafeHttpUrl(String(body.cta_url))) {
@@ -65,26 +67,31 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  await logAdminAction(supabaseAdmin, admin.email ?? "unknown", "announcement.create", data.id, { title: data.title, active: data.active })
   return NextResponse.json(data)
 }
 
 // PATCH — toggle active { id, active }
 export async function PATCH(req: NextRequest) {
-  if (!(await requireAdmin())) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+  const admin = await requireAdmin()
+  if (!admin) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
   const { id, active } = await req.json().catch(() => ({}))
   if (!id) return NextResponse.json({ error: "Falta id" }, { status: 400 })
   if (active) {
     await supabaseAdmin.from("announcements").update({ active: false }).eq("active", true)
   }
   await supabaseAdmin.from("announcements").update({ active: !!active }).eq("id", id)
+  await logAdminAction(supabaseAdmin, admin.email ?? "unknown", "announcement.toggle", id, { active: !!active })
   return NextResponse.json({ ok: true })
 }
 
 // DELETE ?id=...
 export async function DELETE(req: NextRequest) {
-  if (!(await requireAdmin())) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+  const admin = await requireAdmin()
+  if (!admin) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
   const id = req.nextUrl.searchParams.get("id")
   if (!id) return NextResponse.json({ error: "Falta id" }, { status: 400 })
   await supabaseAdmin.from("announcements").delete().eq("id", id)
+  await logAdminAction(supabaseAdmin, admin.email ?? "unknown", "announcement.delete", id)
   return NextResponse.json({ ok: true })
 }
