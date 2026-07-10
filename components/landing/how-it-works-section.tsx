@@ -276,6 +276,15 @@ export function HowItWorksSection() {
           </p>
         </div>
 
+        <div className="rounded-2xl border border-border bg-card shadow-lg overflow-hidden mb-10 max-w-2xl mx-auto">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/dashboard-demo.gif"
+            alt="Flujo real de Inteliar Labels: cargar Excel, elegir plantilla y enviar a imprimir"
+            className="w-full block"
+          />
+        </div>
+
         <div className="grid lg:grid-cols-5 gap-8 items-start">
           {/* Step selector */}
           <div className="lg:col-span-2 space-y-3">
