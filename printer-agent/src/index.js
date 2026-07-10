@@ -153,6 +153,14 @@ async function ensureLicense() {
 }
 
 const app = express()
+// Chrome's Private Network Access blocks fetches from a public HTTPS page
+// (etiquetar.app) to a loopback address (localhost:9638) unless the preflight
+// response explicitly allows it — without this header, the browser silently
+// rejects the request even though this server is up and reachable.
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Private-Network', 'true')
+  next()
+})
 app.use(cors())
 app.use(express.json({ limit: '50mb' }))
 
