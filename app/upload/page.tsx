@@ -60,6 +60,12 @@ export default function UploadPage() {
   const [tnError, setTnError] = useState("")
   const [tnLastSync, setTnLastSync] = useState<{ url: string; syncedAt: string; total: number } | null>(null)
 
+  // Mercado Libre import
+  const [mlStatus, setMlStatus] = useState<{ configured: boolean; connected: boolean } | null>(null)
+  const [mlLoading, setMlLoading] = useState(false)
+  const [mlError, setMlError] = useState("")
+  const [mlNotice, setMlNotice] = useState("")
+
   useEffect(() => {
     // Load last TN sync from localStorage
     try {
@@ -67,8 +73,65 @@ export default function UploadPage() {
       if (raw) setTnLastSync(JSON.parse(raw))
     } catch {}
     loadSavedLists()
+
+    // Mercado Libre OAuth callback lands back here with ?ml_connected=1 or ?ml_error=...
+    const params = new URLSearchParams(window.location.search)
+    if (params.get("ml_connected")) {
+      setMlNotice("Cuenta de Mercado Libre conectada.")
+      window.history.replaceState({}, "", window.location.pathname)
+    } else if (params.get("ml_error")) {
+      const code = params.get("ml_error")
+      setMlError(
+        code === "not_configured"
+          ? "La integración con Mercado Libre todavía no está configurada."
+          : "No se pudo conectar con Mercado Libre. Probá de nuevo."
+      )
+      window.history.replaceState({}, "", window.location.pathname)
+    }
+
+    fetch("/api/integrations/mercadolibre/status")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((s) => s && setMlStatus(s))
+      .catch(() => {})
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const importFromMercadolibre = async (mode: "shipping" | "product") => {
+    setMlLoading(true)
+    setMlError("")
+    try {
+      const res = await fetch("/api/integrations/mercadolibre/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode }),
+      })
+      const result = await res.json()
+      if (!res.ok) { setMlError(result.error || "Error al importar órdenes."); return }
+      setData({
+        columns: result.columns,
+        rows: result.rows,
+        fileName: `Mercado Libre · ${mode === "shipping" ? "envíos" : "productos"}`,
+        totalRows: result.total,
+      })
+      setExcludedRows(new Set())
+      setStep(2)
+      loadTemplates(result.columns)
+    } catch {
+      setMlError("No se pudo importar desde Mercado Libre.")
+    } finally {
+      setMlLoading(false)
+    }
+  }
+
+  const disconnectMercadolibre = async () => {
+    setMlLoading(true)
+    try {
+      await fetch("/api/integrations/mercadolibre/disconnect", { method: "POST" })
+      setMlStatus((s) => (s ? { ...s, connected: false } : s))
+    } finally {
+      setMlLoading(false)
+    }
+  }
 
   const parseFile = useCallback((file: File) => {
     setError(null)
@@ -577,22 +640,55 @@ export default function UploadPage() {
               )}
             </div>
 
-            {/* Mercado Libre import — backend is built and ready, waiting on
-                Client ID/Secret from the ML developer app before this can
-                actually connect. Shows as a teaser until then. */}
-            <div className="rounded-xl border border-dashed border-border bg-card/50 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <ShoppingBag className="h-4 w-4 text-[#FFE600]" />
-                    Importar desde Mercado Libre
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Traé tus órdenes pagas para imprimir etiquetas de envío o de producto</p>
+            {/* Mercado Libre import */}
+            <div className="rounded-xl border border-border bg-card p-4">
+              {mlError && <p className="text-xs text-destructive mb-2">{mlError}</p>}
+              {mlNotice && <p className="text-xs text-green-600 dark:text-green-400 mb-2">{mlNotice}</p>}
+              {mlStatus?.connected ? (
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                      <ShoppingBag className="h-4 w-4 text-[#FFE600]" />
+                      Mercado Libre · Conectado
+                    </p>
+                    <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={disconnectMercadolibre} disabled={mlLoading}>
+                      Desconectar
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" className="gap-2" onClick={() => importFromMercadolibre("shipping")} disabled={mlLoading}>
+                      {mlLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
+                      Importar etiquetas de envío
+                    </Button>
+                    <Button size="sm" variant="outline" className="gap-2" onClick={() => importFromMercadolibre("product")} disabled={mlLoading}>
+                      {mlLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
+                      Importar etiquetas de producto
+                    </Button>
+                  </div>
                 </div>
-                <span className="text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full flex-shrink-0">
-                  Próximamente
-                </span>
-              </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                      <ShoppingBag className="h-4 w-4 text-[#FFE600]" />
+                      Importar desde Mercado Libre
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Traé tus órdenes pagas para imprimir etiquetas de envío o de producto</p>
+                  </div>
+                  {mlStatus?.configured ? (
+                    <Button variant="outline" size="sm" className="gap-2 flex-shrink-0" asChild>
+                      <a href="/api/integrations/mercadolibre/authorize">
+                        <ShoppingBag className="h-4 w-4" />
+                        Conectar cuenta
+                      </a>
+                    </Button>
+                  ) : (
+                    <span className="text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full flex-shrink-0">
+                      Próximamente
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Saved lists */}
