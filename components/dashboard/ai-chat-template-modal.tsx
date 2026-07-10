@@ -137,16 +137,23 @@ export function AiChatTemplateModal({ onClose }: { onClose: () => void }) {
         )}
 
         <form
-          className="flex items-center gap-2 border-t border-border p-4"
+          className="flex items-end gap-2 border-t border-border p-4"
           onSubmit={(e) => { e.preventDefault(); sendMessage(input) }}
         >
-          <input
+          <textarea
             autoFocus
+            rows={3}
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault()
+                sendMessage(input)
+              }
+            }}
             disabled={loading}
-            placeholder="Escribí acá…"
-            className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            placeholder="Escribí acá… (Enter para enviar, Shift+Enter para nueva línea)"
+            className="flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           />
           <Button type="submit" size="icon" disabled={loading || !input.trim()}>
             <Send className="h-4 w-4" />
