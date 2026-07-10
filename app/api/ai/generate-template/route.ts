@@ -82,10 +82,15 @@ export async function POST(req: NextRequest) {
       messages: [{ role: "user", content: userMessage }],
     })
 
-    const rawText = message.content[0].type === "text" ? message.content[0].text : ""
+    const textBlock = message.content.find((b) => b.type === "text")
+    const rawText = textBlock && textBlock.type === "text" ? textBlock.text : ""
 
-    // Strip markdown code fences if present
-    const jsonText = rawText.replace(/^```(?:json)?\n?/i, "").replace(/\n?```$/i, "").trim()
+    // Pull out the JSON object regardless of any surrounding prose or code fences
+    const firstBrace = rawText.indexOf("{")
+    const lastBrace = rawText.lastIndexOf("}")
+    const jsonText = firstBrace !== -1 && lastBrace !== -1
+      ? rawText.slice(firstBrace, lastBrace + 1)
+      : rawText.trim()
 
     const result = JSON.parse(jsonText)
 

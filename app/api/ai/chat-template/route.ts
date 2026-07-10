@@ -98,7 +98,14 @@ export async function POST(req: NextRequest) {
 
     const textBlock = message.content.find((b) => b.type === "text")
     const rawText = textBlock && textBlock.type === "text" ? textBlock.text : ""
-    const jsonText = rawText.replace(/^```(?:json)?\n?/i, "").replace(/\n?```$/i, "").trim()
+
+    // Pull out the JSON object regardless of any surrounding prose or code fences —
+    // the model doesn't always comply with "JSON only" instructions verbatim.
+    const firstBrace = rawText.indexOf("{")
+    const lastBrace = rawText.lastIndexOf("}")
+    const jsonText = firstBrace !== -1 && lastBrace !== -1
+      ? rawText.slice(firstBrace, lastBrace + 1)
+      : rawText.trim()
 
     let result
     try {
