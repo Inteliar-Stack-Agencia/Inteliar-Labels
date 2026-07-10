@@ -9,6 +9,8 @@ import { analytics } from "@/lib/analytics"
 // ~20 seconds on average (find the sticker, write date/price, stick it).
 const SECONDS_PER_LABEL_MANUAL = 20
 const WORK_DAYS_PER_MONTH = 26
+// Vida útil típica de una impresora térmica de uso comercial, para amortizar su costo por mes.
+const PRINTER_AMORTIZATION_MONTHS = 24
 
 const CURRENCIES = [
   { code: "USD", symbol: "US$", decimals: 2 },
@@ -101,10 +103,11 @@ export function SavingsCalculatorSection() {
 
   const rollsNeeded = labelsPerMonth / rollSize
   const suppliesCostMonth = rollsNeeded * rollCost
-  const totalSoftwareCostMonth = suppliesCostMonth + softwareCost
+  const printerAmortizationMonth = printerCost / PRINTER_AMORTIZATION_MONTHS
+  const totalSoftwareCostMonth = suppliesCostMonth + softwareCost + printerAmortizationMonth
 
   // The number that actually convinces: what does ONE label cost you,
-  // all-in (supplies + software), vs. the value it adds to what you sell.
+  // all-in (supplies + software + impresora amortizada), vs. the value it adds to what you sell.
   const costPerLabel = labelsPerMonth > 0 ? totalSoftwareCostMonth / labelsPerMonth : 0
 
   return (
@@ -160,7 +163,7 @@ export function SavingsCalculatorSection() {
           {/* The headline number: cost per label, all-in */}
           <div className="rounded-xl border border-primary/30 bg-primary/5 p-6 sm:p-8 text-center mb-6">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-              Cada etiqueta te cuesta (rollo + plan incluidos)
+              Cada etiqueta te cuesta (rollo + plan + impresora amortizada)
             </p>
             <p className="text-5xl font-bold text-primary">
               {fmt(costPerLabel, costPerLabel < 1 ? 3 : 0)}
@@ -178,7 +181,7 @@ export function SavingsCalculatorSection() {
           <div className="rounded-xl bg-muted/50 p-6 text-center">
             <p className="text-3xl font-bold text-foreground">{fmt(totalSoftwareCostMonth)}</p>
             <p className="text-sm text-muted-foreground mt-1">
-              por mes con etiquetar.app (rollos + plan, sin contar impresora)
+              por mes con etiquetar.app (rollos + plan + impresora amortizada en {PRINTER_AMORTIZATION_MONTHS} meses)
             </p>
           </div>
 
