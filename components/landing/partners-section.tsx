@@ -18,10 +18,10 @@ export function PartnersSection() {
     <section className="py-16 px-4 sm:px-6 border-y border-border">
       <div className="max-w-5xl mx-auto">
         <p className="text-center text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">
-          Dónde comprar tu impresora
+          Partners asociados
         </p>
         <h2 className="text-2xl sm:text-3xl font-bold text-foreground text-center mb-10 text-balance">
-          Trabajamos con vendedores de impresoras térmicas
+          Vendedores de impresoras e insumos recomendados
         </h2>
 
         {PARTNERS.length > 0 ? (
@@ -51,8 +51,9 @@ export function PartnersSection() {
               Próximamente
             </span>
             <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              Estamos cerrando las primeras alianzas con vendedores de impresoras — mientras tanto,
-              cualquier impresora que hable ZPL o TSPL funciona igual con etiquetar.app.
+              Estamos cerrando las primeras alianzas con vendedores de impresoras e insumos
+              (etiquetas, ribbons, cintas) — mientras tanto, cualquier impresora que hable ZPL o
+              TSPL funciona igual con etiquetar.app.
             </p>
           </div>
         )}
@@ -63,15 +64,16 @@ export function PartnersSection() {
               <Handshake className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-foreground">¿Vendés impresoras térmicas?</p>
+              <p className="text-sm font-semibold text-foreground">¿Vendés impresoras térmicas o insumos?</p>
               <p className="text-xs text-muted-foreground mt-1 max-w-md">
                 Sumate como partner: le ofrecés a tus clientes el software listo para imprimir el
-                mismo día que reciben la impresora, sin que tengan que buscar por su cuenta.
+                mismo día que reciben la impresora o las etiquetas, sin que tengan que buscar por
+                su cuenta.
               </p>
             </div>
           </div>
           <a
-            href="https://wa.me/5491165689145?text=Hola%2C%20vendemos%20impresoras%20t%C3%A9rmicas%20y%20queremos%20evaluar%20una%20alianza%20con%20etiquetar.app"
+            href="https://wa.me/5491165689145?text=Hola%2C%20vendemos%20impresoras%20t%C3%A9rmicas%20o%20insumos%20y%20queremos%20evaluar%20una%20alianza%20con%20etiquetar.app"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 whitespace-nowrap flex-shrink-0"
