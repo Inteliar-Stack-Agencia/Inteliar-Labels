@@ -20,20 +20,24 @@ interface TemplateProposal {
 
 export const AI_CHAT_TEMPLATE_STORAGE_KEY = "ai_chat_template_draft"
 
-const PREVIEW_SCALE = 4 // px per mm
+const PREVIEW_MAX_WIDTH = 380
+const PREVIEW_MAX_HEIGHT = 220
 
 function TemplatePreview({ proposal }: { proposal: TemplateProposal }) {
-  const width = proposal.widthMm * PREVIEW_SCALE
-  const height = proposal.heightMm * PREVIEW_SCALE
+  // Scale down (never up) so large labels (e.g. 100x150mm shipping labels)
+  // don't blow past the available space and push the accept button off-screen.
+  const scale = Math.min(4, PREVIEW_MAX_WIDTH / proposal.widthMm, PREVIEW_MAX_HEIGHT / proposal.heightMm)
+  const width = proposal.widthMm * scale
+  const height = proposal.heightMm * scale
   return (
     <div className="flex justify-center py-3">
       <div
-        className="relative border-2 border-dashed border-border bg-white shadow-sm"
+        className="relative overflow-hidden border-2 border-dashed border-border bg-white shadow-sm"
         style={{ width, height, minWidth: 120, minHeight: 60 }}
       >
         {proposal.elements.map((el) => {
-          const left = (el.x / 10) * PREVIEW_SCALE
-          const top = (el.y / 10) * PREVIEW_SCALE
+          const left = (el.x / 10) * scale
+          const top = (el.y / 10) * scale
           if (el.type === "barcode") {
             return (
               <div key={el.id} className="absolute" style={{ left, top }}>
@@ -65,7 +69,10 @@ function TemplatePreview({ proposal }: { proposal: TemplateProposal }) {
               className="absolute whitespace-nowrap text-neutral-800"
               style={{
                 left, top,
-                fontSize: Math.max(8, el.fontSize * PREVIEW_SCALE / 3),
+                maxWidth: Math.max(10, width - left),
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                fontSize: Math.max(7, el.fontSize * scale / 3),
                 fontWeight: el.bold ? "bold" : "normal",
               }}
             >
@@ -180,20 +187,20 @@ export function AiChatTemplateModal({ onClose }: { onClose: () => void }) {
           {error && (
             <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
           )}
-        </div>
 
-        {proposal && (
-          <div className="border-t border-border px-5 py-3">
-            <TemplatePreview proposal={proposal} />
-            <Button size="sm" className="w-full gap-2 bg-violet-600 hover:bg-violet-700" onClick={handleUseTemplate}>
-              <Check className="h-4 w-4" />
-              Usar esta plantilla y abrir en el editor
-            </Button>
-            <p className="mt-1.5 text-center text-[11px] text-muted-foreground">
-              O seguí charlando abajo para pedirle ajustes.
-            </p>
-          </div>
-        )}
+          {proposal && (
+            <div className="rounded-xl border border-violet-500/30 bg-violet-500/5 p-3">
+              <TemplatePreview proposal={proposal} />
+              <Button size="sm" className="w-full gap-2 bg-violet-600 hover:bg-violet-700" onClick={handleUseTemplate}>
+                <Check className="h-4 w-4" />
+                Usar esta plantilla y abrir en el editor
+              </Button>
+              <p className="mt-1.5 text-center text-[11px] text-muted-foreground">
+                O seguí charlando abajo para pedirle ajustes.
+              </p>
+            </div>
+          )}
+        </div>
 
         <form
           className="flex items-end gap-2 border-t border-border p-4"
