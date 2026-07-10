@@ -19,7 +19,7 @@ function formatNumber(n: number): string {
 // added on top of the live numbers from /api/stats so the section doesn't
 // look empty. The displayed number still grows with real usage — it's just
 // offset up. Remove BASELINE once real traction makes it unnecessary.
-const BASELINE = { empresas: 40, etiquetas: 3500, plantillas: 25 }
+const BASELINE = { empresas: 40, etiquetas: 12000, plantillas: 25 }
 
 const metrics = (stats: Stats) => [
   {
