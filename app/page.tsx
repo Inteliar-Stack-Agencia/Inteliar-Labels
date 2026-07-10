@@ -4,7 +4,10 @@ import { StatsSection } from "@/components/landing/stats-section"
 import { PrintersSection } from "@/components/landing/printers-section"
 import { IntegrationsSection } from "@/components/landing/integrations-section"
 import { HowItWorksSection } from "@/components/landing/how-it-works-section"
+import { BeforeAfterSection } from "@/components/landing/before-after-section"
 import { FeaturesSection } from "@/components/landing/features-section"
+import { SavingsCalculatorSection } from "@/components/landing/savings-calculator-section"
+import { ComplianceSection } from "@/components/landing/compliance-section"
 import { TestimonialsSection } from "@/components/landing/testimonials-section"
 import { UseCasesSection } from "@/components/landing/use-cases-section"
 import { ComparisonSection } from "@/components/landing/comparison-section"
@@ -26,7 +29,10 @@ export default function LandingPage() {
         <PrintersSection />
         <IntegrationsSection />
         <HowItWorksSection />
+        <BeforeAfterSection />
         <FeaturesSection />
+        <SavingsCalculatorSection />
+        <ComplianceSection />
         <TestimonialsSection />
         <UseCasesSection />
         <ComparisonSection />
