@@ -56,11 +56,14 @@ export function Navbar() {
             <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
               <a href="/auth/login">Iniciar sesión</a>
             </Button>
-            <Button size="sm" asChild className={scrolled ? "ring-2 ring-primary/30 animate-pulse" : ""}>
-              <a href="/auth/register" onClick={() => analytics.ctaClick("navbar")}>
-                {scrolled ? "Empezá gratis · 15 días" : "Probar gratis"}
-              </a>
-            </Button>
+            <div className="flex flex-col items-center">
+              <Button size="sm" asChild className={scrolled ? "ring-2 ring-primary/30 animate-pulse" : ""}>
+                <a href="/auth/register" onClick={() => analytics.ctaClick("navbar")}>
+                  {scrolled ? "Empezá gratis · 15 días" : "Probar gratis"}
+                </a>
+              </Button>
+              <span className="mt-0.5 text-[10px] text-muted-foreground">Sin tarjeta de crédito</span>
+            </div>
           </div>
 
           <button
@@ -90,6 +93,7 @@ export function Navbar() {
                 <Button size="sm" className="w-full" asChild>
                   <a href="/auth/register">Probar gratis</a>
                 </Button>
+                <span className="text-center text-[11px] text-muted-foreground">Sin tarjeta de crédito</span>
               </div>
             </nav>
           </div>

@@ -5,9 +5,14 @@ import { ChevronDown } from "lucide-react"
 
 const faqs = [
   {
-    question: "¿Funciona con mi impresora?",
+    question: "¿Qué pasa cuando vence el trial?",
     answer:
-      "Si tu impresora habla ZPL o TSPL, funciona. Eso incluye Zebra, Honeywell, TSC, Citizen, Sato, Bixolon, Brother y Godex. Si no estás seguro, escribinos y te confirmamos.",
+      "Después de 15 días o 500 impresiones (lo que llegue primero), el sistema se bloquea hasta que activés una licencia. Todo tu trabajo y templates quedan guardados.",
+  },
+  {
+    question: "¿Es una alternativa a BarTender?",
+    answer:
+      "Sí. Inteliar Labels hace lo mismo que BarTender para la mayoría de los casos de uso: diseñar plantillas, importar datos desde Excel o CSV e imprimir en impresoras térmicas ZPL y TSPL. La diferencia es que es más simple, 100% web y tiene un precio accesible desde US$10/mes.",
   },
   {
     question: "¿Necesito instalar algo?",
@@ -15,29 +20,9 @@ const faqs = [
       "El diseñador y la carga de datos son 100% web, sin instalación. Para enviar a tu impresora térmica instalás un agente pequeño en tu PC con Windows (2 minutos). Mac y Linux están en roadmap.",
   },
   {
-    question: "¿Qué pasa cuando vence el trial?",
+    question: "¿Funciona con mi impresora?",
     answer:
-      "Después de 15 días o 500 impresiones (lo que llegue primero), el sistema se bloquea hasta que activés una licencia. Todo tu trabajo y templates quedan guardados.",
-  },
-  {
-    question: "¿Puedo imprimir sin internet?",
-    answer:
-      "No del todo. La app web necesita conexión, pero el agente local sí puede seguir comunicándose con tu impresora. Si la internet cae a mitad de un trabajo, el agente termina lo que estaba enviando.",
-  },
-  {
-    question: "¿Los datos de mi planilla quedan en la nube?",
-    answer:
-      "Los datos se procesan en tu navegador y se guardan en nuestra base de datos segura (Supabase, región US). No compartimos tus datos con terceros. Podés leer nuestra política de privacidad.",
-  },
-  {
-    question: "¿Puedo usar múltiples impresoras?",
-    answer:
-      "Sí. Podés registrar varias impresoras y elegir a cuál enviar cada trabajo. El plan Mensual permite 1 sucursal, el Pro hasta 3, y el plan Empresa no tiene límite.",
-  },
-  {
-    question: "¿Hay soporte si tengo problemas?",
-    answer:
-      "Sí. Podés escribirnos a inteliarstack.ia@gmail.com y respondemos en menos de 24 horas. El plan Pro tiene soporte prioritario, y el plan Empresa incluye soporte con SLA garantizado.",
+      "Si tu impresora habla ZPL o TSPL, funciona. Eso incluye Zebra, Honeywell, TSC, Citizen, Sato, Bixolon, Brother y Godex. Si no estás seguro, escribinos y te confirmamos.",
   },
   {
     question: "¿Puedo cancelar en cualquier momento?",
@@ -45,9 +30,24 @@ const faqs = [
       "El plan Mensual se puede cancelar cuando quieras. El plan Pro también podés pagarlo por adelantado (1, 3 o 5 años) con descuento, con vencimiento al final del período.",
   },
   {
-    question: "¿Es una alternativa a BarTender?",
+    question: "¿Hay soporte si tengo problemas?",
     answer:
-      "Sí. Inteliar Labels hace lo mismo que BarTender para la mayoría de los casos de uso: diseñar plantillas, importar datos desde Excel o CSV e imprimir en impresoras térmicas ZPL y TSPL. La diferencia es que es más simple, 100% web y tiene un precio accesible desde US$10/mes.",
+      "Sí. Podés escribirnos a inteliarstack.ia@gmail.com y respondemos en menos de 24 horas. El plan Pro tiene soporte prioritario, y el plan Empresa incluye soporte con SLA garantizado.",
+  },
+  {
+    question: "¿Puedo usar múltiples impresoras?",
+    answer:
+      "Sí. Podés registrar varias impresoras y elegir a cuál enviar cada trabajo. El plan Mensual permite 1 sucursal, el Pro hasta 3, y el plan Empresa no tiene límite.",
+  },
+  {
+    question: "¿Los datos de mi planilla quedan en la nube?",
+    answer:
+      "Los datos se procesan en tu navegador y se guardan en nuestra base de datos segura (Supabase, región US). No compartimos tus datos con terceros. Podés leer nuestra política de privacidad.",
+  },
+  {
+    question: "¿Puedo imprimir sin internet?",
+    answer:
+      "No del todo. La app web necesita conexión, pero el agente local sí puede seguir comunicándose con tu impresora. Si la internet cae a mitad de un trabajo, el agente termina lo que estaba enviando.",
   },
   {
     question: "¿Funciona para imprimir etiquetas de precio, envío e inventario?",

@@ -27,12 +27,12 @@ export default function LandingPage() {
       <main>
         <HeroSection />
         <TrustBar />
+        <AiTemplateSection />
         <StatsSection />
         <PrintersSection />
         <PartnersSection />
         <IntegrationsSection />
         <HowItWorksSection />
-        <AiTemplateSection />
         <BeforeAfterSection />
         <FeaturesSection />
         <SavingsCalculatorSection />
