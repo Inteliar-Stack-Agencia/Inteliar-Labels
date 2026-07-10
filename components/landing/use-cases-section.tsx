@@ -1,14 +1,35 @@
 import { UtensilsCrossed, Truck, Store, ShoppingBag, Pill, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-const useCases = [
+interface MockLabel {
+  category: string
+  title: string
+  lines: string[]
+  badge?: { text: string; color: "red" | "green" | "amber" }
+  code: "barcode" | "qr"
+}
+
+const useCases: {
+  icon: typeof UtensilsCrossed
+  industry: string
+  title: string
+  description: string
+  stats: string
+  label: MockLabel
+}[] = [
   {
     icon: UtensilsCrossed,
     industry: "Producción de alimentos",
     title: "Etiquetas de vencimiento e ingredientes desde tu planilla",
     description: "Cocinas industriales y fábricas de alimentos imprimen etiquetas de vencimiento por lote, ingredientes y alérgenos directamente desde su Excel. Diseñá el template una sola vez y reutilizalo siempre.",
     stats: "Un template, miles de lotes",
-    labels: ["VTO: 15/04/26", "Lote #2847", "Sin TACC"],
+    label: {
+      category: "Alimentos",
+      title: "MILANESA DE NALGA",
+      lines: ["VTO: 15/04/2026", "LOTE #2847"],
+      badge: { text: "Sin TACC", color: "green" },
+      code: "barcode",
+    },
   },
   {
     icon: Truck,
@@ -16,7 +37,12 @@ const useCases = [
     title: "Del remito a las etiquetas de envío en segundos",
     description: "Depósitos y centros de distribución imprimen etiquetas de envío y códigos de seguimiento desde sus exportaciones de pedidos. Seleccioná solo las filas que querés imprimir en cada corrida.",
     stats: "Selección por fila incluida",
-    labels: ["TRACK: 1Z999AA10", "ENVÍO: CABA", "2 de 3"],
+    label: {
+      category: "Envíos",
+      title: "ENVÍO A CABA",
+      lines: ["Tracking: 1Z999AA10", "Bulto 2 de 3"],
+      code: "qr",
+    },
   },
   {
     icon: Store,
@@ -24,7 +50,13 @@ const useCases = [
     title: "Etiquetas de precios y SKU desde tu sistema de gestión",
     description: "Locales y comercios imprimen etiquetas de góndola, precios y SKU desde la exportación de su sistema. Guardá la lista y actualizá solo los precios que cambiaron, sin volver a cargar todo.",
     stats: "Listas reutilizables guardadas",
-    labels: ["$24.990", "SKU: A-4521", "OFERTA 20%"],
+    label: {
+      category: "Retail",
+      title: "Zapatilla Running",
+      lines: ["$ 24.990", "SKU: A-4521"],
+      badge: { text: "OFERTA 20%", color: "red" },
+      code: "barcode",
+    },
   },
   {
     icon: ShoppingBag,
@@ -32,7 +64,13 @@ const useCases = [
     title: "Etiquetá tus bultos antes de despachar sin errores",
     description: "Vendedores con alto volumen de pedidos imprimen etiquetas de identificación de bulto, dirección y número de orden desde su planilla de despacho diaria. Un clic y salen todas las etiquetas del día.",
     stats: "Etiqueta todos tus pedidos del día",
-    labels: ["PEDIDO #8821", "DEST: ROSARIO", "FRÁGIL"],
+    label: {
+      category: "E-commerce",
+      title: "Pedido #8821",
+      lines: ["Rosario, Santa Fe", "FRÁGIL"],
+      badge: { text: "FRÁGIL", color: "amber" },
+      code: "qr",
+    },
   },
   {
     icon: Pill,
@@ -40,9 +78,63 @@ const useCases = [
     title: "Actualizá 500 precios de góndola en minutos",
     description: "Cuando cambian los precios, reimprimís solo las etiquetas afectadas desde tu lista de precios en Excel. Sin tipear uno por uno, sin errores de precio en góndola, sin perder tiempo.",
     stats: "Solo reimprimir lo que cambió",
-    labels: ["$8.750", "COD: 7798", "IVA inc."],
+    label: {
+      category: "Dietética / Farmacia",
+      title: "Vitamina C 1g",
+      lines: ["$ 8.750", "COD: 7798"],
+      badge: { text: "IVA inc.", color: "green" },
+      code: "barcode",
+    },
   },
 ]
+
+const badgeClasses: Record<string, string> = {
+  red: "bg-red-100 text-red-700",
+  green: "bg-green-100 text-green-700",
+  amber: "bg-amber-100 text-amber-700",
+}
+
+function LabelMock({ label }: { label: MockLabel }) {
+  return (
+    <div className="w-[240px] shrink-0 rounded-xl border border-border bg-white shadow-sm p-4 flex flex-col gap-1.5">
+      <p className="text-[10px] font-bold text-primary uppercase tracking-wide">{label.category}</p>
+      <p className="text-base font-extrabold text-neutral-900 leading-tight">{label.title}</p>
+      {label.lines.map((l, i) => (
+        <p key={i} className={i === 0 ? "text-sm font-semibold text-neutral-700" : "text-xs text-neutral-500"}>
+          {l}
+        </p>
+      ))}
+      {label.badge && (
+        <span className={`inline-block w-fit text-[10px] font-bold px-2 py-0.5 rounded-full mt-1 ${badgeClasses[label.badge.color]}`}>
+          {label.badge.text}
+        </span>
+      )}
+      <div className="mt-2">
+        {label.code === "barcode" ? (
+          <div className="flex gap-[2px]">
+            {[...Array(24)].map((_, j) => (
+              <div
+                key={j}
+                className={j % 4 === 0 ? "w-[3px] bg-neutral-500" : "w-[3px] bg-neutral-900"}
+                style={{ height: 28 }}
+              />
+            ))}
+          </div>
+        ) : (
+          <div
+            className="h-12 w-12"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(0deg, #171717 0 5px, transparent 5px 10px), repeating-linear-gradient(90deg, #171717 0 5px, transparent 5px 10px)",
+              backgroundBlendMode: "multiply",
+              outline: "2px solid #171717",
+            }}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
 
 export function UseCasesSection() {
   return (
@@ -86,25 +178,7 @@ export function UseCasesSection() {
                     </Button>
                   </div>
                 </div>
-                <div className="flex gap-3 flex-wrap lg:flex-nowrap">
-                  {useCase.labels.map((label, i) => (
-                    <div
-                      key={i}
-                      className="bg-muted border border-border rounded-lg px-4 py-3 text-center min-w-[100px]"
-                    >
-                      <div className="flex gap-px justify-center mb-2">
-                        {[...Array(8)].map((_, j) => (
-                          <div
-                            key={j}
-                            className="w-0.5 bg-foreground/40 rounded-full"
-                            style={{ height: `${(j % 3 === 0 ? 20 : j % 2 === 0 ? 12 : 16)}px` }}
-                          />
-                        ))}
-                      </div>
-                      <p className="text-xs font-mono text-foreground">{label}</p>
-                    </div>
-                  ))}
-                </div>
+                <LabelMock label={useCase.label} />
               </div>
             </div>
           ))}
