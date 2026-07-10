@@ -91,14 +91,22 @@ export async function POST(req: NextRequest) {
     const message = await client.messages.create({
       model: "claude-sonnet-5",
       max_tokens: 1536,
+      thinking: { type: "disabled" },
       system: SYSTEM_PROMPT,
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
     })
 
-    const rawText = message.content[0].type === "text" ? message.content[0].text : ""
+    const textBlock = message.content.find((b) => b.type === "text")
+    const rawText = textBlock && textBlock.type === "text" ? textBlock.text : ""
     const jsonText = rawText.replace(/^```(?:json)?\n?/i, "").replace(/\n?```$/i, "").trim()
 
-    const result = JSON.parse(jsonText)
+    let result
+    try {
+      result = JSON.parse(jsonText)
+    } catch (parseErr) {
+      console.error("AI chat-template: failed to parse model output:", rawText)
+      throw parseErr
+    }
 
     if (result.type === "template" && (!result.elements || !Array.isArray(result.elements))) {
       return NextResponse.json({ error: "Respuesta inválida del modelo" }, { status: 500 })
