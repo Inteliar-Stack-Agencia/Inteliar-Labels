@@ -799,8 +799,11 @@ export default function SettingsPage() {
                     <Printer className="mb-3 h-10 w-10 text-muted-foreground" />
                     <p className="text-sm text-muted-foreground">El agente no está disponible</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Iniciá el agente:{" "}
-                      <code className="rounded bg-muted px-1">cd printer-agent &amp;&amp; npm start</code>
+                      Abrí la app <strong>Inteliar Printer Agent</strong> en tu PC (ícono de la bandeja del
+                      sistema) o{" "}
+                      <a href="/api/download/agent" className="underline hover:text-foreground">
+                        descargala acá
+                      </a>
                     </p>
                   </div>
                 ) : printers.length === 0 && agentOnline ? (

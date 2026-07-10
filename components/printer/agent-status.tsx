@@ -149,10 +149,11 @@ export function PrinterAgentStatus({ onStatusChange, className }: Props) {
 
       {online === false && (
         <p className="text-xs text-muted-foreground">
-          Iniciá el agente:{" "}
-          <code className="rounded bg-muted px-1 py-0.5 text-[10px]">
-            cd printer-agent &amp;&amp; npm start
-          </code>
+          Abrí la app <strong>Inteliar Printer Agent</strong> en tu PC (ícono de la bandeja del sistema, cerca del
+          reloj) para conectar tu impresora.{" "}
+          <a href="/api/download/agent" className="underline hover:text-foreground">
+            ¿No la tenés instalada? Descargala acá
+          </a>
         </p>
       )}
 

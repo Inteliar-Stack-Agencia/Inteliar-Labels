@@ -186,7 +186,8 @@ export default function HistoryPage() {
                 <p className="text-sm text-foreground">Agente no disponible</p>
                 <p className="mt-1 text-xs text-muted-foreground">{agentError}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Iniciá el agente: <code className="rounded bg-muted px-1">cd printer-agent &amp;&amp; npm start</code>
+                  Abrí la app <strong>Inteliar Printer Agent</strong> en tu PC (ícono de la bandeja del sistema) o{" "}
+                  <a href="/api/download/agent" className="underline hover:text-foreground">descargala acá</a>
                 </p>
               </div>
             ) : agentLog.length === 0 ? (
