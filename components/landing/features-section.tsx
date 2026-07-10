@@ -1,4 +1,4 @@
-import { Zap, Code, FileSpreadsheet, Printer, Sparkles, History, Monitor } from "lucide-react"
+import { Zap, Code, FileSpreadsheet, Printer, History, Monitor } from "lucide-react"
 
 const features = [
   {
@@ -12,12 +12,6 @@ const features = [
     title: "Templates con variables",
     description: "Usá {{producto}}, {{precio}}, {{sku}} y más para traer datos automáticamente desde tu planilla a cada etiqueta. Sin carga manual.",
     highlight: "Cero carga manual",
-  },
-  {
-    icon: Sparkles,
-    title: "Diseñador visual + IA",
-    description: "Diseñá tu etiqueta visualmente o describila en texto y la IA la genera por vos. Incluye vista previa real con tus datos.",
-    highlight: "Generación con IA",
   },
   {
     icon: Printer,
