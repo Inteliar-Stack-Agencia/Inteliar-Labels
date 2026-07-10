@@ -57,6 +57,10 @@ export function SavingsCalculatorSection() {
   const netSavingsMonth = manualCostMonth - totalSoftwareCostMonth
   const paybackMonths = netSavingsMonth > 0 ? printerCost / netSavingsMonth : null
 
+  // The number that actually convinces: what does ONE label cost you,
+  // all-in (supplies + software), vs. the value it adds to what you sell.
+  const costPerLabel = labelsPerMonth > 0 ? totalSoftwareCostMonth / labelsPerMonth : 0
+
   return (
     <section className="py-20 px-4 sm:px-6">
       <div className="max-w-3xl mx-auto text-center">
@@ -65,7 +69,7 @@ export function SavingsCalculatorSection() {
           Calculá tu costo real
         </div>
         <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 text-balance">
-          ¿Cuánto te conviene imprimir vs. hacerlo a mano?
+          ¿Cuánto te cuesta realmente cada etiqueta?
         </h2>
         <p className="text-lg text-muted-foreground mb-10">
           Ingresá tus propios números — rollo de etiquetas, plan y costo de la impresora.
@@ -95,6 +99,24 @@ export function SavingsCalculatorSection() {
             <NumberField label="Tu hora de trabajo vale" prefix="US$" value={hourlyRate} onChange={setHourlyRate} suffix="/hora" />
           </div>
 
+          {/* The headline number: cost per label, all-in */}
+          <div className="rounded-xl border border-primary/30 bg-primary/5 p-6 sm:p-8 text-center mb-6">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+              Cada etiqueta te cuesta (rollo + plan incluidos)
+            </p>
+            <p className="text-5xl font-bold text-primary">
+              US${costPerLabel < 1 ? costPerLabel.toFixed(3) : costPerLabel.toFixed(2)}
+            </p>
+            <div className="flex justify-center gap-6 mt-4 text-sm text-muted-foreground">
+              <span>100 etiquetas: <strong className="text-foreground">US${(costPerLabel * 100).toFixed(2)}</strong></span>
+              <span>1.000 etiquetas: <strong className="text-foreground">US${(costPerLabel * 1000).toFixed(2)}</strong></span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-4 max-w-md mx-auto">
+              Compará eso contra lo que suma en presentación, prolijidad y el margen del producto
+              que estás vendiendo — normalmente no es ni comparación.
+            </p>
+          </div>
+
           <div className="grid sm:grid-cols-2 gap-6">
             <div className="rounded-xl bg-muted/50 p-6">
               <p className="text-3xl font-bold text-foreground">${manualCostMonth.toFixed(0)}</p>
@@ -110,25 +132,12 @@ export function SavingsCalculatorSection() {
             </div>
           </div>
 
-          <div className={`rounded-xl p-6 mt-6 border ${netSavingsMonth > 0 ? "bg-green-500/10 border-green-500/20" : "bg-amber-500/10 border-amber-500/20"}`}>
-            {netSavingsMonth > 0 ? (
-              <>
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  Ahorrás ${netSavingsMonth.toFixed(0)}/mes
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {paybackMonths !== null && paybackMonths > 0
-                    ? `La impresora se paga sola en ~${Math.ceil(paybackMonths)} mes${Math.ceil(paybackMonths) === 1 ? "" : "es"}.`
-                    : ""}
-                </p>
-              </>
-            ) : (
-              <p className="text-sm text-foreground">
-                Con este volumen, hacerlo a mano todavía te sale más barato en plata — pero seguís
-                ganando en prolijidad, consistencia y menos errores de tipeo.
-              </p>
-            )}
-          </div>
+          {netSavingsMonth > 0 && paybackMonths !== null && (
+            <p className="text-sm text-muted-foreground text-center mt-4">
+              Además, ahorrás ${netSavingsMonth.toFixed(0)}/mes de tu tiempo — la impresora se paga
+              sola en ~{Math.ceil(paybackMonths)} mes{Math.ceil(paybackMonths) === 1 ? "" : "es"}.
+            </p>
+          )}
 
           <Button size="lg" className="gap-2 mt-6 group" asChild>
             <a href="/auth/register" onClick={() => analytics.ctaClick("calculator")}>
