@@ -2,6 +2,7 @@ import { HeroSection } from "@/components/landing/hero-section"
 import { TrustBar } from "@/components/landing/trust-bar"
 import { StatsSection } from "@/components/landing/stats-section"
 import { PrintersSection } from "@/components/landing/printers-section"
+import { PartnersSection } from "@/components/landing/partners-section"
 import { IntegrationsSection } from "@/components/landing/integrations-section"
 import { HowItWorksSection } from "@/components/landing/how-it-works-section"
 import { BeforeAfterSection } from "@/components/landing/before-after-section"
@@ -27,6 +28,7 @@ export default function LandingPage() {
         <TrustBar />
         <StatsSection />
         <PrintersSection />
+        <PartnersSection />
         <IntegrationsSection />
         <HowItWorksSection />
         <BeforeAfterSection />
