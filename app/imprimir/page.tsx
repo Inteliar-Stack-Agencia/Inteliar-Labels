@@ -505,6 +505,16 @@ function ImprimirPageInner() {
                 </div>
               )}
 
+              {/* Proactive nudge — warn before they hit the wall, not after */}
+              {!planLimits.loading && planLimits.canPrint && planLimits.plan === "monthly" &&
+                planLimits.labelsThisMonth + totalLabels >= planLimits.labelsMonthMax * 0.8 && (
+                <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
+                  Vas {planLimits.labelsThisMonth.toLocaleString("es-AR")} de {planLimits.labelsMonthMax.toLocaleString("es-AR")} etiquetas este mes.
+                  A este ritmo te vas a quedar sin margen antes de fin de mes —{" "}
+                  <a href="/#pricing" className="font-medium underline underline-offset-2">pasate al plan Pro</a> para no cortar en medio de un pedido.
+                </div>
+              )}
+
               {/* Save as favorite — quick reprint shortcut for the dashboard */}
               <div className="rounded-lg border border-dashed border-border p-4">
                 {favoriteSaved ? (

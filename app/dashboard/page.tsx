@@ -63,7 +63,7 @@ export default function DashboardPage() {
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
   const planLimits = usePlanLimits()
 
-  async function handleCheckout(plan: "monthly" | "pro" | "lifetime") {
+  async function handleCheckout(plan: "monthly" | "pro" | "pro1y" | "pro3y" | "pro5y") {
     setCheckoutLoading(plan)
     try {
       const res = await fetch("/api/checkout/create", {
@@ -398,7 +398,7 @@ export default function DashboardPage() {
                 className="flex items-center gap-1.5 rounded-lg bg-current/10 hover:bg-current/20 px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50"
               >
                 {checkoutLoading === "monthly" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                Mensual · US$10/mes
+                Mensual · $17.999/mes
               </button>
               <button
                 onClick={() => handleCheckout("pro")}
@@ -406,15 +406,15 @@ export default function DashboardPage() {
                 className="flex items-center gap-1.5 rounded-lg bg-current/20 hover:bg-current/30 px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50"
               >
                 {checkoutLoading === "pro" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                Pro · US$19/mes
+                Pro · $39.999/mes
               </button>
               <button
-                onClick={() => handleCheckout("lifetime")}
+                onClick={() => handleCheckout("pro5y")}
                 disabled={checkoutLoading !== null}
                 className="flex items-center gap-1.5 rounded-lg bg-current/10 hover:bg-current/20 px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50"
               >
-                {checkoutLoading === "lifetime" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                De por vida · US$300
+                {checkoutLoading === "pro5y" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                Pro 5 años · $1.199.999
               </button>
             </div>
           </div>
@@ -438,6 +438,25 @@ export default function DashboardPage() {
             Descargar .exe
           </a>
         </div>
+
+        {/* Proactive nudge — warn before they hit the monthly cap, not after */}
+        {!planLimits.loading && planLimits.plan === "monthly" && planLimits.labelsThisMonth >= planLimits.labelsMonthMax * 0.8 && (
+          <div className="rounded-xl border border-primary/30 bg-primary/5 px-5 py-4">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex-1 min-w-[200px]">
+                <p className="text-sm font-medium text-foreground">
+                  Vas {planLimits.labelsThisMonth.toLocaleString("es-AR")} de {planLimits.labelsMonthMax.toLocaleString("es-AR")} etiquetas este mes
+                </p>
+                <div className="mt-2 h-1.5 w-full max-w-xs rounded-full bg-primary/15 overflow-hidden">
+                  <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${Math.min(100, (planLimits.labelsThisMonth / planLimits.labelsMonthMax) * 100)}%` }} />
+                </div>
+              </div>
+              <a href="/#pricing" className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 whitespace-nowrap">
+                Pasar a Pro (ilimitado) <ArrowRight className="h-3.5 w-3.5" />
+              </a>
+            </div>
+          </div>
+        )}
 
         {/* KPI Cards */}
         <div className="grid gap-6 md:grid-cols-3">
