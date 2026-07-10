@@ -13,7 +13,7 @@ import { usePlanLimits } from "@/lib/use-plan-limits"
 import { checkPrinterAgent } from "@/lib/printer-agent-client"
 import { analytics } from "@/lib/analytics"
 
-const AGENT_DOWNLOAD_URL = "https://github.com/Inteliar-Stack-Agencia/Inteliar-Labels/releases/latest/download/InteliarPrinterAgent.exe"
+const AGENT_DOWNLOAD_URL = "/api/download/agent"
 
 interface RecentJob {
   id: string

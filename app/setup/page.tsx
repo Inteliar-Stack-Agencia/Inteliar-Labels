@@ -22,7 +22,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-const AGENT_DOWNLOAD_URL = "https://github.com/Inteliar-Stack-Agencia/Inteliar-Labels/releases/latest/download/InteliarPrinterAgent.exe"
+const AGENT_DOWNLOAD_URL = "/api/download/agent"
 
 const STEPS = ["Bienvenida", "Agente", "Impresora", "Calibración", "Prueba", "Listo"] as const
 

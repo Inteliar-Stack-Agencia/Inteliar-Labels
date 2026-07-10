@@ -80,7 +80,7 @@ export function DownloadSection() {
               ))}
             </ul>
             <Button className="w-full gap-2" asChild onClick={() => analytics.agentDownloaded()}>
-              <a href="https://github.com/Inteliar-Stack-Agencia/Inteliar-Labels/releases/latest/download/InteliarPrinterAgent.exe">
+              <a href="/api/download/agent">
                 <Download className="h-4 w-4" />
                 Descargar para Windows
               </a>
