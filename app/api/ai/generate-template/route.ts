@@ -12,7 +12,8 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const DAILY_LIMIT = 20
+const MONTHLY_LIMIT = 10
+const MONTHLY_WINDOW_SECONDS = 30 * 24 * 60 * 60
 
 const SYSTEM_PROMPT = `Eres un experto en diseño de etiquetas térmicas.
 El usuario te describe la etiqueta que necesita y vos generás un JSON con los elementos posicionados en el canvas.
@@ -62,9 +63,9 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 })
 
-    const { allowed } = await checkRateLimit(supabaseAdmin, "ai-generate-template", user.id, DAILY_LIMIT, 24 * 60 * 60)
+    const { allowed } = await checkRateLimit(supabaseAdmin, "ai-templates", user.id, MONTHLY_LIMIT, MONTHLY_WINDOW_SECONDS)
     if (!allowed) {
-      return NextResponse.json({ error: `Límite diario de ${DAILY_LIMIT} generaciones con IA alcanzado. Probá de nuevo mañana.` }, { status: 429 })
+      return NextResponse.json({ error: `Límite mensual de ${MONTHLY_LIMIT} generaciones con IA alcanzado. Probá de nuevo el mes que viene.` }, { status: 429 })
     }
 
     const { description, widthMm, heightMm } = await req.json()
