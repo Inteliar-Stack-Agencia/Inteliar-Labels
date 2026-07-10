@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Calculator, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { analytics } from "@/lib/analytics"
@@ -9,6 +9,25 @@ import { analytics } from "@/lib/analytics"
 // ~20 seconds on average (find the sticker, write date/price, stick it).
 const SECONDS_PER_LABEL_MANUAL = 20
 const WORK_DAYS_PER_MONTH = 26
+
+const CURRENCIES = [
+  { code: "USD", symbol: "US$", decimals: 2 },
+  { code: "ARS", symbol: "AR$", decimals: 0 },
+  { code: "EUR", symbol: "€", decimals: 2 },
+  { code: "BRL", symbol: "R$", decimals: 2 },
+  { code: "MXN", symbol: "MX$", decimals: 0 },
+  { code: "UYU", symbol: "$U", decimals: 0 },
+  { code: "CLP", symbol: "CLP$", decimals: 0 },
+  { code: "COP", symbol: "COP$", decimals: 0 },
+] as const
+type CurrencyCode = (typeof CURRENCIES)[number]["code"]
+
+// Approximate fallback rates (units of currency per 1 USD) in case the live
+// rate fetch fails — only used to keep the default example numbers realistic
+// when switching currency; the user can edit freely afterward regardless.
+const FALLBACK_RATES: Record<CurrencyCode, number> = {
+  USD: 1, ARS: 1000, EUR: 0.92, BRL: 5.4, MXN: 18, UYU: 40, CLP: 950, COP: 4100,
+}
 
 function NumberField({
   label, value, onChange, prefix, suffix, min = 0,
@@ -24,7 +43,7 @@ function NumberField({
     <label className="block">
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
       <div className="mt-1 flex items-center rounded-lg border border-input bg-background overflow-hidden focus-within:ring-1 focus-within:ring-ring">
-        {prefix && <span className="pl-3 text-sm text-muted-foreground">{prefix}</span>}
+        {prefix && <span className="pl-3 text-sm text-muted-foreground whitespace-nowrap">{prefix}</span>}
         <input
           type="number"
           min={min}
@@ -39,12 +58,43 @@ function NumberField({
 }
 
 export function SavingsCalculatorSection() {
+  const [currency, setCurrency] = useState<CurrencyCode>("USD")
+  const [rates, setRates] = useState<Record<CurrencyCode, number>>(FALLBACK_RATES)
+
   const [perDay, setPerDay] = useState(80)
-  const [rollCost, setRollCost] = useState(10) // USD per 1000 labels (80x40mm), AR reference
+  const [rollCost, setRollCost] = useState(10)
   const [rollSize, setRollSize] = useState(1000)
-  const [softwareCost, setSoftwareCost] = useState(13) // USD/month
-  const [printerCost, setPrinterCost] = useState(500) // USD one-time
-  const [hourlyRate, setHourlyRate] = useState(4) // USD/hour, informal reference
+  const [softwareCost, setSoftwareCost] = useState(13)
+  const [printerCost, setPrinterCost] = useState(500)
+  const [hourlyRate, setHourlyRate] = useState(4)
+
+  useEffect(() => {
+    fetch("https://open.er-api.com/v6/latest/USD")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.rates) {
+          const next = { ...FALLBACK_RATES }
+          for (const c of CURRENCIES) {
+            if (typeof data.rates[c.code] === "number") next[c.code] = data.rates[c.code]
+          }
+          setRates(next)
+        }
+      })
+      .catch(() => {}) // keep FALLBACK_RATES
+  }, [])
+
+  function handleCurrencyChange(next: CurrencyCode) {
+    const factor = rates[next] / rates[currency]
+    setRollCost((v) => Number((v * factor).toFixed(2)))
+    setSoftwareCost((v) => Number((v * factor).toFixed(2)))
+    setPrinterCost((v) => Number((v * factor).toFixed(2)))
+    setHourlyRate((v) => Number((v * factor).toFixed(2)))
+    setCurrency(next)
+  }
+
+  const cur = CURRENCIES.find((c) => c.code === currency)!
+  const fmt = (v: number, extraDecimals = 0) =>
+    `${cur.symbol}${v.toLocaleString("es-AR", { minimumFractionDigits: cur.decimals + extraDecimals, maximumFractionDigits: cur.decimals + extraDecimals })}`
 
   const labelsPerMonth = perDay * WORK_DAYS_PER_MONTH
   const hoursPerMonth = (labelsPerMonth * SECONDS_PER_LABEL_MANUAL) / 3600
@@ -71,9 +121,22 @@ export function SavingsCalculatorSection() {
         <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 text-balance">
           ¿Cuánto te cuesta realmente cada etiqueta?
         </h2>
-        <p className="text-lg text-muted-foreground mb-10">
+        <p className="text-lg text-muted-foreground mb-6">
           Ingresá tus propios números — rollo de etiquetas, plan y costo de la impresora.
         </p>
+
+        <div className="flex items-center justify-center gap-2 mb-10">
+          <span className="text-xs text-muted-foreground">Moneda:</span>
+          <select
+            value={currency}
+            onChange={(e) => handleCurrencyChange(e.target.value as CurrencyCode)}
+            className="text-sm rounded-lg border border-input bg-background px-3 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            {CURRENCIES.map((c) => (
+              <option key={c.code} value={c.code}>{c.code} · {c.symbol}</option>
+            ))}
+          </select>
+        </div>
 
         <div className="rounded-2xl border border-border bg-card p-6 sm:p-10 text-left">
           <label className="block mb-8">
@@ -92,11 +155,11 @@ export function SavingsCalculatorSection() {
           </label>
 
           <div className="grid sm:grid-cols-2 gap-4 mb-8">
-            <NumberField label="Costo del rollo de etiquetas" prefix="US$" value={rollCost} onChange={setRollCost} />
+            <NumberField label="Costo del rollo de etiquetas" prefix={cur.symbol} value={rollCost} onChange={setRollCost} />
             <NumberField label="Etiquetas por rollo" value={rollSize} onChange={setRollSize} min={1} suffix="unidades" />
-            <NumberField label="Plan de etiquetar.app" prefix="US$" value={softwareCost} onChange={setSoftwareCost} suffix="/mes" />
-            <NumberField label="Costo de la impresora" prefix="US$" value={printerCost} onChange={setPrinterCost} suffix="pago único" />
-            <NumberField label="Tu hora de trabajo vale" prefix="US$" value={hourlyRate} onChange={setHourlyRate} suffix="/hora" />
+            <NumberField label="Plan de etiquetar.app" prefix={cur.symbol} value={softwareCost} onChange={setSoftwareCost} suffix="/mes" />
+            <NumberField label="Costo de la impresora" prefix={cur.symbol} value={printerCost} onChange={setPrinterCost} suffix="pago único" />
+            <NumberField label="Tu hora de trabajo vale" prefix={cur.symbol} value={hourlyRate} onChange={setHourlyRate} suffix="/hora" />
           </div>
 
           {/* The headline number: cost per label, all-in */}
@@ -105,11 +168,11 @@ export function SavingsCalculatorSection() {
               Cada etiqueta te cuesta (rollo + plan incluidos)
             </p>
             <p className="text-5xl font-bold text-primary">
-              US${costPerLabel < 1 ? costPerLabel.toFixed(3) : costPerLabel.toFixed(2)}
+              {fmt(costPerLabel, costPerLabel < 1 ? 3 : 0)}
             </p>
             <div className="flex justify-center gap-6 mt-4 text-sm text-muted-foreground">
-              <span>100 etiquetas: <strong className="text-foreground">US${(costPerLabel * 100).toFixed(2)}</strong></span>
-              <span>1.000 etiquetas: <strong className="text-foreground">US${(costPerLabel * 1000).toFixed(2)}</strong></span>
+              <span>100 etiquetas: <strong className="text-foreground">{fmt(costPerLabel * 100)}</strong></span>
+              <span>1.000 etiquetas: <strong className="text-foreground">{fmt(costPerLabel * 1000)}</strong></span>
             </div>
             <p className="text-xs text-muted-foreground mt-4 max-w-md mx-auto">
               Compará eso contra lo que suma en presentación, prolijidad y el margen del producto
@@ -119,13 +182,13 @@ export function SavingsCalculatorSection() {
 
           <div className="grid sm:grid-cols-2 gap-6">
             <div className="rounded-xl bg-muted/50 p-6">
-              <p className="text-3xl font-bold text-foreground">${manualCostMonth.toFixed(0)}</p>
+              <p className="text-3xl font-bold text-foreground">{fmt(manualCostMonth)}</p>
               <p className="text-sm text-muted-foreground mt-1">
                 de tu tiempo por mes etiquetando a mano ({hoursPerMonth.toFixed(1)}hs)
               </p>
             </div>
             <div className="rounded-xl bg-muted/50 p-6">
-              <p className="text-3xl font-bold text-foreground">${totalSoftwareCostMonth.toFixed(0)}</p>
+              <p className="text-3xl font-bold text-foreground">{fmt(totalSoftwareCostMonth)}</p>
               <p className="text-sm text-muted-foreground mt-1">
                 por mes con etiquetar.app (rollos + plan, sin contar impresora)
               </p>
@@ -134,8 +197,8 @@ export function SavingsCalculatorSection() {
 
           {netSavingsMonth > 0 && paybackMonths !== null && (
             <p className="text-sm text-muted-foreground text-center mt-4">
-              Además, ahorrás ${netSavingsMonth.toFixed(0)}/mes de tu tiempo — la impresora se paga
-              sola en ~{Math.ceil(paybackMonths)} mes{Math.ceil(paybackMonths) === 1 ? "" : "es"}.
+              Además, ahorrás {fmt(netSavingsMonth)}/mes de tu tiempo — la impresora se paga sola en
+              ~{Math.ceil(paybackMonths)} mes{Math.ceil(paybackMonths) === 1 ? "" : "es"}.
             </p>
           )}
 
