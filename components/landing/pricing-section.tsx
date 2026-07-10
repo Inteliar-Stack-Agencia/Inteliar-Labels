@@ -31,7 +31,7 @@ const plansARS = [
     name: "Pro",
     price: "$39.999",
     period: "/mes",
-    description: "Para negocios con mayor volumen o múltiples puntos de venta.",
+    description: "Para cuando el límite de 2.000 impresiones te queda chico — sin techo de impresión.",
     features: [
       "Hasta 3 sucursales",
       "Impresiones ilimitadas",
@@ -91,7 +91,7 @@ const plansUSD = [
     name: "Pro",
     price: "US$25",
     period: "/mes",
-    description: "Para negocios con mayor volumen o múltiples puntos de venta.",
+    description: "Para cuando el límite de 2.000 impresiones te queda chico — sin techo de impresión.",
     features: [
       "Hasta 3 sucursales",
       "Impresiones ilimitadas",
