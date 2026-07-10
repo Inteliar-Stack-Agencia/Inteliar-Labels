@@ -276,7 +276,7 @@ export function HowItWorksSection() {
           </p>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card shadow-lg overflow-hidden mb-10 max-w-2xl mx-auto">
+        <div className="rounded-2xl border border-border bg-card shadow-lg overflow-hidden mb-10">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/dashboard-demo.gif"
