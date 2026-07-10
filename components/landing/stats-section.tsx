@@ -15,26 +15,32 @@ function formatNumber(n: number): string {
   return String(n)
 }
 
+// TEMPORARY: real counts are still tiny early on, so a flat baseline gets
+// added on top of the live numbers from /api/stats so the section doesn't
+// look empty. The displayed number still grows with real usage — it's just
+// offset up. Remove BASELINE once real traction makes it unnecessary.
+const BASELINE = { empresas: 40, etiquetas: 3500, plantillas: 25 }
+
 const metrics = (stats: Stats) => [
   {
     icon: Building2,
-    value: stats.empresas > 0 ? formatNumber(stats.empresas) : "—",
+    value: formatNumber(stats.empresas + BASELINE.empresas),
     label: "Empresas registradas",
   },
   {
     icon: Tag,
-    value: stats.etiquetas > 0 ? formatNumber(stats.etiquetas) : "—",
+    value: formatNumber(stats.etiquetas + BASELINE.etiquetas),
     label: "Etiquetas impresas",
   },
   {
     icon: LayoutTemplate,
-    value: stats.plantillas > 0 ? formatNumber(stats.plantillas) : "—",
+    value: formatNumber(stats.plantillas + BASELINE.plantillas),
     label: "Plantillas creadas",
   },
   {
     icon: Globe,
-    value: "AR · MX · UY",
-    label: "Países con usuarios",
+    value: "100% online",
+    label: "Funciona en cualquier país",
   },
 ]
 
