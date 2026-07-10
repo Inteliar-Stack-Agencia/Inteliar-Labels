@@ -20,6 +20,64 @@ interface TemplateProposal {
 
 export const AI_CHAT_TEMPLATE_STORAGE_KEY = "ai_chat_template_draft"
 
+const PREVIEW_SCALE = 4 // px per mm
+
+function TemplatePreview({ proposal }: { proposal: TemplateProposal }) {
+  const width = proposal.widthMm * PREVIEW_SCALE
+  const height = proposal.heightMm * PREVIEW_SCALE
+  return (
+    <div className="flex justify-center py-3">
+      <div
+        className="relative border-2 border-dashed border-border bg-white shadow-sm"
+        style={{ width, height, minWidth: 120, minHeight: 60 }}
+      >
+        {proposal.elements.map((el) => {
+          const left = (el.x / 10) * PREVIEW_SCALE
+          const top = (el.y / 10) * PREVIEW_SCALE
+          if (el.type === "barcode") {
+            return (
+              <div key={el.id} className="absolute" style={{ left, top }}>
+                <div className="flex gap-[1px]">
+                  {[...Array(16)].map((_, j) => (
+                    <div key={j} className={j % 3 === 0 ? "w-[2px] bg-neutral-500" : "w-[2px] bg-neutral-900"} style={{ height: 16 }} />
+                  ))}
+                </div>
+              </div>
+            )
+          }
+          if (el.type === "qr") {
+            return (
+              <div
+                key={el.id}
+                className="absolute h-6 w-6"
+                style={{
+                  left, top,
+                  backgroundImage: "repeating-linear-gradient(0deg, #171717 0 3px, transparent 3px 6px), repeating-linear-gradient(90deg, #171717 0 3px, transparent 3px 6px)",
+                  backgroundBlendMode: "multiply",
+                  outline: "1px solid #171717",
+                }}
+              />
+            )
+          }
+          return (
+            <span
+              key={el.id}
+              className="absolute whitespace-nowrap text-neutral-800"
+              style={{
+                left, top,
+                fontSize: Math.max(8, el.fontSize * PREVIEW_SCALE / 3),
+                fontWeight: el.bold ? "bold" : "normal",
+              }}
+            >
+              {el.content}
+            </span>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export function AiChatTemplateModal({ onClose }: { onClose: () => void }) {
   const router = useRouter()
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -126,6 +184,7 @@ export function AiChatTemplateModal({ onClose }: { onClose: () => void }) {
 
         {proposal && (
           <div className="border-t border-border px-5 py-3">
+            <TemplatePreview proposal={proposal} />
             <Button size="sm" className="w-full gap-2 bg-violet-600 hover:bg-violet-700" onClick={handleUseTemplate}>
               <Check className="h-4 w-4" />
               Usar esta plantilla y abrir en el editor
