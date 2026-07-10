@@ -9,7 +9,11 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://vitals.vercel-insights.com https://api.mercadopago.com https://open.er-api.com",
+  // http://localhost:* / 127.0.0.1:* let the dashboard talk to the local
+  // Inteliar Printer Agent (default port 9638, user-configurable) running
+  // on the customer's own machine — without this, the browser silently
+  // blocks the fetch and the agent looks "offline" even when it's running.
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://vitals.vercel-insights.com https://api.mercadopago.com https://open.er-api.com http://localhost:* http://127.0.0.1:*",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "object-src 'none'",
