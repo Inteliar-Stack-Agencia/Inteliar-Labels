@@ -39,6 +39,14 @@ const TESTIMONIALS = [
     initials: "DF",
     stars: 5,
   },
+  {
+    quote: "Pesamos y etiquetamos fruta y verdura suelta todo el día — antes escribíamos el precio a mano en cada bolsita y se corría con la humedad. Ahora imprimimos directo con el peso y el precio por kilo, ni se despega ni se corre más.",
+    name: "Marisa T.",
+    role: "Encargada",
+    company: "Verdulería El Quincho, La Plata",
+    initials: "MT",
+    stars: 5,
+  },
 ]
 
 export function TestimonialsSection() {
