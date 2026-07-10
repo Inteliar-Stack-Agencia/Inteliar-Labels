@@ -38,6 +38,7 @@ import type { LabelElement, ElementType } from "@/lib/label-types"
 import { PRESET_TEMPLATES } from "@/lib/preset-templates"
 import { resolveDateVars, DATE_SHORTCUTS, isDateToken } from "@/lib/date-vars"
 import { analytics } from "@/lib/analytics"
+import { AI_CHAT_TEMPLATE_STORAGE_KEY } from "@/components/dashboard/ai-chat-template-modal"
 import * as XLSX from "xlsx"
 
 const PRESET_SIZES = [
@@ -77,9 +78,30 @@ export default function NewTemplatePage() {
   const [realSize, setRealSize] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
 
-  // Load a preset template when arriving via /templates/new?preset=<id>
+  // Load a preset template when arriving via /templates/new?preset=<id>,
+  // or an AI-chat-generated draft when arriving via /templates/new?ai=chat
   useEffect(() => {
-    const presetId = new URLSearchParams(window.location.search).get("preset")
+    const params = new URLSearchParams(window.location.search)
+
+    if (params.get("ai") === "chat") {
+      const raw = sessionStorage.getItem(AI_CHAT_TEMPLATE_STORAGE_KEY)
+      sessionStorage.removeItem(AI_CHAT_TEMPLATE_STORAGE_KEY)
+      if (raw) {
+        try {
+          const draft = JSON.parse(raw) as { widthMm: number; heightMm: number; elements: LabelElement[] }
+          setTemplateName("Plantilla generada con IA")
+          setWidthMm(draft.widthMm)
+          setHeightMm(draft.heightMm)
+          setElements(draft.elements.map((el, i) => ({ ...el, id: `${Date.now()}-${i}` })))
+          setShowSizePanel(false)
+          return
+        } catch {
+          // fall through to preset handling below
+        }
+      }
+    }
+
+    const presetId = params.get("preset")
     if (!presetId) return
     const preset = PRESET_TEMPLATES.find((p) => p.id === presetId)
     if (!preset) return

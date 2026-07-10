@@ -27,7 +27,8 @@ import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 import { PRESET_TEMPLATES } from "@/lib/preset-templates"
 import { usePlanLimits } from "@/lib/use-plan-limits"
-import { Lock } from "lucide-react"
+import { Lock, Sparkles } from "lucide-react"
+import { AiChatTemplateModal } from "@/components/dashboard/ai-chat-template-modal"
 
 interface Template {
   id: string
@@ -53,6 +54,7 @@ export default function TemplatesPage() {
   const [loading, setLoading] = useState(true)
   const planLimits = usePlanLimits()
   const importInputRef = useRef<HTMLInputElement>(null)
+  const [showAiChat, setShowAiChat] = useState(false)
 
   useEffect(() => {
     loadTemplates()
@@ -426,10 +428,23 @@ export default function TemplatesPage() {
 
         {/* Plantillas predeterminadas */}
         <div className="mt-12">
-          <h2 className="text-lg font-semibold text-foreground">¿Qué querés etiquetar?</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Elegí una plantilla base y la personalizás en segundos
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">¿Qué querés etiquetar?</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Elegí una plantilla base y la personalizás en segundos
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 border-violet-500/50 text-violet-400 hover:bg-violet-500/10 hover:text-violet-300"
+              onClick={() => setShowAiChat(true)}
+            >
+              <Sparkles className="h-4 w-4" />
+              Armar plantilla charlando con la IA
+            </Button>
+          </div>
 
           <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {PRESET_TEMPLATES.map((preset) => (
@@ -457,6 +472,7 @@ export default function TemplatesPage() {
           </div>
         </div>
       </div>
+      {showAiChat && <AiChatTemplateModal onClose={() => setShowAiChat(false)} />}
     </DashboardLayout>
   )
 }

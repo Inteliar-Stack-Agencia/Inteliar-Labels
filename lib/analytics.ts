@@ -25,7 +25,7 @@ function persist(name: string, metadata?: Record<string, any>) {
 // Conversion funnel events
 export const analytics = {
   // ── Landing ──────────────────────────────────────────────────────────────
-  ctaClick: (location: "hero" | "navbar" | "pricing" | "final-cta" | "calculator") =>
+  ctaClick: (location: "hero" | "navbar" | "pricing" | "final-cta" | "calculator" | "ai_template") =>
     event("cta_click", { location }),
 
   pricingClick: (plan: "monthly" | "pro" | "pro1y" | "pro3y" | "pro5y") =>
