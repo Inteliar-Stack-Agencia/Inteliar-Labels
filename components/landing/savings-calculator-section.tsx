@@ -45,10 +45,13 @@ function NumberField({
       <div className="mt-1 flex items-center rounded-lg border border-input bg-background overflow-hidden focus-within:ring-1 focus-within:ring-ring">
         {prefix && <span className="pl-3 text-sm text-muted-foreground whitespace-nowrap">{prefix}</span>}
         <input
-          type="number"
-          min={min}
-          value={value}
-          onChange={(e) => onChange(Math.max(min, Number(e.target.value) || 0))}
+          type="text"
+          inputMode="decimal"
+          value={value.toLocaleString("es-AR")}
+          onChange={(e) => {
+            const raw = e.target.value.replace(/\./g, "").replace(",", ".").replace(/[^\d.]/g, "")
+            onChange(Math.max(min, Number(raw) || 0))
+          }}
           className="w-full min-w-0 bg-transparent px-2 py-2 text-sm text-foreground focus:outline-none"
         />
         {suffix && <span className="pr-3 text-sm text-muted-foreground whitespace-nowrap">{suffix}</span>}
@@ -66,7 +69,6 @@ export function SavingsCalculatorSection() {
   const [rollSize, setRollSize] = useState(1000)
   const [softwareCost, setSoftwareCost] = useState(13)
   const [printerCost, setPrinterCost] = useState(500)
-  const [hourlyRate, setHourlyRate] = useState(4)
 
   useEffect(() => {
     fetch("https://open.er-api.com/v6/latest/USD")
@@ -88,7 +90,6 @@ export function SavingsCalculatorSection() {
     setRollCost((v) => Number((v * factor).toFixed(2)))
     setSoftwareCost((v) => Number((v * factor).toFixed(2)))
     setPrinterCost((v) => Number((v * factor).toFixed(2)))
-    setHourlyRate((v) => Number((v * factor).toFixed(2)))
     setCurrency(next)
   }
 
@@ -97,15 +98,10 @@ export function SavingsCalculatorSection() {
     `${cur.symbol}${v.toLocaleString("es-AR", { minimumFractionDigits: cur.decimals + extraDecimals, maximumFractionDigits: cur.decimals + extraDecimals })}`
 
   const labelsPerMonth = perDay * WORK_DAYS_PER_MONTH
-  const hoursPerMonth = (labelsPerMonth * SECONDS_PER_LABEL_MANUAL) / 3600
-  const manualCostMonth = hoursPerMonth * hourlyRate
 
   const rollsNeeded = labelsPerMonth / rollSize
   const suppliesCostMonth = rollsNeeded * rollCost
   const totalSoftwareCostMonth = suppliesCostMonth + softwareCost
-
-  const netSavingsMonth = manualCostMonth - totalSoftwareCostMonth
-  const paybackMonths = netSavingsMonth > 0 ? printerCost / netSavingsMonth : null
 
   // The number that actually convinces: what does ONE label cost you,
   // all-in (supplies + software), vs. the value it adds to what you sell.
@@ -159,7 +155,6 @@ export function SavingsCalculatorSection() {
             <NumberField label="Etiquetas por rollo" value={rollSize} onChange={setRollSize} min={1} suffix="unidades" />
             <NumberField label="Plan de etiquetar.app" prefix={cur.symbol} value={softwareCost} onChange={setSoftwareCost} suffix="/mes" />
             <NumberField label="Costo de la impresora" prefix={cur.symbol} value={printerCost} onChange={setPrinterCost} suffix="pago único" />
-            <NumberField label="Tu hora de trabajo vale" prefix={cur.symbol} value={hourlyRate} onChange={setHourlyRate} suffix="/hora" />
           </div>
 
           {/* The headline number: cost per label, all-in */}
@@ -174,33 +169,18 @@ export function SavingsCalculatorSection() {
               <span>100 etiquetas: <strong className="text-foreground">{fmt(costPerLabel * 100)}</strong></span>
               <span>1.000 etiquetas: <strong className="text-foreground">{fmt(costPerLabel * 1000)}</strong></span>
             </div>
-            <p className="text-xs text-muted-foreground mt-4 max-w-md mx-auto">
+            <p className="text-sm font-semibold text-foreground mt-4 max-w-md mx-auto">
               Compará eso contra lo que suma en presentación, prolijidad y el margen del producto
               que estás vendiendo — normalmente no es ni comparación.
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-6">
-            <div className="rounded-xl bg-muted/50 p-6">
-              <p className="text-3xl font-bold text-foreground">{fmt(manualCostMonth)}</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                de tu tiempo por mes etiquetando a mano ({hoursPerMonth.toFixed(1)}hs)
-              </p>
-            </div>
-            <div className="rounded-xl bg-muted/50 p-6">
-              <p className="text-3xl font-bold text-foreground">{fmt(totalSoftwareCostMonth)}</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                por mes con etiquetar.app (rollos + plan, sin contar impresora)
-              </p>
-            </div>
-          </div>
-
-          {netSavingsMonth > 0 && paybackMonths !== null && (
-            <p className="text-sm text-muted-foreground text-center mt-4">
-              Además, ahorrás {fmt(netSavingsMonth)}/mes de tu tiempo — la impresora se paga sola en
-              ~{Math.ceil(paybackMonths)} mes{Math.ceil(paybackMonths) === 1 ? "" : "es"}.
+          <div className="rounded-xl bg-muted/50 p-6 text-center">
+            <p className="text-3xl font-bold text-foreground">{fmt(totalSoftwareCostMonth)}</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              por mes con etiquetar.app (rollos + plan, sin contar impresora)
             </p>
-          )}
+          </div>
 
           <Button size="lg" className="gap-2 mt-6 group" asChild>
             <a href="/auth/register" onClick={() => analytics.ctaClick("calculator")}>
