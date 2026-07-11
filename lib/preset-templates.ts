@@ -74,6 +74,26 @@ export const PRESET_TEMPLATES: PresetTemplate[] = [
     },
   },
   {
+    id: "mercadolibre-product",
+    name: "Producto Mercado Libre",
+    description: "Nombre, SKU, cantidad, precio y número de orden — para pedidos importados de ML",
+    emoji: "🛍️",
+    widthMm: 60,
+    heightMm: 40,
+    canvas: {
+      cutBetweenLabels: true,
+      cutEveryN: 1,
+      elements: [
+        { id: "1", type: "text", content: "{{nombre}}", x: 30, y: 25, fontSize: 11, bold: true },
+        { id: "2", type: "text", content: "SKU: {{sku}}", x: 30, y: 100, fontSize: 8, bold: false },
+        { id: "3", type: "text", content: "${{precio}}", x: 350, y: 90, fontSize: 14, bold: true },
+        { id: "4", type: "text", content: "Cant: {{cantidad}}", x: 30, y: 140, fontSize: 8, bold: false },
+        { id: "5", type: "text", content: "Orden: {{nro_orden}}", x: 30, y: 180, fontSize: 7, bold: false },
+        { id: "6", type: "barcode", content: "{{sku}}", x: 30, y: 240, fontSize: 7, bold: false, barcodeType: "code128" },
+      ],
+    },
+  },
+  {
     id: "product-sku",
     name: "Producto con SKU",
     description: "Nombre, SKU, código de barras del SKU y precio — ideal para inventario",
