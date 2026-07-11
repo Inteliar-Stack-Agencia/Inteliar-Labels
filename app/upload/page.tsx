@@ -16,10 +16,12 @@ import {
   X,
   Eye,
   Download,
+  Loader2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import * as XLSX from "xlsx"
 import { PRESET_TEMPLATES } from "@/lib/preset-templates"
+import { renderLabelToPng } from "@/lib/label-image"
 import { analytics } from "@/lib/analytics"
 import { IMPORT_HANDOFF_KEY, type ImportHandoff } from "@/lib/import-handoff"
 
@@ -48,6 +50,8 @@ export default function UploadPage() {
   const [showSamplePicker, setShowSamplePicker] = useState(false)
   const [savedLists, setSavedLists] = useState<{ id: string; name: string; file_name: string | null; row_count: number; columns: string[]; rows: Record<string, string>[]; created_at: string }[]>([])
   const [savingList, setSavingList] = useState(false)
+  const [previewImgUrl, setPreviewImgUrl] = useState<string | null>(null)
+  const [previewError, setPreviewError] = useState<string | null>(null)
   const [excludedRows, setExcludedRows] = useState<Set<number>>(new Set())
   const [suggestedMatch, setSuggestedMatch] = useState<{ name: string; matched: number; total: number } | null>(null)
 
@@ -164,6 +168,34 @@ export default function UploadPage() {
 
   const includedRows = data ? data.rows.filter((_, i) => !excludedRows.has(i)) : []
   const includedCount = includedRows.length
+
+  // Render a preview image of the first label once the user reaches the confirm step.
+  useEffect(() => {
+    if (step !== 3 || !selectedTemplate || includedRows.length === 0) return
+    let cancelled = false
+    setPreviewImgUrl(null)
+    setPreviewError(null)
+    ;(async () => {
+      const { data: tmpl, error } = await supabase
+        .from("templates")
+        .select("width_mm, height_mm, canvas_data")
+        .eq("id", selectedTemplate)
+        .single()
+      if (cancelled) return
+      if (error || !tmpl) {
+        setPreviewError("No se pudo generar la vista previa.")
+        return
+      }
+      try {
+        const url = await renderLabelToPng(tmpl, includedRows[0])
+        if (!cancelled) setPreviewImgUrl(url)
+      } catch {
+        if (!cancelled) setPreviewError("No se pudo generar la vista previa.")
+      }
+    })()
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, selectedTemplate])
 
   // When none of the user's own templates matched, suggest the closest
   // built-in preset (e.g. the ML shipping/product presets) as a starting point.
@@ -576,7 +608,12 @@ export default function UploadPage() {
                     size="sm"
                     variant="outline"
                     className="flex-shrink-0"
-                    onClick={() => router.push(`/templates/new?preset=${matchingPresetId}`)}
+                    onClick={() => {
+                      if (data) {
+                        sessionStorage.setItem(IMPORT_HANDOFF_KEY, JSON.stringify(data))
+                      }
+                      router.push(`/templates/new?preset=${matchingPresetId}&returnTo=upload`)
+                    }}
                   >
                     Usar plantilla sugerida
                   </Button>
@@ -721,6 +758,26 @@ export default function UploadPage() {
                   </p>
                 </div>
               )}
+              <div>
+                <h4 className="text-sm font-semibold mb-2">Vista previa de impresión</h4>
+                {previewError && <p className="text-xs text-destructive">{previewError}</p>}
+                {!previewError && !previewImgUrl && (
+                  <div className="flex items-center justify-center h-32 rounded-lg bg-muted">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+                {previewImgUrl && (
+                  <div className="flex flex-col items-center gap-2">
+                    <img
+                      src={previewImgUrl}
+                      alt="Vista previa de la etiqueta"
+                      className="border border-border rounded-lg bg-white max-w-full"
+                      style={{ imageRendering: "pixelated" }}
+                    />
+                    <p className="text-xs text-muted-foreground">Así se va a imprimir la primera etiqueta (con los datos de la primera fila seleccionada)</p>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-3 justify-end">
               <Button variant="outline" onClick={() => setStep(2)}>Volver</Button>

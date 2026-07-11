@@ -438,7 +438,10 @@ export default function NewTemplatePage() {
     })
 
     setSaving(false)
-    if (!error) router.push("/templates")
+    if (!error) {
+      const returnTo = new URLSearchParams(window.location.search).get("returnTo")
+      router.push(returnTo === "upload" ? "/upload?imported=1" : "/templates")
+    }
   }
 
   const elementIcon = (type: ElementType) => {
