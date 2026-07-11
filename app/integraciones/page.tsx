@@ -5,12 +5,21 @@ import { useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Header } from "@/components/dashboard/header"
 import { Button } from "@/components/ui/button"
-import { Loader2, RefreshCw, ArrowRight, X, Printer, CheckCircle2 } from "lucide-react"
+import { Loader2, RefreshCw, ArrowRight, X, Printer, CheckCircle2, Archive, Trash2 } from "lucide-react"
 import { sendToPrinterAgent } from "@/lib/printer-agent-client"
 import { IMPORT_HANDOFF_KEY, type ImportHandoff } from "@/lib/import-handoff"
+import { createClient } from "@/lib/supabase/client"
+
+interface ChecklistEntry {
+  id: string
+  order_id: string
+  preparado: boolean
+  despachado: boolean
+}
 
 export default function IntegracionesPage() {
   const router = useRouter()
+  const supabase = createClient()
 
   // Tiendanube
   const [showTNModal, setShowTNModal] = useState(false)
@@ -26,6 +35,7 @@ export default function IntegracionesPage() {
   const [mlNotice, setMlNotice] = useState("")
   const [mlLabelResult, setMlLabelResult] = useState<{ count: number } | null>(null)
   const [mlBuyerData, setMlBuyerData] = useState<{ columns: string[]; rows: Record<string, string>[] } | null>(null)
+  const [checklist, setChecklist] = useState<Record<string, ChecklistEntry>>({})
 
   useEffect(() => {
     try {
@@ -144,12 +154,62 @@ export default function IntegracionesPage() {
       })
       const result = await res.json()
       if (!res.ok) { setMlError(result.error || "Error al traer las órdenes."); return }
-      setMlBuyerData({ columns: result.columns, rows: result.rows })
+
+      const { data: { user } } = await supabase.auth.getUser()
+      let rows: Record<string, string>[] = result.rows
+      if (user) {
+        const { data: entries } = await supabase
+          .from("ml_order_checklist")
+          .select("id, order_id, preparado, despachado, archivado")
+          .eq("user_id", user.id)
+        const archivedIds = new Set((entries ?? []).filter((e) => e.archivado).map((e) => e.order_id))
+        rows = rows.filter((r) => !archivedIds.has(r.nro_orden))
+        const map: Record<string, ChecklistEntry> = {}
+        for (const e of entries ?? []) {
+          if (!e.archivado) map[e.order_id] = { id: e.id, order_id: e.order_id, preparado: e.preparado, despachado: e.despachado }
+        }
+        setChecklist(map)
+      }
+      setMlBuyerData({ columns: result.columns, rows })
     } catch {
       setMlError("No se pudo traer los datos de Mercado Libre.")
     } finally {
       setMlLoading(false)
     }
+  }
+
+  async function toggleChecklist(orderId: string, field: "preparado" | "despachado") {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const existing = checklist[orderId]
+    const next = { preparado: existing?.preparado ?? false, despachado: existing?.despachado ?? false, [field]: !existing?.[field] }
+    const { data: saved } = await supabase
+      .from("ml_order_checklist")
+      .upsert({ user_id: user.id, order_id: orderId, ...next }, { onConflict: "user_id,order_id" })
+      .select("id, order_id, preparado, despachado")
+      .single()
+    if (saved) setChecklist((prev) => ({ ...prev, [orderId]: saved }))
+  }
+
+  async function archiveChecklistRow(orderId: string) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    await supabase
+      .from("ml_order_checklist")
+      .upsert({ user_id: user.id, order_id: orderId, archivado: true }, { onConflict: "user_id,order_id" })
+    setMlBuyerData((prev) => prev && { ...prev, rows: prev.rows.filter((r) => r.nro_orden !== orderId) })
+  }
+
+  async function deleteChecklistRow(orderId: string) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    await supabase.from("ml_order_checklist").delete().eq("user_id", user.id).eq("order_id", orderId)
+    setChecklist((prev) => {
+      const next = { ...prev }
+      delete next[orderId]
+      return next
+    })
+    setMlBuyerData((prev) => prev && { ...prev, rows: prev.rows.filter((r) => r.nro_orden !== orderId) })
   }
 
   const printOfficialShippingLabels = async () => {
@@ -389,19 +449,60 @@ export default function IntegracionesPage() {
                 <table className="w-full text-sm border-collapse">
                   <thead className="sticky top-0 bg-background">
                     <tr className="border-b border-border">
+                      <th className="px-3 py-2.5 text-left font-medium text-muted-foreground whitespace-nowrap">Preparado</th>
+                      <th className="px-3 py-2.5 text-left font-medium text-muted-foreground whitespace-nowrap">Despachado</th>
                       {mlBuyerData.columns.map((col) => (
                         <th key={col} className="px-3 py-2.5 text-left font-medium text-muted-foreground whitespace-nowrap">{col}</th>
                       ))}
+                      <th className="px-3 py-2.5"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {mlBuyerData.rows.map((row, i) => (
-                      <tr key={i} className="hover:bg-muted/50">
-                        {mlBuyerData.columns.map((col) => (
-                          <td key={col} className="px-3 py-2.5 text-foreground whitespace-nowrap">{row[col] || <span className="text-muted-foreground">—</span>}</td>
-                        ))}
-                      </tr>
-                    ))}
+                    {mlBuyerData.rows.map((row, i) => {
+                      const orderId = row.nro_orden
+                      const entry = checklist[orderId]
+                      return (
+                        <tr key={i} className="hover:bg-muted/50">
+                          <td className="px-3 py-2.5">
+                            <input
+                              type="checkbox"
+                              className="accent-primary"
+                              checked={entry?.preparado ?? false}
+                              onChange={() => toggleChecklist(orderId, "preparado")}
+                            />
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <input
+                              type="checkbox"
+                              className="accent-primary"
+                              checked={entry?.despachado ?? false}
+                              onChange={() => toggleChecklist(orderId, "despachado")}
+                            />
+                          </td>
+                          {mlBuyerData.columns.map((col) => (
+                            <td key={col} className="px-3 py-2.5 text-foreground whitespace-nowrap">{row[col] || <span className="text-muted-foreground">—</span>}</td>
+                          ))}
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-center gap-2">
+                              <button
+                                title="Archivar"
+                                onClick={() => archiveChecklistRow(orderId)}
+                                className="text-muted-foreground hover:text-foreground"
+                              >
+                                <Archive className="h-4 w-4" />
+                              </button>
+                              <button
+                                title="Eliminar"
+                                onClick={() => deleteChecklistRow(orderId)}
+                                className="text-muted-foreground hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               )}
