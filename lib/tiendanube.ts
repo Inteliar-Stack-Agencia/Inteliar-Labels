@@ -102,7 +102,10 @@ async function tnFetch(storeId: string, path: string, accessToken: string) {
       "User-Agent": USER_AGENT,
     },
   })
-  if (!res.ok) throw new Error(`Tiendanube API error (${res.status}) en ${path}`)
+  if (!res.ok) {
+    const body = await res.text().catch(() => "")
+    throw new Error(`Tiendanube API error (${res.status}) en ${path}${body ? `: ${body.slice(0, 300)}` : ""}`)
+  }
   return res.json()
 }
 
