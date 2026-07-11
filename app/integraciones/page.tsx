@@ -309,6 +309,17 @@ export default function IntegracionesPage() {
                 )}
               </div>
             )}
+            <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+              <p className="text-xs font-medium text-foreground mb-1">📋 Recomendación: tamaño de papel</p>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                La etiqueta oficial de Mercado Envíos se imprime en <strong>10×15cm</strong> (sin troquel) o{" "}
+                <strong>10×19cm</strong> (con troquel), según lo que tengas configurado en{" "}
+                <strong>tu cuenta de Mercado Libre → Preferencias de venta</strong>. Ese tamaño no se puede elegir
+                desde acá ni por la API: lo define únicamente esa configuración. Antes de imprimir, verificá que
+                coincida con el papel cargado en tu impresora térmica para evitar que la etiqueta salga cortada o
+                con espacio de más.
+              </p>
+            </div>
           </div>
         </div>
       </DashboardLayout>
