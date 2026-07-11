@@ -268,30 +268,30 @@ export default function IntegracionesPage() {
                   </Button>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-3">
-                  <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3">
+                  <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3 min-w-0">
                     <p className="text-xs text-muted-foreground leading-snug">
                       La etiqueta que genera Mercado Envíos, con el código de seguimiento que escanea el correo. Es la que va pegada en el paquete.
                     </p>
-                    <Button size="sm" className="gap-2 bg-amber-500 hover:bg-amber-600 text-black mt-auto" onClick={printOfficialShippingLabels} disabled={mlLoading}>
-                      {mlLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Printer className="h-3.5 w-3.5" />}
+                    <Button size="sm" className="gap-2 bg-amber-500 hover:bg-amber-600 text-black mt-auto w-full whitespace-normal h-auto py-2" onClick={printOfficialShippingLabels} disabled={mlLoading}>
+                      {mlLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin flex-shrink-0" /> : <Printer className="h-3.5 w-3.5 flex-shrink-0" />}
                       Imprimir etiquetas oficiales de envío
                     </Button>
                   </div>
-                  <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3">
+                  <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3 min-w-0">
                     <p className="text-xs text-muted-foreground leading-snug">
                       Trae destinatario, dirección y teléfono de tus órdenes para armar una etiqueta propia — sirve como control interno, no reemplaza la oficial.
                     </p>
-                    <Button size="sm" variant="outline" className="gap-2 mt-auto" onClick={() => importFromMercadolibre("shipping")} disabled={mlLoading}>
-                      {mlLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
+                    <Button size="sm" variant="outline" className="gap-2 mt-auto w-full whitespace-normal h-auto py-2" onClick={() => importFromMercadolibre("shipping")} disabled={mlLoading}>
+                      {mlLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin flex-shrink-0" /> : <ArrowRight className="h-3.5 w-3.5 flex-shrink-0" />}
                       Importar datos de comprador (control interno)
                     </Button>
                   </div>
-                  <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3">
+                  <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3 min-w-0">
                     <p className="text-xs text-muted-foreground leading-snug">
                       Trae nombre, SKU, cantidad y precio de lo vendido — para etiquetar el producto en sí (picking en depósito, talles, etc.), no el envío.
                     </p>
-                    <Button size="sm" variant="outline" className="gap-2 mt-auto" onClick={() => importFromMercadolibre("product")} disabled={mlLoading}>
-                      {mlLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
+                    <Button size="sm" variant="outline" className="gap-2 mt-auto w-full whitespace-normal h-auto py-2" onClick={() => importFromMercadolibre("product")} disabled={mlLoading}>
+                      {mlLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin flex-shrink-0" /> : <ArrowRight className="h-3.5 w-3.5 flex-shrink-0" />}
                       Importar etiquetas de producto
                     </Button>
                   </div>
