@@ -165,6 +165,27 @@ export default function UploadPage() {
   const includedRows = data ? data.rows.filter((_, i) => !excludedRows.has(i)) : []
   const includedCount = includedRows.length
 
+  // When none of the user's own templates matched, suggest the closest
+  // built-in preset (e.g. the ML shipping/product presets) as a starting point.
+  const matchingPresetId = (() => {
+    if (!data?.columns) return null
+    const cols = data.columns.map((c) => c.toLowerCase().trim())
+    let best: { id: string; matched: number } | null = null
+    for (const p of PRESET_TEMPLATES) {
+      const vars = Array.from(
+        new Set(
+          p.canvas.elements.flatMap((el) => [...el.content.matchAll(/\{\{(\w+)\}\}/g)].map((m) => m[1].toLowerCase()))
+        )
+      )
+      if (vars.length === 0) continue
+      const matched = vars.filter((v) => cols.includes(v)).length
+      if (matched > 0 && (!best || matched > best.matched)) {
+        best = { id: p.id, matched }
+      }
+    }
+    return best?.id ?? null
+  })()
+
   const totalLabels = includedRows.reduce((sum, row) => {
     const qty = quantityColumn ? Number(row[quantityColumn]) || 1 : 1
     return sum + qty
@@ -544,6 +565,21 @@ export default function UploadPage() {
                   <p className="text-foreground">
                     Sugerimos <strong>{suggestedMatch.name}</strong> — coincide con {suggestedMatch.matched} de {suggestedMatch.total} variables de tu Excel. Ya la seleccionamos, podés cambiarla.
                   </p>
+                </div>
+              )}
+              {!suggestedMatch && data?.columns && matchingPresetId && (
+                <div className="flex items-center justify-between gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+                  <p className="text-foreground">
+                    Ninguna de tus plantillas coincide con estas columnas. Tenemos una plantilla lista para este formato.
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-shrink-0"
+                    onClick={() => router.push(`/templates/new?preset=${matchingPresetId}`)}
+                  >
+                    Usar plantilla sugerida
+                  </Button>
                 </div>
               )}
               {templates.length === 0 ? (

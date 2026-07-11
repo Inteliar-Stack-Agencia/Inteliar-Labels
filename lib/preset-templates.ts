@@ -94,6 +94,26 @@ export const PRESET_TEMPLATES: PresetTemplate[] = [
     },
   },
   {
+    id: "mercadolibre-shipping",
+    name: "Envío Mercado Libre (control interno)",
+    description: "Destinatario, dirección, localidad, provincia, CP y número de orden — para el packing check, no reemplaza la etiqueta oficial de Mercado Envíos",
+    emoji: "📦",
+    widthMm: 80,
+    heightMm: 50,
+    canvas: {
+      cutBetweenLabels: true,
+      cutEveryN: 1,
+      elements: [
+        { id: "1", type: "text", content: "{{destinatario}}", x: 30, y: 25, fontSize: 12, bold: true },
+        { id: "2", type: "text", content: "{{direccion}}", x: 30, y: 90, fontSize: 9, bold: false },
+        { id: "3", type: "text", content: "{{localidad}}, {{provincia}}", x: 30, y: 140, fontSize: 9, bold: false },
+        { id: "4", type: "text", content: "CP: {{cp}}", x: 30, y: 190, fontSize: 8, bold: false },
+        { id: "5", type: "text", content: "Tel: {{telefono}}", x: 30, y: 230, fontSize: 8, bold: false },
+        { id: "6", type: "text", content: "Orden: {{nro_orden}}", x: 30, y: 280, fontSize: 7, bold: false },
+      ],
+    },
+  },
+  {
     id: "product-sku",
     name: "Producto con SKU",
     description: "Nombre, SKU, código de barras del SKU y precio — ideal para inventario",
