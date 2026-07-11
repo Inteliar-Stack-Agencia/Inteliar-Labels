@@ -276,14 +276,10 @@ export default function IntegracionesPage() {
                     {mlLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
                     Importar datos de comprador (control interno)
                   </Button>
-                  <Button size="sm" variant="outline" className="gap-2" onClick={() => importFromMercadolibre("product")} disabled={mlLoading}>
-                    {mlLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
-                    Importar etiquetas de producto
-                  </Button>
                 </div>
                 <p className="text-[11px] text-muted-foreground">
                   "Etiquetas oficiales" es la misma que genera Mercado Envíos (con su código de seguimiento) —
-                  se manda directo a tu impresora térmica. Las otras dos arman una plantilla propia con los datos.
+                  se manda directo a tu impresora térmica. La otra opción arma una plantilla propia con los datos del comprador.
                 </p>
               </div>
             ) : (
