@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Header } from "@/components/dashboard/header"
 import { Button } from "@/components/ui/button"
-import { ShoppingBag, Loader2, RefreshCw, ArrowRight, X, Printer, CheckCircle2 } from "lucide-react"
+import { Loader2, RefreshCw, ArrowRight, X, Printer, CheckCircle2 } from "lucide-react"
 import { sendToPrinterAgent } from "@/lib/printer-agent-client"
 import { IMPORT_HANDOFF_KEY, type ImportHandoff } from "@/lib/import-handoff"
 
@@ -163,7 +163,7 @@ export default function IntegracionesPage() {
           <div className="bg-background border border-border rounded-2xl shadow-2xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                <ShoppingBag className="h-5 w-5 text-[#14cce4]" />
+                <img src="/logos/tiendanube-icon.svg" alt="" className="h-5 w-5 text-[#0433ff]" />
                 Importar desde Tiendanube
               </h3>
               <button onClick={() => { setShowTNModal(false); setTnError("") }} className="text-muted-foreground hover:text-foreground">
@@ -208,7 +208,7 @@ export default function IntegracionesPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-foreground flex items-center gap-2">
-                      <ShoppingBag className="h-4 w-4 text-[#14cce4]" />
+                      <img src="/logos/tiendanube-icon.svg" alt="" className="h-4 w-4 text-[#0433ff]" />
                       Tiendanube · Conectado
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[300px]">{tnLastSync.url}</p>
@@ -233,13 +233,13 @@ export default function IntegracionesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <ShoppingBag className="h-4 w-4 text-[#14cce4]" />
+                    <img src="/logos/tiendanube-icon.svg" alt="" className="h-4 w-4 text-[#0433ff]" />
                     Importar desde Tiendanube
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">Traé tus productos directo sin pasar por Excel</p>
                 </div>
                 <Button variant="outline" size="sm" className="gap-2 flex-shrink-0" onClick={() => setShowTNModal(true)}>
-                  <ShoppingBag className="h-4 w-4" />
+                  <img src="/logos/tiendanube-icon.svg" alt="" className="h-4 w-4 text-[#0433ff]" />
                   Conectar tienda
                 </Button>
               </div>
@@ -260,7 +260,7 @@ export default function IntegracionesPage() {
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <ShoppingBag className="h-4 w-4 text-[#FFE600]" />
+                    <img src="/logos/mercadolibre-icon.png" alt="" className="h-4 w-4 object-contain" />
                     Mercado Libre · Conectado
                   </p>
                   <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={disconnectMercadolibre} disabled={mlLoading}>
@@ -301,7 +301,7 @@ export default function IntegracionesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <ShoppingBag className="h-4 w-4 text-[#FFE600]" />
+                    <img src="/logos/mercadolibre-icon.png" alt="" className="h-4 w-4 object-contain" />
                     Importar desde Mercado Libre
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">Etiquetas oficiales de envío y etiquetas de producto de tus órdenes pagas</p>
@@ -309,7 +309,7 @@ export default function IntegracionesPage() {
                 {mlStatus?.configured ? (
                   <Button variant="outline" size="sm" className="gap-2 flex-shrink-0" asChild>
                     <a href="/api/integrations/mercadolibre/authorize">
-                      <ShoppingBag className="h-4 w-4" />
+                      <img src="/logos/mercadolibre-icon.png" alt="" className="h-4 w-4 object-contain" />
                       Conectar cuenta
                     </a>
                   </Button>
