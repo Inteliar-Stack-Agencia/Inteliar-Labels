@@ -104,6 +104,12 @@ async function tnFetch(storeId: string, path: string, accessToken: string) {
   })
   if (!res.ok) {
     const body = await res.text().catch(() => "")
+    // Tiendanube returns a 404 with "Last page is 0" instead of an empty
+    // array when a filtered list (e.g. orders) has zero results — treat
+    // that specific case as "nothing found", not an error.
+    if (res.status === 404 && /last page is 0/i.test(body)) {
+      return []
+    }
     throw new Error(`Tiendanube API error (${res.status}) en ${path}${body ? `: ${body.slice(0, 300)}` : ""}`)
   }
   return res.json()
