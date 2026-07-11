@@ -205,3 +205,29 @@ export async function fetchOrderRows(
 
   return { columns, rows }
 }
+
+// Fetches Mercado Libre's own official shipping labels (the ones with ML's
+// tracking barcode that couriers scan) in raw ZPL — not a label we design,
+// just what Mercado Envíos generates — so it can be sent straight to the
+// user's thermal printer instead of downloading a PDF and reprinting it.
+export async function fetchShippingLabelsZpl(userId: string): Promise<{ zpl: string; count: number }> {
+  const { accessToken, mlUserId } = await getValidAccessToken(userId)
+  const orders = await fetchRecentOrders(accessToken, mlUserId)
+
+  const shipmentIds = orders
+    .map((o) => o.shipping?.id)
+    .filter((id): id is number => typeof id === "number")
+
+  if (shipmentIds.length === 0) {
+    return { zpl: "", count: 0 }
+  }
+
+  const res = await fetch(
+    `https://api.mercadolibre.com/shipment_labels?shipment_ids=${shipmentIds.join(",")}&response_type=zpl2`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  )
+  if (!res.ok) throw new Error(`No se pudieron obtener las etiquetas de envío (${res.status})`)
+
+  const zpl = await res.text()
+  return { zpl, count: shipmentIds.length }
+}

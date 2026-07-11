@@ -18,6 +18,7 @@ import {
   HelpCircle,
   BookOpen,
   MessageCircle,
+  ShoppingBag,
 } from "lucide-react"
 
 const SUPPORT_WHATSAPP = "5491165689145"
@@ -27,6 +28,7 @@ const navigation = [
   { name: "Templates", href: "/templates", icon: FileStack },
   { name: "Imprimir", href: "/imprimir", icon: PrinterCheck },
   { name: "Cargar Excel", href: "/upload", icon: Upload },
+  { name: "Integraciones", href: "/integraciones", icon: ShoppingBag },
   { name: "Trabajos", href: "/jobs", icon: Printer },
   { name: "Historial", href: "/history", icon: Clock },
   { name: "Configuración", href: "/settings", icon: Settings },
