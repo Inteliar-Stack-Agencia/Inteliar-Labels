@@ -78,6 +78,10 @@ export default function UploadPage() {
     const params = new URLSearchParams(window.location.search)
     if (params.get("ml_connected")) {
       setMlNotice("Cuenta de Mercado Libre conectada.")
+      // The callback route only redirects here with ml_connected=1 after the
+      // token exchange + DB save already succeeded — reflect that immediately
+      // instead of waiting on the status fetch below, which has been racy.
+      setMlStatus({ configured: true, connected: true })
       window.history.replaceState({}, "", window.location.pathname)
     } else if (params.get("ml_error")) {
       const code = params.get("ml_error")
@@ -89,7 +93,7 @@ export default function UploadPage() {
       window.history.replaceState({}, "", window.location.pathname)
     }
 
-    fetch("/api/integrations/mercadolibre/status")
+    fetch("/api/integrations/mercadolibre/status", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((s) => s && setMlStatus(s))
       .catch(() => {})
