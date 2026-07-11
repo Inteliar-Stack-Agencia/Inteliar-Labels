@@ -312,12 +312,24 @@ export default function IntegracionesPage() {
             <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
               <p className="text-xs font-medium text-foreground mb-1">📋 Recomendación: tamaño de papel</p>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                La etiqueta oficial de Mercado Envíos se imprime en <strong>10×15cm</strong> (sin troquel) o{" "}
-                <strong>10×19cm</strong> (con troquel), según lo que tengas configurado en{" "}
-                <strong>tu cuenta de Mercado Libre → Preferencias de venta</strong>. Ese tamaño no se puede elegir
-                desde acá ni por la API: lo define únicamente esa configuración. Antes de imprimir, verificá que
-                coincida con el papel cargado en tu impresora térmica para evitar que la etiqueta salga cortada o
-                con espacio de más.
+                La etiqueta oficial de Mercado Envíos se imprime en <strong>10×15cm (sin troquel)</strong> o{" "}
+                <strong>10×19cm (con troquel)</strong>, según lo que tengas configurado en{" "}
+                <a
+                  href="https://www.mercadolibre.com.ar/preferencias-de-venta"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline underline-offset-2"
+                >
+                  tu cuenta de Mercado Libre → Preferencias de venta
+                </a>
+                . Ese tamaño no se puede elegir desde acá ni por la API: lo define únicamente esa configuración.
+              </p>
+              <p className="text-[11px] text-muted-foreground leading-relaxed mt-1.5">
+                <strong>Sin troquel:</strong> rollo de papel térmico continuo (sin cortes preimpresos), el más común.{" "}
+                <strong>Con troquel:</strong> rollo de etiquetas ya separadas físicamente, con un espacio en blanco
+                entre una y otra, que la impresora detecta con sensor — necesitás haber comprado ese insumo específico.
+                Antes de imprimir, verificá que la opción elegida coincida con el papel que tenés cargado en tu
+                impresora, para evitar que la etiqueta salga cortada o con espacio de más.
               </p>
             </div>
           </div>
