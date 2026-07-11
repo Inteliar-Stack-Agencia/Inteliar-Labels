@@ -22,6 +22,19 @@ function extractStoreSlug(input: string): string {
   return /^[a-zA-Z0-9-]{1,63}$/.test(candidate) ? candidate : ""
 }
 
+// Returns the origin (scheme + host, no path) if the input parses as a valid
+// http(s) URL — used as a fallback when the store uses a custom domain
+// instead of *.mitiendanube.com, so we can look for the store_id meta tag on
+// the domain the user actually gave us.
+function extractOrigin(input: string): string {
+  try {
+    const url = input.startsWith("http") ? new URL(input) : new URL(`https://${input}`)
+    return url.origin
+  } catch {
+    return ""
+  }
+}
+
 interface TNProduct {
   id: number
   name: Record<string, string>
@@ -128,17 +141,40 @@ export async function POST(req: NextRequest) {
   // If slug is already numeric, use it directly.
   let storeId = slug
   if (!/^\d+$/.test(slug)) {
-    // Try to resolve via store domain
+    const storeIdPattern = [
+      /"store_id"\s*:\s*"?(\d+)"?/,
+      /tiendanube\.com\/v1\/(\d+)/,
+      /store[_-]id['":\s]+(\d+)/i,
+    ]
+
+    // Try to resolve via the *.mitiendanube.com domain first...
     const metaRes = await fetch(`https://${slug}.mitiendanube.com/`, {
       headers: { "User-Agent": "InteliarLabels/1.0" },
     }).catch(() => null)
 
     if (metaRes?.ok) {
       const html = await metaRes.text()
-      const match = html.match(/"store_id"\s*:\s*"?(\d+)"?/) ||
-                    html.match(/tiendanube\.com\/v1\/(\d+)/) ||
-                    html.match(/store[_-]id['":\s]+(\d+)/i)
-      if (match) storeId = match[1]
+      for (const pattern of storeIdPattern) {
+        const match = html.match(pattern)
+        if (match) { storeId = match[1]; break }
+      }
+    }
+
+    // ...and if that didn't work, the store might be on a custom domain
+    // (e.g. cinturity.com.ar) instead of *.mitiendanube.com — try the
+    // origin the user actually pasted.
+    if (!/^\d+$/.test(storeId)) {
+      const origin = extractOrigin(storeUrl)
+      const customRes = origin
+        ? await fetch(origin, { headers: { "User-Agent": "InteliarLabels/1.0" } }).catch(() => null)
+        : null
+      if (customRes?.ok) {
+        const html = await customRes.text()
+        for (const pattern of storeIdPattern) {
+          const match = html.match(pattern)
+          if (match) { storeId = match[1]; break }
+        }
+      }
     }
 
     if (!/^\d+$/.test(storeId)) {
