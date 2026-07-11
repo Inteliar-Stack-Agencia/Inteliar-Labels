@@ -17,16 +17,24 @@ interface ChecklistEntry {
   despachado: boolean
 }
 
+type Source = "ml" | "tn"
+
 export default function IntegracionesPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  // Tiendanube
+  // Tiendanube — import de productos por URL (sin login)
   const [showTNModal, setShowTNModal] = useState(false)
   const [tnUrl, setTnUrl] = useState("")
   const [tnLoading, setTnLoading] = useState(false)
   const [tnError, setTnError] = useState("")
   const [tnLastSync, setTnLastSync] = useState<{ url: string; syncedAt: string; total: number } | null>(null)
+
+  // Tiendanube — cuenta conectada (OAuth, órdenes)
+  const [tnAcctStatus, setTnAcctStatus] = useState<{ configured: boolean; connected: boolean } | null>(null)
+  const [tnAcctLoading, setTnAcctLoading] = useState(false)
+  const [tnAcctError, setTnAcctError] = useState("")
+  const [tnAcctNotice, setTnAcctNotice] = useState("")
 
   // Mercado Libre
   const [mlStatus, setMlStatus] = useState<{ configured: boolean; connected: boolean } | null>(null)
@@ -34,7 +42,9 @@ export default function IntegracionesPage() {
   const [mlError, setMlError] = useState("")
   const [mlNotice, setMlNotice] = useState("")
   const [mlLabelResult, setMlLabelResult] = useState<{ count: number } | null>(null)
-  const [mlBuyerData, setMlBuyerData] = useState<{ columns: string[]; rows: Record<string, string>[] } | null>(null)
+
+  // Datos de comprador (control interno) — compartido entre ML y Tiendanube
+  const [buyerData, setBuyerData] = useState<{ source: Source; columns: string[]; rows: Record<string, string>[] } | null>(null)
   const [checklist, setChecklist] = useState<Record<string, ChecklistEntry>>({})
 
   useEffect(() => {
@@ -56,11 +66,28 @@ export default function IntegracionesPage() {
           : "No se pudo conectar con Mercado Libre. Probá de nuevo."
       )
       window.history.replaceState({}, "", window.location.pathname)
+    } else if (params.get("tn_connected")) {
+      setTnAcctNotice("Cuenta de Tiendanube conectada.")
+      setTnAcctStatus({ configured: true, connected: true })
+      window.history.replaceState({}, "", window.location.pathname)
+    } else if (params.get("tn_error")) {
+      const code = params.get("tn_error")
+      setTnAcctError(
+        code === "not_configured"
+          ? "La conexión de cuenta con Tiendanube todavía no está configurada."
+          : "No se pudo conectar con Tiendanube. Probá de nuevo."
+      )
+      window.history.replaceState({}, "", window.location.pathname)
     }
 
     fetch("/api/integrations/mercadolibre/status", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((s) => s && setMlStatus(s))
+      .catch(() => {})
+
+    fetch("/api/integrations/tiendanube/status", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((s) => s && setTnAcctStatus(s))
       .catch(() => {})
   }, [])
 
@@ -140,20 +167,61 @@ export default function IntegracionesPage() {
     }
   }
 
+  const importFromTiendanubeOrders = async (mode: "shipping" | "product") => {
+    setTnAcctLoading(true)
+    setTnAcctError("")
+    try {
+      const res = await fetch("/api/integrations/tiendanube/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode }),
+      })
+      const result = await res.json()
+      if (!res.ok) { setTnAcctError(result.error || "Error al importar órdenes."); return }
+      goToUpload({
+        columns: result.columns,
+        rows: result.rows,
+        fileName: `Tiendanube · ${mode === "shipping" ? "envíos" : "productos"}`,
+        totalRows: result.total,
+      })
+    } catch {
+      setTnAcctError("No se pudo importar desde Tiendanube.")
+    } finally {
+      setTnAcctLoading(false)
+    }
+  }
+
+  const disconnectTiendanube = async () => {
+    setTnAcctLoading(true)
+    try {
+      await fetch("/api/integrations/tiendanube/disconnect", { method: "POST" })
+      setTnAcctStatus((s) => (s ? { ...s, connected: false } : s))
+    } finally {
+      setTnAcctLoading(false)
+    }
+  }
+
+  const ORDERS_ENDPOINT: Record<Source, string> = {
+    ml: "/api/integrations/mercadolibre/orders",
+    tn: "/api/integrations/tiendanube/orders",
+  }
+
   // Datos del comprador: solo para chequeo visual antes de despachar, no se
   // manda a imprimir (evita tener que cambiar de rollo entre la etiqueta
   // oficial de 10×15/19 y una etiqueta propia de otro tamaño).
-  const viewBuyerData = async () => {
-    setMlLoading(true)
-    setMlError("")
+  const viewBuyerData = async (source: Source) => {
+    const setLoading = source === "ml" ? setMlLoading : setTnAcctLoading
+    const setError = source === "ml" ? setMlError : setTnAcctError
+    setLoading(true)
+    setError("")
     try {
-      const res = await fetch("/api/integrations/mercadolibre/orders", {
+      const res = await fetch(ORDERS_ENDPOINT[source], {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mode: "shipping" }),
       })
       const result = await res.json()
-      if (!res.ok) { setMlError(result.error || "Error al traer las órdenes."); return }
+      if (!res.ok) { setError(result.error || "Error al traer las órdenes."); return }
 
       const { data: { user } } = await supabase.auth.getUser()
       let rows: Record<string, string>[] = result.rows
@@ -162,6 +230,7 @@ export default function IntegracionesPage() {
           .from("ml_order_checklist")
           .select("id, order_id, preparado, despachado, archivado")
           .eq("user_id", user.id)
+          .eq("source", source)
         const archivedIds = new Set((entries ?? []).filter((e) => e.archivado).map((e) => e.order_id))
         rows = rows.filter((r) => !archivedIds.has(r.nro_orden))
         const map: Record<string, ChecklistEntry> = {}
@@ -170,46 +239,49 @@ export default function IntegracionesPage() {
         }
         setChecklist(map)
       }
-      setMlBuyerData({ columns: result.columns, rows })
+      setBuyerData({ source, columns: result.columns, rows })
     } catch {
-      setMlError("No se pudo traer los datos de Mercado Libre.")
+      setError(source === "ml" ? "No se pudo traer los datos de Mercado Libre." : "No se pudo traer los datos de Tiendanube.")
     } finally {
-      setMlLoading(false)
+      setLoading(false)
     }
   }
 
   async function toggleChecklist(orderId: string, field: "preparado" | "despachado") {
+    if (!buyerData) return
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     const existing = checklist[orderId]
     const next = { preparado: existing?.preparado ?? false, despachado: existing?.despachado ?? false, [field]: !existing?.[field] }
     const { data: saved } = await supabase
       .from("ml_order_checklist")
-      .upsert({ user_id: user.id, order_id: orderId, ...next }, { onConflict: "user_id,order_id" })
+      .upsert({ user_id: user.id, order_id: orderId, source: buyerData.source, ...next }, { onConflict: "user_id,source,order_id" })
       .select("id, order_id, preparado, despachado")
       .single()
     if (saved) setChecklist((prev) => ({ ...prev, [orderId]: saved }))
   }
 
   async function archiveChecklistRow(orderId: string) {
+    if (!buyerData) return
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     await supabase
       .from("ml_order_checklist")
-      .upsert({ user_id: user.id, order_id: orderId, archivado: true }, { onConflict: "user_id,order_id" })
-    setMlBuyerData((prev) => prev && { ...prev, rows: prev.rows.filter((r) => r.nro_orden !== orderId) })
+      .upsert({ user_id: user.id, order_id: orderId, source: buyerData.source, archivado: true }, { onConflict: "user_id,source,order_id" })
+    setBuyerData((prev) => prev && { ...prev, rows: prev.rows.filter((r) => r.nro_orden !== orderId) })
   }
 
   async function deleteChecklistRow(orderId: string) {
+    if (!buyerData) return
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    await supabase.from("ml_order_checklist").delete().eq("user_id", user.id).eq("order_id", orderId)
+    await supabase.from("ml_order_checklist").delete().eq("user_id", user.id).eq("source", buyerData.source).eq("order_id", orderId)
     setChecklist((prev) => {
       const next = { ...prev }
       delete next[orderId]
       return next
     })
-    setMlBuyerData((prev) => prev && { ...prev, rows: prev.rows.filter((r) => r.nro_orden !== orderId) })
+    setBuyerData((prev) => prev && { ...prev, rows: prev.rows.filter((r) => r.nro_orden !== orderId) })
   }
 
   const printOfficialShippingLabels = async () => {
@@ -329,6 +401,70 @@ export default function IntegracionesPage() {
             )}
           </div>
 
+          {/* Tiendanube — cuenta conectada (órdenes) */}
+          <div className="rounded-xl border border-border bg-card p-5">
+            {tnAcctError && <p className="text-xs text-destructive mb-2">{tnAcctError}</p>}
+            {tnAcctNotice && <p className="text-xs text-green-600 dark:text-green-400 mb-2">{tnAcctNotice}</p>}
+            {tnAcctStatus?.connected ? (
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <img src="/logos/tiendanube-icon.svg" alt="" className="h-4 w-4 text-[#0433ff]" />
+                    Tiendanube (cuenta) · Conectado
+                  </p>
+                  <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={disconnectTiendanube} disabled={tnAcctLoading}>
+                    Desconectar
+                  </Button>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3 min-w-0">
+                    <p className="text-xs text-muted-foreground leading-snug">
+                      Muestra destinatario, dirección y teléfono en pantalla para chequear el paquete antes de despacharlo — no imprime nada.
+                    </p>
+                    <Button size="sm" variant="outline" className="gap-2 mt-auto w-full whitespace-normal h-auto py-2" onClick={() => viewBuyerData("tn")} disabled={tnAcctLoading}>
+                      {tnAcctLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin flex-shrink-0" /> : <ArrowRight className="h-3.5 w-3.5 flex-shrink-0" />}
+                      Ver datos de comprador (control interno)
+                    </Button>
+                  </div>
+                  <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3 min-w-0">
+                    <p className="text-xs text-muted-foreground leading-snug">
+                      Trae nombre, SKU, cantidad y precio de lo vendido en tus pedidos pagos — para etiquetar el producto en sí, no el envío.
+                    </p>
+                    <Button size="sm" variant="outline" className="gap-2 mt-auto w-full whitespace-normal h-auto py-2" onClick={() => importFromTiendanubeOrders("product")} disabled={tnAcctLoading}>
+                      {tnAcctLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin flex-shrink-0" /> : <ArrowRight className="h-3.5 w-3.5 flex-shrink-0" />}
+                      Importar etiquetas de producto
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Todavía no encontramos una etiqueta oficial de envío única de Tiendanube (depende del correo que tengas conectado) — por eso no hay botón de "imprimir etiqueta oficial" acá, a diferencia de Mercado Libre.
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <img src="/logos/tiendanube-icon.svg" alt="" className="h-4 w-4 text-[#0433ff]" />
+                    Conectar cuenta de Tiendanube
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Traé tus pedidos pagos (envío y producto) autorizando tu tienda — no solo el catálogo público</p>
+                </div>
+                {tnAcctStatus?.configured ? (
+                  <Button variant="outline" size="sm" className="gap-2 flex-shrink-0" asChild>
+                    <a href="/api/integrations/tiendanube/authorize">
+                      <img src="/logos/tiendanube-icon.svg" alt="" className="h-4 w-4 text-[#0433ff]" />
+                      Conectar cuenta
+                    </a>
+                  </Button>
+                ) : (
+                  <span className="text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full flex-shrink-0">
+                    Próximamente
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Mercado Libre */}
           <div className="rounded-xl border border-border bg-card p-5">
             {mlError && <p className="text-xs text-destructive mb-2">{mlError}</p>}
@@ -364,7 +500,7 @@ export default function IntegracionesPage() {
                     <p className="text-xs text-muted-foreground leading-snug">
                       Muestra destinatario, dirección y teléfono en pantalla para que chequees el paquete antes de despacharlo — no imprime nada, así no hay que cambiar de rollo.
                     </p>
-                    <Button size="sm" variant="outline" className="gap-2 mt-auto w-full whitespace-normal h-auto py-2" onClick={viewBuyerData} disabled={mlLoading}>
+                    <Button size="sm" variant="outline" className="gap-2 mt-auto w-full whitespace-normal h-auto py-2" onClick={() => viewBuyerData("ml")} disabled={mlLoading}>
                       {mlLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin flex-shrink-0" /> : <ArrowRight className="h-3.5 w-3.5 flex-shrink-0" />}
                       Ver datos de comprador (control interno)
                     </Button>
@@ -430,7 +566,7 @@ export default function IntegracionesPage() {
         </div>
       </DashboardLayout>
 
-      {mlBuyerData && (
+      {buyerData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
           <div className="bg-background border border-border rounded-2xl shadow-2xl w-full max-w-[95vw] xl:max-w-6xl max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between p-5 border-b border-border flex-shrink-0">
@@ -438,12 +574,12 @@ export default function IntegracionesPage() {
                 <h3 className="text-lg font-semibold text-foreground">Datos de comprador</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">Solo para chequeo — no se imprime nada.</p>
               </div>
-              <button onClick={() => setMlBuyerData(null)} className="text-muted-foreground hover:text-foreground">
+              <button onClick={() => setBuyerData(null)} className="text-muted-foreground hover:text-foreground">
                 <X className="h-5 w-5" />
               </button>
             </div>
             <div className="overflow-auto">
-              {mlBuyerData.rows.length === 0 ? (
+              {buyerData.rows.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">No encontramos órdenes pagas recientes.</p>
               ) : (
                 <table className="w-full text-sm border-collapse">
@@ -451,14 +587,14 @@ export default function IntegracionesPage() {
                     <tr className="border-b border-border">
                       <th className="px-3 py-2.5 text-left font-medium text-muted-foreground whitespace-nowrap">Preparado</th>
                       <th className="px-3 py-2.5 text-left font-medium text-muted-foreground whitespace-nowrap">Despachado</th>
-                      {mlBuyerData.columns.map((col) => (
+                      {buyerData.columns.map((col) => (
                         <th key={col} className="px-3 py-2.5 text-left font-medium text-muted-foreground whitespace-nowrap">{col}</th>
                       ))}
                       <th className="px-3 py-2.5"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {mlBuyerData.rows.map((row, i) => {
+                    {buyerData.rows.map((row, i) => {
                       const orderId = row.nro_orden
                       const entry = checklist[orderId]
                       return (
@@ -479,7 +615,7 @@ export default function IntegracionesPage() {
                               onChange={() => toggleChecklist(orderId, "despachado")}
                             />
                           </td>
-                          {mlBuyerData.columns.map((col) => (
+                          {buyerData.columns.map((col) => (
                             <td key={col} className="px-3 py-2.5 text-foreground whitespace-nowrap">{row[col] || <span className="text-muted-foreground">—</span>}</td>
                           ))}
                           <td className="px-3 py-2.5">
