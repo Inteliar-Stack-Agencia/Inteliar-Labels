@@ -66,21 +66,23 @@ async function refreshToken(refresh_token: string): Promise<TokenResponse> {
 
 export async function saveConnection(userId: string, token: TokenResponse): Promise<void> {
   const expires_at = new Date(Date.now() + token.expires_in * 1000).toISOString()
-  await supabaseAdmin.from("mercadolibre_connections").upsert({
+  const { error } = await supabaseAdmin.from("mercadolibre_connections").upsert({
     user_id: userId,
     ml_user_id: String(token.user_id),
     access_token: token.access_token,
     refresh_token: token.refresh_token,
     expires_at,
   })
+  if (error) throw new Error(`Failed to save ML connection: ${error.message}`)
 }
 
 export async function isConnected(userId: string): Promise<boolean> {
-  const { data } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("mercadolibre_connections")
     .select("user_id")
     .eq("user_id", userId)
     .maybeSingle()
+  if (error) throw new Error(`Failed to check ML connection: ${error.message}`)
   return Boolean(data)
 }
 

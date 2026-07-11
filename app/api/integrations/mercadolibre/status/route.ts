@@ -15,6 +15,11 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 })
 
   const configured = isMercadolibreConfigured()
-  const connected = configured ? await isConnected(user.id) : false
-  return NextResponse.json({ configured, connected })
+  try {
+    const connected = configured ? await isConnected(user.id) : false
+    return NextResponse.json({ configured, connected })
+  } catch (e: any) {
+    console.error("[ml-status] isConnected failed:", e.message)
+    return NextResponse.json({ configured, connected: false, error: e.message }, { status: 200 })
+  }
 }
