@@ -25,6 +25,7 @@ export default function IntegracionesPage() {
   const [mlError, setMlError] = useState("")
   const [mlNotice, setMlNotice] = useState("")
   const [mlLabelResult, setMlLabelResult] = useState<{ count: number } | null>(null)
+  const [mlBuyerData, setMlBuyerData] = useState<{ columns: string[]; rows: Record<string, string>[] } | null>(null)
 
   useEffect(() => {
     try {
@@ -124,6 +125,28 @@ export default function IntegracionesPage() {
       })
     } catch {
       setMlError("No se pudo importar desde Mercado Libre.")
+    } finally {
+      setMlLoading(false)
+    }
+  }
+
+  // Datos del comprador: solo para chequeo visual antes de despachar, no se
+  // manda a imprimir (evita tener que cambiar de rollo entre la etiqueta
+  // oficial de 10×15/19 y una etiqueta propia de otro tamaño).
+  const viewBuyerData = async () => {
+    setMlLoading(true)
+    setMlError("")
+    try {
+      const res = await fetch("/api/integrations/mercadolibre/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "shipping" }),
+      })
+      const result = await res.json()
+      if (!res.ok) { setMlError(result.error || "Error al traer las órdenes."); return }
+      setMlBuyerData({ columns: result.columns, rows: result.rows })
+    } catch {
+      setMlError("No se pudo traer los datos de Mercado Libre.")
     } finally {
       setMlLoading(false)
     }
@@ -279,11 +302,11 @@ export default function IntegracionesPage() {
                   </div>
                   <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3 min-w-0">
                     <p className="text-xs text-muted-foreground leading-snug">
-                      Trae destinatario, dirección y teléfono de tus órdenes para armar una etiqueta propia — sirve como control interno, no reemplaza la oficial.
+                      Muestra destinatario, dirección y teléfono en pantalla para que chequees el paquete antes de despacharlo — no imprime nada, así no hay que cambiar de rollo.
                     </p>
-                    <Button size="sm" variant="outline" className="gap-2 mt-auto w-full whitespace-normal h-auto py-2" onClick={() => importFromMercadolibre("shipping")} disabled={mlLoading}>
+                    <Button size="sm" variant="outline" className="gap-2 mt-auto w-full whitespace-normal h-auto py-2" onClick={viewBuyerData} disabled={mlLoading}>
                       {mlLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin flex-shrink-0" /> : <ArrowRight className="h-3.5 w-3.5 flex-shrink-0" />}
-                      Importar datos de comprador (control interno)
+                      Ver datos de comprador (control interno)
                     </Button>
                   </div>
                   <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3 min-w-0">
@@ -346,6 +369,46 @@ export default function IntegracionesPage() {
           </div>
         </div>
       </DashboardLayout>
+
+      {mlBuyerData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="bg-background border border-border rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-5 border-b border-border">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Datos de comprador</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Solo para chequeo — no se imprime nada.</p>
+              </div>
+              <button onClick={() => setMlBuyerData(null)} className="text-muted-foreground hover:text-foreground">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="overflow-auto p-5">
+              {mlBuyerData.rows.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">No encontramos órdenes pagas recientes.</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border">
+                      {mlBuyerData.columns.map((col) => (
+                        <th key={col} className="px-2 py-2 text-left font-medium text-muted-foreground">{col}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {mlBuyerData.rows.map((row, i) => (
+                      <tr key={i}>
+                        {mlBuyerData.columns.map((col) => (
+                          <td key={col} className="px-2 py-2 text-foreground whitespace-nowrap">{row[col]}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
