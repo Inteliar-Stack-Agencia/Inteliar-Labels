@@ -144,7 +144,56 @@ Lista todos los templates field-based (builtin + custom).
 templates  (id, name, canvas_data, width_mm, height_mm, org_id, user_id)
 jobs       (id, template_id, status, total_labels, org_id, created_at)
 history    (id, job_id, status, message, timestamp)
+
+-- Integraciones (ver sección "Integraciones externas" más abajo)
+mercadolibre_connections  (user_id pk, ml_user_id, access_token, refresh_token, expires_at)
+tiendanube_connections    (user_id pk, store_id, access_token, scope)
+ml_order_checklist        (id, user_id, source, order_id, preparado, despachado, archivado)
 ```
+
+**Nota:** las migraciones en `supabase/migrations/` no se aplican solas — no hay paso de CI/deploy que corra `supabase db push`. Después de cada migración nueva hay que correr el SQL manualmente en el SQL Editor del proyecto de Supabase en producción.
+
+## Integraciones externas (Mercado Libre, Tiendanube)
+
+Ambas integraciones viven en `/integraciones` (`app/integraciones/page.tsx`), separadas de la carga de Excel manual (`/upload`). Comparten el mismo patrón: **OAuth2 authorization-code flow**, un botón "Conectar cuenta", y al aprobar quedan asociadas al usuario logueado de Inteliar Labels (no a una tienda/cuenta suelta).
+
+### Patrón común de conexión
+
+Para cada integración:
+- `lib/<integracion>.ts`: `getAuthorizationUrl()`, `exchangeCodeForToken()`, `saveConnection()`, `isConnected()`, `disconnect()`, y un `fetchOrderRows(userId, mode)` que devuelve `{ columns, rows }` listos para el flujo de impresión.
+- Rutas API en `app/api/integrations/<integracion>/`: `authorize` (GET, redirige a la pantalla de consentimiento), `callback` (GET, intercambia el `code` por token y guarda la conexión), `status` (GET), `disconnect` (POST), `orders` (POST, `{ mode }` → filas).
+- Tabla en Supabase `<integracion>_connections` (una fila por `user_id`, service-role only, sin acceso público vía RLS — se lee/escribe solo desde `lib/<integracion>.ts` con `supabaseAdmin`).
+- El resultado de "traer pedidos" se pasa a `/upload` vía **sessionStorage handoff** (`lib/import-handoff.ts`, `IMPORT_HANDOFF_KEY`) — evita duplicar la lógica de selección de plantilla/editor en una segunda pantalla. `goToUpload()` en `integraciones/page.tsx` escribe el handoff y navega a `/upload?imported=1`; `upload/page.tsx` lo lee en su `useEffect` de montaje y salta directo al paso 2.
+- Si ninguna plantilla propia matchea las columnas importadas, `/upload` sugiere el preset más cercano de `lib/preset-templates.ts` (`matchingPresetId`), y el flujo de "crear esa plantilla" hace un round-trip a `/templates/new?preset=<id>&returnTo=upload` sin perder los datos importados (mismo mecanismo de sessionStorage).
+
+### Mercado Libre (`lib/mercadolibre.ts`)
+
+- **Credenciales**: `MERCADOLIBRE_CLIENT_ID`, `MERCADOLIBRE_CLIENT_SECRET` (env vars). App creada en [developers.mercadolibre.com.ar](https://developers.mercadolibre.com.ar), tipo no certificada (no bloquea el OAuth, solo restringe algunos badges de partner).
+- **Authorization URL**: `https://auth.mercadolibre.com.ar/authorization` — nota: fijo a `.com.ar`; para otros países (México, Brasil, etc.) el dominio de auth cambia, no está resuelto dinámicamente todavía.
+- **Token exchange/refresh**: `https://api.mercadolibre.com/oauth/token`. Los tokens expiran (`expires_in`) y tienen `refresh_token` — `getValidAccessToken()` refresca automáticamente 5 min antes de vencer.
+- **Modos de import** (`ImportMode`): `"shipping"` (destinatario/dirección/localidad/provincia/cp/telefono/nro_orden, desde `/shipments/{id}`) y `"product"` (nombre/sku/cantidad/precio/nro_orden, desde `order_items`).
+- **Etiqueta oficial de envío**: `fetchShippingLabelsZpl()` llama a `/shipment_labels?shipment_ids=...&response_type=zpl2` y devuelve el ZPL crudo que genera Mercado Envíos (con el código de seguimiento real que escanea el correo) — se manda directo al printer-agent, sin pasar por nuestro editor de plantillas. El tamaño de esa etiqueta (10×15cm sin troquel vs 10×19cm con troquel) lo define la cuenta del vendedor en "Preferencias de venta" de ML, no es parametrizable por API — documentado como nota de ayuda en la tarjeta de `/integraciones`.
+- **Webhook** `app/api/webhooks/mercadolibre/route.ts`: requerido por ML para poder guardar la config de la app (debe responder 200 rápido); hoy solo loguea, no procesa notificaciones push.
+- **Tabla**: `mercadolibre_connections` (migración `20260710_mercadolibre_connections.sql`).
+
+### Tiendanube (`lib/tiendanube.ts`)
+
+- **Credenciales**: `TIENDANUBE_CLIENT_ID`, `TIENDANUBE_CLIENT_SECRET`. App creada en [partners.tiendanube.com](https://partners.tiendanube.com), distribución **"Para tus clientes"** (privada — no requiere revisión pública de Tiendanube, se conecta manualmente).
+- **Instalación**: a diferencia de ML, el flujo lo puede iniciar Tiendanube (link de instalación `/admin/apps/<app_id>/authorize` que se comparte con clientes) o nuestra propia app (`/api/integrations/tiendanube/authorize`, que redirige a `https://www.tiendanube.com/apps/<client_id>/authorize`). El callback (`/api/integrations/tiendanube/callback`) no recibe un `state` de vuelta — la asociación al usuario depende de que la sesión del navegador siga logueada en Inteliar Labels durante todo el flujo.
+- **Token**: `POST https://www.tiendanube.com/apps/authorize/token`. A diferencia de ML, el `access_token` de Tiendanube **no expira** — no hay refresh flow.
+- **API**: `https://api.tiendanube.com/v1/<store_id>/...`, header `Authentication: bearer <token>` (no es "Authorization", es "Authentication") + `User-Agent` obligatorio.
+- **Gotcha de la API**: cuando un listado filtrado (ej. `/orders?payment_status=paid`) no tiene resultados, Tiendanube devuelve **404 con `"description": "Last page is 0"`** en vez de un array vacío — `tnFetch()` lo detecta y lo trata como `[]`, no como error.
+- **Modos**: `fetchOrderRows(userId, "shipping" | "product")` (igual que ML, desde `/orders`) + `fetchCatalogRows(userId)` (catálogo completo publicado vía `/products`, no solo lo vendido — para etiquetas de góndola/precio).
+- **Sin etiqueta oficial por API todavía**: Tiendanube tiene su propio sistema de envío con tracking ("Envío Nube"), pero es **pago por etiqueta** (se compra saldo) y no tiene un endpoint que hayamos integrado — por eso en `/integraciones` no hay botón de "etiqueta oficial" para Tiendanube como sí lo hay para ML. Pendiente evaluar si vale la pena integrarlo.
+- **Webhooks LGPD obligatorios** (`app/api/webhooks/tiendanube/`): `store-redact`, `customers-redact`, `customers-data-request` — Tiendanube exige tenerlos configurados para poder guardar la app, aunque hoy no persistimos datos de compradores (solo acknowledgean con 200).
+- **Import por URL pública (deprecado)**: existió una primera versión que scrapeaba el catálogo de cualquier tienda pública por URL, sin login (`/api/tiendanube/products`). Se sacó una vez que la conexión OAuth quedó funcionando, porque cubre el mismo caso (tu propio catálogo) de forma más confiable y además trae pedidos.
+- **Tabla**: `tiendanube_connections` (migración `20260711_tiendanube_connections.sql`).
+
+### Checklist de "datos de comprador" (control interno)
+
+Pantalla de solo lectura en `/integraciones` ("Ver datos de comprador") — deliberadamente **no imprime nada**: la idea original era ofrecer una etiqueta de control interno con los datos del comprador, pero como su tamaño típico (~8x5cm) no coincide con el de la etiqueta oficial de envío (10x15/19cm en ML), habría que cambiar el rollo de la impresora constantemente. Se resolvió mostrando los datos en pantalla en vez de imprimir.
+
+Tiene un checklist manual persistido en Supabase (`ml_order_checklist`, migraciones `20260711_ml_order_checklist.sql` + `20260711b_order_checklist_source.sql`): columnas `preparado`/`despachado` (checkbox) y acciones de archivar/eliminar por fila. La tabla es compartida entre ML y Tiendanube — se distingue con la columna `source` (`"ml" | "tn"`), porque los números de orden no son únicos entre marketplaces.
 
 ## Configuración de Desarrollo
 

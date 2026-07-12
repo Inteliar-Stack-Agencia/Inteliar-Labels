@@ -14,6 +14,7 @@ Alternativa moderna a BarTender para empresas de alimentos, logística, depósit
 - Historial de trabajos e impresión
 - Auth multitenant con Supabase
 - Generación de templates con IA (Anthropic SDK)
+- Integraciones con Mercado Libre y Tiendanube (OAuth): traer pedidos/productos e imprimir la etiqueta oficial de envío de Mercado Envíos — ver [ARCHITECTURE.md § Integraciones externas](./ARCHITECTURE.md#integraciones-externas-mercado-libre-tiendanube)
 
 ## Stack
 
