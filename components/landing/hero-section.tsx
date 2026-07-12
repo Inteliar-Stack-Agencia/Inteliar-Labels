@@ -162,7 +162,7 @@ export function HeroSection() {
             </h1>
 
             <p className="text-lg sm:text-xl text-muted-foreground max-w-xl leading-relaxed">
-              Traé tus pedidos y productos automáticamente — o subí tu Excel o CSV — elegí un template e imprimí al instante en tu impresora térmica Zebra, TSC, Honeywell o Godex.
+              Traé tus pedidos y productos automáticamente — o subí tu Excel o CSV — elegí un template e imprimí al instante en tu impresora térmica.
               Diseñador visual con IA, códigos de barras, QR y más. Sin capacitación.
             </p>
 
