@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Header } from "@/components/dashboard/header"
 import { Button } from "@/components/ui/button"
-import { Loader2, RefreshCw, ArrowRight, X, Printer, CheckCircle2, Archive, Trash2 } from "lucide-react"
+import { Loader2, ArrowRight, X, Printer, CheckCircle2, Archive, Trash2 } from "lucide-react"
 import { sendToPrinterAgent } from "@/lib/printer-agent-client"
 import { IMPORT_HANDOFF_KEY, type ImportHandoff } from "@/lib/import-handoff"
 import { createClient } from "@/lib/supabase/client"
@@ -23,14 +23,7 @@ export default function IntegracionesPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  // Tiendanube — import de productos por URL (sin login)
-  const [showTNModal, setShowTNModal] = useState(false)
-  const [tnUrl, setTnUrl] = useState("")
-  const [tnLoading, setTnLoading] = useState(false)
-  const [tnError, setTnError] = useState("")
-  const [tnLastSync, setTnLastSync] = useState<{ url: string; syncedAt: string; total: number } | null>(null)
-
-  // Tiendanube — cuenta conectada (OAuth, órdenes)
+  // Tiendanube — cuenta conectada (OAuth, órdenes + catálogo)
   const [tnAcctStatus, setTnAcctStatus] = useState<{ configured: boolean; connected: boolean } | null>(null)
   const [tnAcctLoading, setTnAcctLoading] = useState(false)
   const [tnAcctError, setTnAcctError] = useState("")
@@ -48,11 +41,6 @@ export default function IntegracionesPage() {
   const [checklist, setChecklist] = useState<Record<string, ChecklistEntry>>({})
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("tn_last_sync")
-      if (raw) setTnLastSync(JSON.parse(raw))
-    } catch {}
-
     const params = new URLSearchParams(window.location.search)
     if (params.get("ml_connected")) {
       setMlNotice("Cuenta de Mercado Libre conectada.")
@@ -94,53 +82,6 @@ export default function IntegracionesPage() {
   function goToUpload(handoff: ImportHandoff) {
     sessionStorage.setItem(IMPORT_HANDOFF_KEY, JSON.stringify(handoff))
     router.push("/upload?imported=1")
-  }
-
-  const importFromTiendanube = async () => {
-    if (!tnUrl.trim()) { setTnError("Ingresá la URL de tu tienda."); return }
-    setTnLoading(true)
-    setTnError("")
-    try {
-      const res = await fetch("/api/tiendanube/products", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeUrl: tnUrl.trim() }),
-      })
-      const result = await res.json()
-      if (!res.ok) { setTnError(result.error || "No se pudo conectar con la tienda."); return }
-      const syncInfo = { url: tnUrl.trim(), syncedAt: new Date().toISOString(), total: result.total }
-      localStorage.setItem("tn_last_sync", JSON.stringify(syncInfo))
-      setTnLastSync(syncInfo)
-      setShowTNModal(false)
-      goToUpload({ columns: result.columns, rows: result.rows, fileName: `Tiendanube · ${tnUrl.trim()}`, totalRows: result.total })
-    } catch {
-      setTnError("No se pudo conectar con Tiendanube.")
-    } finally {
-      setTnLoading(false)
-    }
-  }
-
-  const resyncTiendanube = async () => {
-    if (!tnLastSync) return
-    setTnLoading(true)
-    setTnError("")
-    try {
-      const res = await fetch("/api/tiendanube/products", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeUrl: tnLastSync.url }),
-      })
-      const result = await res.json()
-      if (!res.ok) { setTnError(result.error || "Error al sincronizar."); return }
-      const syncInfo = { url: tnLastSync.url, syncedAt: new Date().toISOString(), total: result.total }
-      localStorage.setItem("tn_last_sync", JSON.stringify(syncInfo))
-      setTnLastSync(syncInfo)
-      goToUpload({ columns: result.columns, rows: result.rows, fileName: `Tiendanube · ${tnLastSync.url}`, totalRows: result.total })
-    } catch {
-      setTnError("No se pudo sincronizar.")
-    } finally {
-      setTnLoading(false)
-    }
   }
 
   const importFromMercadolibre = async (mode: "shipping" | "product") => {
@@ -186,6 +127,21 @@ export default function IntegracionesPage() {
       })
     } catch {
       setTnAcctError("No se pudo importar desde Tiendanube.")
+    } finally {
+      setTnAcctLoading(false)
+    }
+  }
+
+  const importCatalogFromTiendanube = async () => {
+    setTnAcctLoading(true)
+    setTnAcctError("")
+    try {
+      const res = await fetch("/api/integrations/tiendanube/catalog", { method: "POST" })
+      const result = await res.json()
+      if (!res.ok) { setTnAcctError(result.error || "Error al importar el catálogo."); return }
+      goToUpload({ columns: result.columns, rows: result.rows, fileName: "Tiendanube · catálogo", totalRows: result.total })
+    } catch {
+      setTnAcctError("No se pudo importar el catálogo de Tiendanube.")
     } finally {
       setTnAcctLoading(false)
     }
@@ -313,95 +269,10 @@ export default function IntegracionesPage() {
 
   return (
     <>
-      {showTNModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="bg-background border border-border rounded-2xl shadow-2xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                <img src="/logos/tiendanube-icon.svg" alt="" className="h-5 w-5 text-[#0433ff]" />
-                Importar desde Tiendanube
-              </h3>
-              <button onClick={() => { setShowTNModal(false); setTnError("") }} className="text-muted-foreground hover:text-foreground">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <p className="text-sm text-muted-foreground mb-4">
-              Pegá la URL de tu tienda y traemos todos los productos automáticamente.
-            </p>
-            <input
-              type="text"
-              placeholder="mitienda.mitiendanube.com"
-              value={tnUrl}
-              onChange={(e) => { setTnUrl(e.target.value); setTnError("") }}
-              onKeyDown={(e) => e.key === "Enter" && importFromTiendanube()}
-              className="w-full border border-border rounded-lg px-3 py-2.5 text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary mb-1"
-            />
-            {tnError && <p className="text-xs text-destructive mt-1 mb-2">{tnError}</p>}
-            <div className="flex gap-2 mt-4">
-              <Button variant="outline" className="flex-1" onClick={() => { setShowTNModal(false); setTnError("") }}>
-                Cancelar
-              </Button>
-              <Button className="flex-1 gap-2" onClick={importFromTiendanube} disabled={tnLoading}>
-                {tnLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-                {tnLoading ? "Importando..." : "Importar productos"}
-              </Button>
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-3 text-center">
-              Solo funciona con tiendas públicas. Para tiendas privadas, usá el ID numérico de tu tienda.
-            </p>
-          </div>
-        </div>
-      )}
-
       <DashboardLayout>
         <Header title="Integraciones" description="Traé tus productos y pedidos directo desde Tiendanube o Mercado Libre" />
         <div className="p-6 space-y-4 max-w-3xl">
-          {/* Tiendanube */}
-          <div className="rounded-xl border border-border bg-card p-5">
-            {tnLastSync ? (
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-foreground flex items-center gap-2">
-                      <img src="/logos/tiendanube-icon.svg" alt="" className="h-4 w-4 text-[#0433ff]" />
-                      Tiendanube · Conectado
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[300px]">{tnLastSync.url}</p>
-                  </div>
-                  <span className="text-xs text-muted-foreground text-right flex-shrink-0">
-                    {tnLastSync.total} productos<br />
-                    {new Date(tnLastSync.syncedAt).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })}
-                  </span>
-                </div>
-                {tnError && <p className="text-xs text-destructive">{tnError}</p>}
-                <div className="flex gap-2">
-                  <Button size="sm" className="gap-2" onClick={resyncTiendanube} disabled={tnLoading}>
-                    {tnLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                    Sincronizar ahora
-                  </Button>
-                  <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setShowTNModal(true)}>
-                    Cambiar tienda
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <img src="/logos/tiendanube-icon.svg" alt="" className="h-4 w-4 text-[#0433ff]" />
-                    Importar desde Tiendanube
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Traé tus productos directo sin pasar por Excel</p>
-                </div>
-                <Button variant="outline" size="sm" className="gap-2 flex-shrink-0" onClick={() => setShowTNModal(true)}>
-                  <img src="/logos/tiendanube-icon.svg" alt="" className="h-4 w-4 text-[#0433ff]" />
-                  Conectar tienda
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Tiendanube — cuenta conectada (órdenes) */}
+          {/* Tiendanube — cuenta conectada (órdenes + catálogo) */}
           <div className="rounded-xl border border-border bg-card p-5">
             {tnAcctError && <p className="text-xs text-destructive mb-2">{tnAcctError}</p>}
             {tnAcctNotice && <p className="text-xs text-green-600 dark:text-green-400 mb-2">{tnAcctNotice}</p>}
@@ -416,7 +287,7 @@ export default function IntegracionesPage() {
                     Desconectar
                   </Button>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2 sm:grid-cols-3">
                   <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3 min-w-0">
                     <p className="text-xs text-muted-foreground leading-snug">
                       Muestra destinatario, dirección y teléfono en pantalla para chequear el paquete antes de despacharlo — no imprime nada.
@@ -433,6 +304,15 @@ export default function IntegracionesPage() {
                     <Button size="sm" variant="outline" className="gap-2 mt-auto w-full whitespace-normal h-auto py-2" onClick={() => importFromTiendanubeOrders("product")} disabled={tnAcctLoading}>
                       {tnAcctLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin flex-shrink-0" /> : <ArrowRight className="h-3.5 w-3.5 flex-shrink-0" />}
                       Importar etiquetas de producto
+                    </Button>
+                  </div>
+                  <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3 min-w-0">
+                    <p className="text-xs text-muted-foreground leading-snug">
+                      Trae todo tu catálogo publicado con precios y SKU — no solo lo vendido, sirve para etiquetas de góndola/precio.
+                    </p>
+                    <Button size="sm" variant="outline" className="gap-2 mt-auto w-full whitespace-normal h-auto py-2" onClick={importCatalogFromTiendanube} disabled={tnAcctLoading}>
+                      {tnAcctLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin flex-shrink-0" /> : <ArrowRight className="h-3.5 w-3.5 flex-shrink-0" />}
+                      Importar catálogo de productos
                     </Button>
                   </div>
                 </div>

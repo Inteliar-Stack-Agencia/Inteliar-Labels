@@ -166,3 +166,73 @@ export async function fetchOrderRows(
   }
   return { columns, rows }
 }
+
+interface TNProduct {
+  id: number
+  name: Record<string, string>
+  categories: { name: Record<string, string> }[]
+  variants: {
+    sku: string | null
+    price: string
+    compare_at_price: string | null
+    barcode: string | null
+    values: { es?: string; pt?: string }[]
+  }[]
+}
+
+async function fetchAllProducts(storeId: string, accessToken: string): Promise<TNProduct[]> {
+  const products: TNProduct[] = []
+  let page = 1
+  const perPage = 200
+  while (true) {
+    const batch: TNProduct[] = await tnFetch(
+      storeId,
+      `/products?page=${page}&per_page=${perPage}&fields=id,name,variants,categories`,
+      accessToken
+    )
+    if (!Array.isArray(batch) || batch.length === 0) break
+    products.push(...batch)
+    if (batch.length < perPage) break
+    page++
+  }
+  return products
+}
+
+function firstLocalized(obj: Record<string, string> | undefined): string {
+  if (!obj) return ""
+  return obj.es || obj.pt || Object.values(obj)[0] || ""
+}
+
+// Full published catalog (not just what's been sold in orders) — via the
+// authenticated store connection instead of scraping a public storefront.
+export async function fetchCatalogRows(userId: string): Promise<{ columns: string[]; rows: Record<string, string>[] }> {
+  const { accessToken, storeId } = await getConnection(userId)
+  const products = await fetchAllProducts(storeId, accessToken)
+
+  const columns = ["nombre", "precio", "precio_anterior", "sku", "codigo_barras", "categoria", "cantidad"]
+  const rows: Record<string, string>[] = []
+
+  for (const product of products) {
+    const name = firstLocalized(product.name)
+    const category = firstLocalized(product.categories?.[0]?.name)
+
+    for (const variant of product.variants ?? []) {
+      const variantOptions = (variant.values ?? [])
+        .map((v) => v.es || v.pt || Object.values(v)[0] || "")
+        .filter(Boolean)
+        .join(" / ")
+
+      rows.push({
+        nombre: variantOptions ? `${name} — ${variantOptions}` : name,
+        precio: variant.price ?? "",
+        precio_anterior: variant.compare_at_price ?? "",
+        sku: variant.sku ?? "",
+        codigo_barras: variant.barcode ?? "",
+        categoria: category,
+        cantidad: "1",
+      })
+    }
+  }
+
+  return { columns, rows }
+}
