@@ -280,7 +280,7 @@ export default function IntegracionesPage() {
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <img src="/logos/tiendanube-icon.svg" alt="" className="h-4 w-4 text-[#0433ff]" />
+                    <img src="/logos/tiendanube-icon.svg" alt="" className="h-4 w-4" />
                     Tiendanube (cuenta) · Conectado
                   </p>
                   <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={disconnectTiendanube} disabled={tnAcctLoading}>
@@ -301,9 +301,9 @@ export default function IntegracionesPage() {
                     <p className="text-xs text-muted-foreground leading-snug">
                       Trae nombre, SKU, cantidad y precio de lo vendido en tus pedidos pagos — para etiquetar el producto en sí, no el envío.
                     </p>
-                    <Button size="sm" variant="outline" className="gap-2 mt-auto w-full whitespace-normal h-auto py-2" onClick={() => importFromTiendanubeOrders("product")} disabled={tnAcctLoading}>
+                    <Button size="sm" className="gap-2 mt-auto w-full whitespace-normal h-auto py-2 bg-[#0433ff] hover:bg-[#0433ff]/90 text-white" onClick={() => importFromTiendanubeOrders("product")} disabled={tnAcctLoading}>
                       {tnAcctLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin flex-shrink-0" /> : <ArrowRight className="h-3.5 w-3.5 flex-shrink-0" />}
-                      Importar etiquetas de producto
+                      Importar productos vendidos
                     </Button>
                   </div>
                   <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3 min-w-0">
@@ -324,7 +324,7 @@ export default function IntegracionesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <img src="/logos/tiendanube-icon.svg" alt="" className="h-4 w-4 text-[#0433ff]" />
+                    <img src="/logos/tiendanube-icon.svg" alt="" className="h-4 w-4" />
                     Conectar cuenta de Tiendanube
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">Traé tus pedidos pagos (envío y producto) autorizando tu tienda — no solo el catálogo público</p>
@@ -332,7 +332,7 @@ export default function IntegracionesPage() {
                 {tnAcctStatus?.configured ? (
                   <Button variant="outline" size="sm" className="gap-2 flex-shrink-0" asChild>
                     <a href="/api/integrations/tiendanube/authorize">
-                      <img src="/logos/tiendanube-icon.svg" alt="" className="h-4 w-4 text-[#0433ff]" />
+                      <img src="/logos/tiendanube-icon.svg" alt="" className="h-4 w-4" />
                       Conectar cuenta
                     </a>
                   </Button>

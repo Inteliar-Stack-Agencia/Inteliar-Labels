@@ -109,6 +109,42 @@ function AnimatedDemo() {
   )
 }
 
+const SLIDE_INTEGRATIONS = [
+  { name: "Mercado Libre", logo: "/logos/mercadolibre-icon.png", available: true },
+  { name: "Tiendanube", logo: "/logos/tiendanube-icon.svg", available: true },
+  { name: "Excel / CSV", available: true, isExcel: true },
+  { name: "Shopify", available: false },
+  { name: "WooCommerce", available: false },
+]
+
+function IntegrationsSlide() {
+  const items = [...SLIDE_INTEGRATIONS, ...SLIDE_INTEGRATIONS]
+  return (
+    <div className="mt-10 -mx-4 sm:-mx-6 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+      <div className="flex w-max gap-8 animate-[marquee_22s_linear_infinite] px-4 sm:px-6">
+        {items.map((it, i) => (
+          <div
+            key={`${it.name}-${i}`}
+            className={`flex items-center gap-2.5 flex-shrink-0 rounded-full border px-4 py-2 ${
+              it.available ? "border-border bg-card" : "border-dashed border-border/70 bg-muted/30 opacity-60"
+            }`}
+          >
+            {it.isExcel ? (
+              <FileSpreadsheet className="w-4 h-4 text-green-700 flex-shrink-0" />
+            ) : it.logo ? (
+              <img src={it.logo} alt="" className="w-4 h-4 object-contain flex-shrink-0" />
+            ) : (
+              <span className="w-4 h-4 rounded-full bg-muted-foreground/30 flex-shrink-0" />
+            )}
+            <span className="text-sm font-medium text-foreground whitespace-nowrap">{it.name}</span>
+            {!it.available && <span className="text-[10px] text-muted-foreground whitespace-nowrap">pronto</span>}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function HeroSection() {
   return (
     <section className="pt-32 pb-20 px-4 sm:px-6 overflow-hidden">
@@ -117,17 +153,17 @@ export function HeroSection() {
           <div className="space-y-8">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border text-sm">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-muted-foreground">Diseñado para impresoras térmicas ZPL y TSPL</span>
+              <span className="text-muted-foreground">Conectá tu tienda o subí tu Excel</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground leading-[1.1] text-balance">
-              Dejá de perder horas.{" "}
-              <span className="text-primary">Imprimí 100+ etiquetas</span> en segundos.
+              Conectá <span className="text-primary">Mercado Libre</span> y <span className="text-primary">Tiendanube</span>,{" "}
+              imprimí tus etiquetas en segundos.
             </h1>
 
             <p className="text-lg sm:text-xl text-muted-foreground max-w-xl leading-relaxed">
-              Subí tu Excel o CSV, elegí un template e imprimí al instante en tu impresora térmica Zebra, TSC, Honeywell o Godex.
-              Diseñador visual con IA, códigos de barras, QR y más. La alternativa simple a BarTender. Sin capacitación.
+              Traé tus pedidos y productos automáticamente — o subí tu Excel o CSV — elegí un template e imprimí al instante en tu impresora térmica Zebra, TSC, Honeywell o Godex.
+              Diseñador visual con IA, códigos de barras, QR y más. Sin capacitación.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
@@ -169,6 +205,8 @@ export function HeroSection() {
             </div>
           </div>
         </div>
+
+        <IntegrationsSlide />
       </div>
     </section>
   )

@@ -135,3 +135,12 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
