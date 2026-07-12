@@ -36,9 +36,12 @@ export default function IntegracionesPage() {
   const [mlNotice, setMlNotice] = useState("")
   const [mlLabelResult, setMlLabelResult] = useState<{ count: number } | null>(null)
 
-  // Datos de comprador (control interno) — compartido entre ML y Tiendanube
-  const [buyerData, setBuyerData] = useState<{ source: Source; columns: string[]; rows: Record<string, string>[] } | null>(null)
+  // Datos de comprador (control interno) — compartido entre ML y Tiendanube.
+  // Cada fila lleva su propio _source para poder mezclar ambos canales en
+  // una sola tabla ("Ver todos los pedidos").
+  const [buyerData, setBuyerData] = useState<{ columns: string[]; rows: (Record<string, string> & { _source: Source })[] } | null>(null)
   const [checklist, setChecklist] = useState<Record<string, ChecklistEntry>>({})
+  const checklistKey = (source: Source, orderId: string) => `${source}:${orderId}`
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -165,79 +168,93 @@ export default function IntegracionesPage() {
   // Datos del comprador: solo para chequeo visual antes de despachar, no se
   // manda a imprimir (evita tener que cambiar de rollo entre la etiqueta
   // oficial de 10×15/19 y una etiqueta propia de otro tamaño).
-  const viewBuyerData = async (source: Source) => {
-    const setLoading = source === "ml" ? setMlLoading : setTnAcctLoading
-    const setError = source === "ml" ? setMlError : setTnAcctError
+  // Acepta uno o varios canales a la vez (para la vista combinada).
+  const viewBuyerData = async (sources: Source[]) => {
+    const multi = sources.length > 1
+    const setLoading = multi ? setMlLoading : sources[0] === "ml" ? setMlLoading : setTnAcctLoading
+    const setError = multi ? setMlError : sources[0] === "ml" ? setMlError : setTnAcctError
     setLoading(true)
     setError("")
     try {
-      const res = await fetch(ORDERS_ENDPOINT[source], {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "shipping" }),
-      })
-      const result = await res.json()
-      if (!res.ok) { setError(result.error || "Error al traer las órdenes."); return }
+      const results = await Promise.all(
+        sources.map(async (source) => {
+          const res = await fetch(ORDERS_ENDPOINT[source], {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mode: "shipping" }),
+          })
+          const result = await res.json()
+          return { source, ok: res.ok, result }
+        })
+      )
+
+      const failed = results.filter((r) => !r.ok && r.result?.error !== "No encontramos órdenes pagas recientes.")
+      if (failed.length > 0 && results.every((r) => !r.ok)) {
+        setError(failed[0].result?.error || "Error al traer las órdenes.")
+        return
+      }
+
+      const columns = results.find((r) => r.ok)?.result.columns ?? []
+      let rows: (Record<string, string> & { _source: Source })[] = results.flatMap((r) =>
+        r.ok ? r.result.rows.map((row: Record<string, string>) => ({ ...row, _source: r.source })) : []
+      )
 
       const { data: { user } } = await supabase.auth.getUser()
-      let rows: Record<string, string>[] = result.rows
       if (user) {
         const { data: entries } = await supabase
           .from("ml_order_checklist")
-          .select("id, order_id, preparado, despachado, archivado")
+          .select("id, order_id, source, preparado, despachado, archivado")
           .eq("user_id", user.id)
-          .eq("source", source)
-        const archivedIds = new Set((entries ?? []).filter((e) => e.archivado).map((e) => e.order_id))
-        rows = rows.filter((r) => !archivedIds.has(r.nro_orden))
+          .in("source", sources)
+        const archivedKeys = new Set((entries ?? []).filter((e) => e.archivado).map((e) => checklistKey(e.source, e.order_id)))
+        rows = rows.filter((r) => !archivedKeys.has(checklistKey(r._source, r.nro_orden)))
         const map: Record<string, ChecklistEntry> = {}
         for (const e of entries ?? []) {
-          if (!e.archivado) map[e.order_id] = { id: e.id, order_id: e.order_id, preparado: e.preparado, despachado: e.despachado }
+          if (!e.archivado) map[checklistKey(e.source, e.order_id)] = { id: e.id, order_id: e.order_id, preparado: e.preparado, despachado: e.despachado }
         }
         setChecklist(map)
       }
-      setBuyerData({ source, columns: result.columns, rows })
+      setBuyerData({ columns, rows })
     } catch {
-      setError(source === "ml" ? "No se pudo traer los datos de Mercado Libre." : "No se pudo traer los datos de Tiendanube.")
+      setError("No se pudieron traer los pedidos.")
     } finally {
       setLoading(false)
     }
   }
 
-  async function toggleChecklist(orderId: string, field: "preparado" | "despachado") {
-    if (!buyerData) return
+  async function toggleChecklist(source: Source, orderId: string, field: "preparado" | "despachado") {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    const existing = checklist[orderId]
+    const key = checklistKey(source, orderId)
+    const existing = checklist[key]
     const next = { preparado: existing?.preparado ?? false, despachado: existing?.despachado ?? false, [field]: !existing?.[field] }
     const { data: saved } = await supabase
       .from("ml_order_checklist")
-      .upsert({ user_id: user.id, order_id: orderId, source: buyerData.source, ...next }, { onConflict: "user_id,source,order_id" })
+      .upsert({ user_id: user.id, order_id: orderId, source, ...next }, { onConflict: "user_id,source,order_id" })
       .select("id, order_id, preparado, despachado")
       .single()
-    if (saved) setChecklist((prev) => ({ ...prev, [orderId]: saved }))
+    if (saved) setChecklist((prev) => ({ ...prev, [key]: saved }))
   }
 
-  async function archiveChecklistRow(orderId: string) {
-    if (!buyerData) return
+  async function archiveChecklistRow(source: Source, orderId: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     await supabase
       .from("ml_order_checklist")
-      .upsert({ user_id: user.id, order_id: orderId, source: buyerData.source, archivado: true }, { onConflict: "user_id,source,order_id" })
-    setBuyerData((prev) => prev && { ...prev, rows: prev.rows.filter((r) => r.nro_orden !== orderId) })
+      .upsert({ user_id: user.id, order_id: orderId, source, archivado: true }, { onConflict: "user_id,source,order_id" })
+    setBuyerData((prev) => prev && { ...prev, rows: prev.rows.filter((r) => !(r._source === source && r.nro_orden === orderId)) })
   }
 
-  async function deleteChecklistRow(orderId: string) {
-    if (!buyerData) return
+  async function deleteChecklistRow(source: Source, orderId: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    await supabase.from("ml_order_checklist").delete().eq("user_id", user.id).eq("source", buyerData.source).eq("order_id", orderId)
+    await supabase.from("ml_order_checklist").delete().eq("user_id", user.id).eq("source", source).eq("order_id", orderId)
     setChecklist((prev) => {
       const next = { ...prev }
-      delete next[orderId]
+      delete next[checklistKey(source, orderId)]
       return next
     })
-    setBuyerData((prev) => prev && { ...prev, rows: prev.rows.filter((r) => r.nro_orden !== orderId) })
+    setBuyerData((prev) => prev && { ...prev, rows: prev.rows.filter((r) => !(r._source === source && r.nro_orden === orderId)) })
   }
 
   const printOfficialShippingLabels = async () => {
@@ -272,6 +289,19 @@ export default function IntegracionesPage() {
       <DashboardLayout>
         <Header title="Integraciones" description="Traé tus productos y pedidos directo desde Tiendanube o Mercado Libre" />
         <div className="p-6 space-y-4 max-w-3xl">
+          {mlStatus?.connected && tnAcctStatus?.connected && (
+            <div className="rounded-xl border border-primary/30 bg-primary/5 p-5 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Ver todos los pedidos (multicanal)</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Mercado Libre + Tiendanube juntos en una sola lista, con columna de canal.</p>
+              </div>
+              <Button size="sm" className="gap-2 flex-shrink-0" onClick={() => viewBuyerData(["ml", "tn"])} disabled={mlLoading || tnAcctLoading}>
+                {(mlLoading || tnAcctLoading) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
+                Ver todos
+              </Button>
+            </div>
+          )}
+
           {/* Tiendanube — cuenta conectada (órdenes + catálogo) */}
           <div className="rounded-xl border border-border bg-card p-5">
             {tnAcctError && <p className="text-xs text-destructive mb-2">{tnAcctError}</p>}
@@ -301,7 +331,7 @@ export default function IntegracionesPage() {
                     <p className="text-xs text-muted-foreground leading-snug">
                       Muestra destinatario, dirección y teléfono en pantalla para chequear el paquete antes de despacharlo — no imprime nada.
                     </p>
-                    <Button size="sm" variant="outline" className="gap-2 mt-auto w-full whitespace-normal h-auto py-2" onClick={() => viewBuyerData("tn")} disabled={tnAcctLoading}>
+                    <Button size="sm" variant="outline" className="gap-2 mt-auto w-full whitespace-normal h-auto py-2" onClick={() => viewBuyerData(["tn"])} disabled={tnAcctLoading}>
                       {tnAcctLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin flex-shrink-0" /> : <ArrowRight className="h-3.5 w-3.5 flex-shrink-0" />}
                       Ver datos de comprador (control interno)
                     </Button>
@@ -380,7 +410,7 @@ export default function IntegracionesPage() {
                     <p className="text-xs text-muted-foreground leading-snug">
                       Muestra destinatario, dirección y teléfono en pantalla para que chequees el paquete antes de despacharlo — no imprime nada, así no hay que cambiar de rollo.
                     </p>
-                    <Button size="sm" variant="outline" className="gap-2 mt-auto w-full whitespace-normal h-auto py-2" onClick={() => viewBuyerData("ml")} disabled={mlLoading}>
+                    <Button size="sm" variant="outline" className="gap-2 mt-auto w-full whitespace-normal h-auto py-2" onClick={() => viewBuyerData(["ml"])} disabled={mlLoading}>
                       {mlLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin flex-shrink-0" /> : <ArrowRight className="h-3.5 w-3.5 flex-shrink-0" />}
                       Ver datos de comprador (control interno)
                     </Button>
@@ -465,6 +495,7 @@ export default function IntegracionesPage() {
                 <table className="w-full text-sm border-collapse">
                   <thead className="sticky top-0 bg-background">
                     <tr className="border-b border-border">
+                      <th className="px-3 py-2.5 text-left font-medium text-muted-foreground whitespace-nowrap">Canal</th>
                       <th className="px-3 py-2.5 text-left font-medium text-muted-foreground whitespace-nowrap">Preparado</th>
                       <th className="px-3 py-2.5 text-left font-medium text-muted-foreground whitespace-nowrap">Despachado</th>
                       {buyerData.columns.map((col) => (
@@ -476,15 +507,26 @@ export default function IntegracionesPage() {
                   <tbody className="divide-y divide-border">
                     {buyerData.rows.map((row, i) => {
                       const orderId = row.nro_orden
-                      const entry = checklist[orderId]
+                      const source = row._source
+                      const entry = checklist[checklistKey(source, orderId)]
                       return (
                         <tr key={i} className="hover:bg-muted/50">
+                          <td className="px-3 py-2.5">
+                            <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                              <img
+                                src={source === "ml" ? "/logos/mercadolibre-icon.png" : "/logos/tiendanube-icon.svg"}
+                                alt=""
+                                className="h-3.5 w-3.5 object-contain"
+                              />
+                              <span className="text-xs text-muted-foreground">{source === "ml" ? "Mercado Libre" : "Tiendanube"}</span>
+                            </span>
+                          </td>
                           <td className="px-3 py-2.5">
                             <input
                               type="checkbox"
                               className="accent-primary"
                               checked={entry?.preparado ?? false}
-                              onChange={() => toggleChecklist(orderId, "preparado")}
+                              onChange={() => toggleChecklist(source, orderId, "preparado")}
                             />
                           </td>
                           <td className="px-3 py-2.5">
@@ -492,7 +534,7 @@ export default function IntegracionesPage() {
                               type="checkbox"
                               className="accent-primary"
                               checked={entry?.despachado ?? false}
-                              onChange={() => toggleChecklist(orderId, "despachado")}
+                              onChange={() => toggleChecklist(source, orderId, "despachado")}
                             />
                           </td>
                           {buyerData.columns.map((col) => (
@@ -502,14 +544,14 @@ export default function IntegracionesPage() {
                             <div className="flex items-center gap-2">
                               <button
                                 title="Archivar"
-                                onClick={() => archiveChecklistRow(orderId)}
+                                onClick={() => archiveChecklistRow(source, orderId)}
                                 className="text-muted-foreground hover:text-foreground"
                               >
                                 <Archive className="h-4 w-4" />
                               </button>
                               <button
                                 title="Eliminar"
-                                onClick={() => deleteChecklistRow(orderId)}
+                                onClick={() => deleteChecklistRow(source, orderId)}
                                 className="text-muted-foreground hover:text-destructive"
                               >
                                 <Trash2 className="h-4 w-4" />
