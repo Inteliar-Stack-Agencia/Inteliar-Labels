@@ -95,12 +95,12 @@ interface TNOrder {
   shipping_status?: string | null
 }
 
-// Tiendanube marks a fulfilled/shipped order with shipping_status "shipped"
-// or "fulfilled" (unconfirmed against live docs — we couldn't reach them
-// from this environment). Any other value, or the field being absent
-// entirely, is treated as "still pending" so we never silently hide orders
-// because of a field name we guessed wrong.
-const TN_SHIPPED_STATUSES = new Set(["shipped", "fulfilled", "delivered"])
+// Confirmed against a real order via the API (2026-07-12): pending orders
+// have shipping_status "unshipped". Anything else (e.g. "shipped") — or the
+// field being absent — is treated as already handled.
+function isTnPending(order: Pick<TNOrder, "shipping_status">): boolean {
+  return !order.shipping_status || order.shipping_status === "unshipped"
+}
 
 async function tnFetch(storeId: string, path: string, accessToken: string) {
   const res = await fetch(`https://api.tiendanube.com/v1/${storeId}${path}`, {
@@ -142,11 +142,7 @@ export async function fetchOrderRows(
   const allOrders = await fetchRecentOrders(storeId, accessToken)
 
   // Sort pending-shipment orders first (not filtered out) — mirrors ML's behavior.
-  const orders = [...allOrders].sort((a, b) => {
-    const aPending = !a.shipping_status || !TN_SHIPPED_STATUSES.has(a.shipping_status) ? 0 : 1
-    const bPending = !b.shipping_status || !TN_SHIPPED_STATUSES.has(b.shipping_status) ? 0 : 1
-    return aPending - bPending
-  })
+  const orders = [...allOrders].sort((a, b) => (isTnPending(a) ? 0 : 1) - (isTnPending(b) ? 0 : 1))
 
   if (mode === "shipping") {
     const columns = ["destinatario", "direccion", "localidad", "provincia", "cp", "telefono", "nro_orden"]
