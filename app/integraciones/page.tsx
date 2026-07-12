@@ -478,7 +478,7 @@ export default function IntegracionesPage() {
 
       {buyerData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="bg-background border border-border rounded-2xl shadow-2xl w-full max-w-[95vw] xl:max-w-6xl max-h-[85vh] flex flex-col">
+          <div className="bg-background border border-border rounded-2xl shadow-2xl w-full max-w-[97vw] max-h-[94vh] flex flex-col">
             <div className="flex items-center justify-between p-5 border-b border-border flex-shrink-0">
               <div>
                 <h3 className="text-lg font-semibold text-foreground">Datos de comprador</h3>

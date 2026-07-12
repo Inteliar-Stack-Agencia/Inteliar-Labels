@@ -178,6 +178,23 @@ async function fetchRecentOrders(accessToken: string, mlUserId: string): Promise
   return data.results ?? []
 }
 
+// Mercado Libre's shipment "status" field: pending/handling/ready_to_ship
+// mean it's still not out for delivery; shipped/delivered/not_delivered/
+// cancelled mean the seller already dispatched it (or it's dead). We use
+// this to default the import screens to "still pending", same as ML's own
+// UI does once the seller marks something as shipped.
+const SHIPPED_STATUSES = new Set(["shipped", "delivered", "not_delivered", "cancelled"])
+
+async function fetchShipment(shippingId: number, accessToken: string): Promise<{ address: MLShipmentAddress; status: string | null }> {
+  try {
+    const shipment = await mlFetch(`/shipments/${shippingId}`, accessToken)
+    return { address: shipment.receiver_address ?? {}, status: shipment.status ?? null }
+  } catch {
+    // Some orders (pickup, no shipment yet) won't have a shipment — treat as still pending.
+    return { address: {}, status: null }
+  }
+}
+
 export type ImportMode = "shipping" | "product"
 
 export async function fetchOrderRows(
@@ -187,21 +204,26 @@ export async function fetchOrderRows(
   const { accessToken, mlUserId } = await getValidAccessToken(userId)
   const orders = await fetchRecentOrders(accessToken, mlUserId)
 
+  const shipments = await Promise.all(
+    orders.map((order) => (order.shipping?.id ? fetchShipment(order.shipping.id, accessToken) : Promise.resolve({ address: {} as MLShipmentAddress, status: null })))
+  )
+
+  // Sort pending-shipment orders first (not filtered out) — same priority
+  // as ML's own "por enviar" view, so nothing gets hidden by mistake.
+  const pairs = orders.map((order, i) => ({ order, shipment: shipments[i] }))
+  const sortedPairs = [...pairs].sort((a, b) => {
+    const aPending = !a.shipment.status || !SHIPPED_STATUSES.has(a.shipment.status) ? 0 : 1
+    const bPending = !b.shipment.status || !SHIPPED_STATUSES.has(b.shipment.status) ? 0 : 1
+    return aPending - bPending
+  })
+  const sortedOrders = sortedPairs.map((p) => p.order)
+
   if (mode === "shipping") {
     const columns = ["destinatario", "direccion", "localidad", "provincia", "cp", "telefono", "nro_orden"]
     const rows: Record<string, string>[] = []
 
-    for (const order of orders) {
-      const shippingId = order.shipping?.id
-      let address: MLShipmentAddress = {}
-      if (shippingId) {
-        try {
-          const shipment = await mlFetch(`/shipments/${shippingId}`, accessToken)
-          address = shipment.receiver_address ?? {}
-        } catch {
-          // Some orders (pickup, no shipment yet) won't have an address — skip silently
-        }
-      }
+    sortedPairs.forEach(({ order, shipment }) => {
+      const address = shipment.address
       const buyerName =
         address.receiver_name ||
         `${order.buyer.first_name ?? ""} ${order.buyer.last_name ?? ""}`.trim() ||
@@ -216,7 +238,7 @@ export async function fetchOrderRows(
         telefono: address.receiver_phone ?? "",
         nro_orden: String(order.id),
       })
-    }
+    })
 
     return { columns, rows }
   }
@@ -225,7 +247,7 @@ export async function fetchOrderRows(
   const columns = ["nombre", "sku", "cantidad", "precio", "nro_orden"]
   const rows: Record<string, string>[] = []
 
-  for (const order of orders) {
+  for (const order of sortedOrders) {
     for (const item of order.order_items ?? []) {
       rows.push({
         nombre: item.item.title,

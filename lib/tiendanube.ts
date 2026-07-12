@@ -92,7 +92,15 @@ interface TNOrder {
     phone?: string
   } | null
   products: { name: string; sku: string | null; price: string; quantity: number }[]
+  shipping_status?: string | null
 }
+
+// Tiendanube marks a fulfilled/shipped order with shipping_status "shipped"
+// or "fulfilled" (unconfirmed against live docs — we couldn't reach them
+// from this environment). Any other value, or the field being absent
+// entirely, is treated as "still pending" so we never silently hide orders
+// because of a field name we guessed wrong.
+const TN_SHIPPED_STATUSES = new Set(["shipped", "fulfilled", "delivered"])
 
 async function tnFetch(storeId: string, path: string, accessToken: string) {
   const res = await fetch(`https://api.tiendanube.com/v1/${storeId}${path}`, {
@@ -118,7 +126,7 @@ async function tnFetch(storeId: string, path: string, accessToken: string) {
 async function fetchRecentOrders(storeId: string, accessToken: string): Promise<TNOrder[]> {
   const data = await tnFetch(
     storeId,
-    "/orders?status=any&payment_status=paid&per_page=50&fields=id,number,shipping_address,products",
+    "/orders?status=any&payment_status=paid&per_page=50&fields=id,number,shipping_address,products,shipping_status",
     accessToken
   )
   return Array.isArray(data) ? data : []
@@ -131,7 +139,14 @@ export async function fetchOrderRows(
   mode: ImportMode
 ): Promise<{ columns: string[]; rows: Record<string, string>[] }> {
   const { accessToken, storeId } = await getConnection(userId)
-  const orders = await fetchRecentOrders(storeId, accessToken)
+  const allOrders = await fetchRecentOrders(storeId, accessToken)
+
+  // Sort pending-shipment orders first (not filtered out) — mirrors ML's behavior.
+  const orders = [...allOrders].sort((a, b) => {
+    const aPending = !a.shipping_status || !TN_SHIPPED_STATUSES.has(a.shipping_status) ? 0 : 1
+    const bPending = !b.shipping_status || !TN_SHIPPED_STATUSES.has(b.shipping_status) ? 0 : 1
+    return aPending - bPending
+  })
 
   if (mode === "shipping") {
     const columns = ["destinatario", "direccion", "localidad", "provincia", "cp", "telefono", "nro_orden"]
