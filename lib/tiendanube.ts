@@ -93,6 +93,7 @@ interface TNOrder {
   } | null
   products: { name: string; sku: string | null; price: string; quantity: number }[]
   shipping_status?: string | null
+  shipping_option?: string | null
 }
 
 // Confirmed against a real order via the API (2026-07-12): pending orders
@@ -126,7 +127,7 @@ async function tnFetch(storeId: string, path: string, accessToken: string) {
 async function fetchRecentOrders(storeId: string, accessToken: string): Promise<TNOrder[]> {
   const data = await tnFetch(
     storeId,
-    "/orders?status=any&payment_status=paid&per_page=50&fields=id,number,shipping_address,products,shipping_status",
+    "/orders?status=any&payment_status=paid&per_page=50&fields=id,number,shipping_address,products,shipping_status,shipping_option",
     accessToken
   )
   return Array.isArray(data) ? data : []
@@ -145,7 +146,7 @@ export async function fetchOrderRows(
   const orders = [...allOrders].sort((a, b) => (isTnPending(a) ? 0 : 1) - (isTnPending(b) ? 0 : 1))
 
   if (mode === "shipping") {
-    const columns = ["destinatario", "direccion", "localidad", "provincia", "cp", "telefono", "nro_orden"]
+    const columns = ["destinatario", "direccion", "localidad", "provincia", "cp", "telefono", "metodo_envio", "nro_orden"]
     const rows = orders.map((order) => {
       const a = order.shipping_address ?? {}
       return {
@@ -155,6 +156,7 @@ export async function fetchOrderRows(
         provincia: a.province ?? "",
         cp: a.zipcode ?? "",
         telefono: a.phone ?? "",
+        metodo_envio: order.shipping_option ?? "",
         nro_orden: String(order.number ?? order.id),
       }
     })
