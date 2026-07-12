@@ -30,7 +30,7 @@ export default function IntegracionesPage() {
   const [tnAcctNotice, setTnAcctNotice] = useState("")
 
   // Mercado Libre
-  const [mlStatus, setMlStatus] = useState<{ configured: boolean; connected: boolean } | null>(null)
+  const [mlStatus, setMlStatus] = useState<{ configured: boolean; connected: boolean; storefrontDomain?: string } | null>(null)
   const [mlLoading, setMlLoading] = useState(false)
   const [mlError, setMlError] = useState("")
   const [mlNotice, setMlNotice] = useState("")
@@ -425,7 +425,7 @@ export default function IntegracionesPage() {
                 La etiqueta oficial de Mercado Envíos se imprime en <strong>10×15cm (sin troquel)</strong> o{" "}
                 <strong>10×19cm (con troquel)</strong>, según lo que tengas configurado en{" "}
                 <a
-                  href="https://www.mercadolibre.com.ar/preferencias-de-venta"
+                  href={`https://www.${mlStatus?.storefrontDomain || "mercadolibre.com.ar"}/preferencias-de-venta`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary underline underline-offset-2"

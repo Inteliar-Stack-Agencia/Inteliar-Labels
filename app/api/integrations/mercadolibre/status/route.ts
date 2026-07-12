@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
-import { isConnected, isMercadolibreConfigured } from "@/lib/mercadolibre"
+import { isConnected, isMercadolibreConfigured, getStorefrontDomain } from "@/lib/mercadolibre"
 
 // GET /api/integrations/mercadolibre/status
 export async function GET() {
@@ -15,11 +15,12 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 })
 
   const configured = isMercadolibreConfigured()
+  const storefrontDomain = getStorefrontDomain()
   try {
     const connected = configured ? await isConnected(user.id) : false
-    return NextResponse.json({ configured, connected })
+    return NextResponse.json({ configured, connected, storefrontDomain })
   } catch (e: any) {
     console.error("[ml-status] isConnected failed:", e.message)
-    return NextResponse.json({ configured, connected: false, error: e.message }, { status: 200 })
+    return NextResponse.json({ configured, connected: false, storefrontDomain, error: e.message }, { status: 200 })
   }
 }

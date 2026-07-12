@@ -11,12 +11,46 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://etiquetar.app"
 
 export const ML_REDIRECT_URI = `${APP_URL}/api/integrations/mercadolibre/callback`
 
+// Mercado Libre's OAuth authorization screen and storefront both live on a
+// per-country domain (auth.mercadolibre.<tld>, except Brazil which uses
+// "mercadolivre"). MERCADOLIBRE_SITE selects which one to use — defaults to
+// Argentina (MLA), where this app is registered today. Set it per deploy
+// when expanding to another country.
+const ML_SITE_DOMAINS: Record<string, string> = {
+  MLA: "mercadolibre.com.ar", // Argentina
+  MLB: "mercadolivre.com.br", // Brasil
+  MLM: "mercadolibre.com.mx", // México
+  MCO: "mercadolibre.com.co", // Colombia
+  MLC: "mercadolibre.cl", // Chile
+  MLU: "mercadolibre.com.uy", // Uruguay
+  MPE: "mercadolibre.com.pe", // Perú
+  MLV: "mercadolibre.com.ve", // Venezuela
+  MEC: "mercadolibre.com.ec", // Ecuador
+  MBO: "mercadolibre.com.bo", // Bolivia
+  MPY: "mercadolibre.com.py", // Paraguay
+  MCR: "mercadolibre.co.cr", // Costa Rica
+  MPA: "mercadolibre.com.pa", // Panamá
+  MDO: "mercadolibre.com.do", // República Dominicana
+  MGT: "mercadolibre.com.gt", // Guatemala
+  MHN: "mercadolibre.com.hn", // Honduras
+  MNI: "mercadolibre.com.ni", // Nicaragua
+  MSV: "mercadolibre.com.sv", // El Salvador
+}
+
+const ML_SITE = (process.env.MERCADOLIBRE_SITE || "MLA").toUpperCase()
+
+// The seller-facing domain for this site (e.g. to link to
+// "Preferencias de venta" or other account settings pages).
+export function getStorefrontDomain(): string {
+  return ML_SITE_DOMAINS[ML_SITE] ?? ML_SITE_DOMAINS.MLA
+}
+
 export function isMercadolibreConfigured(): boolean {
   return Boolean(CLIENT_ID && CLIENT_SECRET)
 }
 
 export function getAuthorizationUrl(state: string): string {
-  const url = new URL("https://auth.mercadolibre.com.ar/authorization")
+  const url = new URL(`https://auth.${getStorefrontDomain()}/authorization`)
   url.searchParams.set("response_type", "code")
   url.searchParams.set("client_id", CLIENT_ID!)
   url.searchParams.set("redirect_uri", ML_REDIRECT_URI)
