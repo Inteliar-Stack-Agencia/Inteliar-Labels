@@ -12,8 +12,8 @@ export const metadata: Metadata = {
   verification: {
     google: 'nemBe9x4IsZm82Op4LTeiMRz8HDCdYi6mu3FrrlBr_M',
   },
-  title: 'Inteliar Labels — Software para imprimir etiquetas térmicas desde Excel',
-  description: 'Imprimí etiquetas térmicas desde Excel o CSV en segundos. Compatible con Zebra, TSC, Honeywell, Godex y Brother. Diseñador visual con IA, códigos de barras y QR. Trial 15 días gratis, sin tarjeta.',
+  title: 'Inteliar Labels — Etiquetas térmicas desde Mercado Libre, Tiendanube o Excel',
+  description: 'Conectá Mercado Libre y Tiendanube o subí tu Excel/CSV, e imprimí etiquetas térmicas en segundos — incluida la etiqueta oficial de Mercado Envíos. Compatible con Zebra, TSC, Honeywell, Godex y Brother. Diseñador visual con IA. Trial 15 días gratis, sin tarjeta.',
   keywords: [
     'etiquetas termicas', 'impresora zebra', 'ZPL', 'TSPL',
     'etiquetas desde excel', 'bartender alternativa', 'software etiquetas',
@@ -26,13 +26,17 @@ export const metadata: Metadata = {
     'etiquetas producto', 'diseñador etiquetas online', 'etiquetas termicas argentina',
     'etiquetas termicas mexico', 'alternativa bartender gratis',
     'software etiquetas windows', 'imprimir etiquetas csv',
+    'etiquetas mercado libre', 'imprimir etiqueta mercado envios',
+    'etiqueta envio mercado libre', 'integracion mercado libre etiquetas',
+    'etiquetas tiendanube', 'imprimir etiquetas tiendanube',
+    'integracion tiendanube etiquetas', 'etiquetas pedidos tiendanube',
   ],
   authors: [{ name: 'Inteliar Stack', url: 'https://etiquetar.app' }],
   creator: 'Inteliar Stack',
   publisher: 'Inteliar Stack',
   openGraph: {
-    title: 'Inteliar Labels — Imprimí etiquetas térmicas desde Excel',
-    description: 'Subí tu planilla, elegí un template e imprimí al instante. Sin BarTender, sin vueltas. Trial gratis 15 días.',
+    title: 'Inteliar Labels — Etiquetas desde Mercado Libre, Tiendanube o Excel',
+    description: 'Conectá tu cuenta e imprimí al instante — incluida la etiqueta oficial de Mercado Envíos. Sin BarTender, sin vueltas. Trial gratis 15 días.',
     type: 'website',
     locale: 'es_AR',
     url: 'https://etiquetar.app',
@@ -40,7 +44,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Inteliar Labels — Etiquetas térmicas desde Excel en segundos',
+    title: 'Inteliar Labels — Etiquetas de Mercado Libre y Tiendanube en segundos',
     description: 'Sin BarTender. Sin curva de aprendizaje. Trial 15 días gratis.',
   },
   robots: {
@@ -73,7 +77,7 @@ export default function RootLayout({
     "applicationCategory": "BusinessApplication",
     "operatingSystem": "Windows",
     "url": "https://etiquetar.app",
-    "description": "Software SaaS para imprimir etiquetas térmicas desde Excel o CSV. Soporte para impresoras Zebra, TSC, Honeywell y Brother. Diseñador visual con IA.",
+    "description": "Software SaaS para imprimir etiquetas térmicas. Integraciones con Mercado Libre (incluida la etiqueta oficial de Mercado Envíos) y Tiendanube, o importación desde Excel/CSV. Soporte para impresoras Zebra, TSC, Honeywell y Brother. Diseñador visual con IA.",
     "offers": [
       {
         "@type": "Offer",
@@ -109,6 +113,8 @@ export default function RootLayout({
     "featureList": [
       "Diseñador visual de plantillas",
       "Asistente de IA para crear plantillas",
+      "Integración con Mercado Libre (etiqueta oficial de Mercado Envíos)",
+      "Integración con Tiendanube (pedidos y catálogo)",
       "Importación desde Excel y CSV",
       "Soporte Zebra ZPL, TSC TSPL, Honeywell, Brother",
       "Trial gratuito 15 días"
