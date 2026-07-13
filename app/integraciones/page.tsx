@@ -288,7 +288,7 @@ export default function IntegracionesPage() {
     <>
       <DashboardLayout>
         <Header title="Integraciones" description="Traé tus productos y pedidos directo desde Tiendanube o Mercado Libre" />
-        <div className="p-6 space-y-4 max-w-3xl">
+        <div className="p-6 space-y-4 max-w-5xl">
           {mlStatus?.connected && tnAcctStatus?.connected && (
             <div className="rounded-xl border border-primary/30 bg-primary/5 p-5 flex items-center justify-between gap-4">
               <div>
@@ -361,19 +361,18 @@ export default function IntegracionesPage() {
                 )}
               </div>
             )}
-            <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
-              <p className="text-xs font-medium text-foreground mb-1">⚠️ Qué no podemos automatizar todavía (limitación de Tiendanube, no nuestra)</p>
-              <p className="text-[11px] text-muted-foreground leading-relaxed">
+            <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
+              <p className="text-sm font-medium text-foreground mb-2">⚠️ Qué no podemos automatizar todavía (limitación de Tiendanube, no nuestra)</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
                 Ningún método de envío de Tiendanube (Envío Nube, Correo Argentino/MiCorreo, Andreani, Pickit)
                 expone por API la etiqueta oficial con el código de seguimiento del correo — lo confirmamos directo
                 con el soporte de Tiendanube. Por eso acá no hay botón de "imprimir etiqueta oficial" como sí tenemos
                 para Mercado Libre: hay que generarla e imprimirla manualmente desde el panel de Tiendanube
                 (o desde MiCorreo/Andreani, según el método que uses) antes de despachar.
               </p>
-              <p className="text-[11px] text-muted-foreground leading-relaxed mt-1.5">
-                Lo que sí traemos automatizado: datos de comprador para chequeo interno, productos vendidos para
-                picking, y tu catálogo completo con precio y SKU para etiquetas propias — nada de esto reemplaza
-                la etiqueta oficial, es un complemento.
+              <p className="text-sm text-muted-foreground leading-relaxed mt-2">
+                Lo que sí traemos automatizado: productos vendidos para picking, y tu catálogo completo con precio
+                y SKU para etiquetas propias — nada de esto reemplaza la etiqueta oficial, es un complemento.
               </p>
             </div>
           </div>
