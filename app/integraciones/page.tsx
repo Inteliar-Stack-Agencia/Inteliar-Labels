@@ -346,9 +346,6 @@ export default function IntegracionesPage() {
                     </Button>
                   </div>
                 </div>
-                <p className="text-[11px] text-muted-foreground">
-                  Todavía no encontramos una etiqueta oficial de envío única de Tiendanube (depende del correo que tengas conectado) — por eso no hay botón de "imprimir etiqueta oficial" acá, a diferencia de Mercado Libre.
-                </p>
               </div>
             ) : (
               <div className="flex items-center justify-between">
@@ -373,6 +370,21 @@ export default function IntegracionesPage() {
                 )}
               </div>
             )}
+            <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+              <p className="text-xs font-medium text-foreground mb-1">⚠️ Qué no podemos automatizar todavía (limitación de Tiendanube, no nuestra)</p>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Ningún método de envío de Tiendanube (Envío Nube, Correo Argentino/MiCorreo, Andreani, Pickit)
+                expone por API la etiqueta oficial con el código de seguimiento del correo — lo confirmamos directo
+                con el soporte de Tiendanube. Por eso acá no hay botón de "imprimir etiqueta oficial" como sí tenemos
+                para Mercado Libre: hay que generarla e imprimirla manualmente desde el panel de Tiendanube
+                (o desde MiCorreo/Andreani, según el método que uses) antes de despachar.
+              </p>
+              <p className="text-[11px] text-muted-foreground leading-relaxed mt-1.5">
+                Lo que sí traemos automatizado: datos de comprador para chequeo interno, productos vendidos para
+                picking, y tu catálogo completo con precio y SKU para etiquetas propias — nada de esto reemplaza
+                la etiqueta oficial, es un complemento.
+              </p>
+            </div>
           </div>
 
           {/* Mercado Libre */}
