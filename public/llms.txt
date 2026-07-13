@@ -1,26 +1,34 @@
 # Inteliar Labels
 
-> Software SaaS para imprimir etiquetas térmicas desde Excel o CSV, con diseñador visual e inteligencia artificial. Desarrollado por Inteliar Stack (Argentina).
+> Software SaaS para imprimir etiquetas térmicas desde Mercado Libre, Tiendanube, Excel o CSV, con diseñador visual e inteligencia artificial. Desarrollado por Inteliar Stack (Argentina).
 
 ## Qué es
 
-Inteliar Labels es una herramienta web + agente de escritorio que permite a empresas imprimir etiquetas térmicas (Zebra, TSC, Honeywell, Brother y otras) directamente desde planillas de Excel o archivos CSV, sin necesidad de software caro como BarTender.
+Inteliar Labels es una herramienta web + agente de escritorio que permite a empresas imprimir etiquetas térmicas (Zebra, TSC, Honeywell, Brother y otras) conectando directamente Mercado Libre o Tiendanube, o desde planillas de Excel/CSV, sin necesidad de software caro como BarTender.
+
+## Integraciones
+
+- **Mercado Libre** (OAuth): trae pedidos pagos e imprime la etiqueta oficial de Mercado Envíos —con el código de seguimiento real que escanea el correo— directo en la impresora térmica, sin descargar el PDF. También importa productos vendidos para etiquetas de picking.
+- **Tiendanube** (OAuth): trae pedidos pagos y el catálogo completo de productos (precio, SKU, variantes) para etiquetas de producto o de góndola. Nota: Tiendanube no tiene una etiqueta oficial de envío descargable por API (limitación de la plataforma, no de Inteliar Labels) — la etiqueta de envío (Envío Nube, Correo Argentino/MiCorreo, Andreani, Pickit) se sigue generando manualmente desde el panel correspondiente.
+- **Excel / CSV**: carga de planillas con mapeo automático de columnas a variables de la plantilla.
 
 ## Características principales
 
 - Diseñador visual de plantillas con soporte para variables dinámicas
 - Asistente de IA para crear plantillas por descripción
+- Conexión directa con Mercado Libre y Tiendanube (OAuth)
 - Importación masiva desde Excel y CSV
-- Soporte para impresoras térmicas: Zebra (ZPL), TSC (TSPL), Honeywell, Brother
+- Soporte para impresoras térmicas: Zebra (ZPL), TSC (TSPL), Honeywell, Brother, Citizen, Sato, Bixolon, Godex
 - Agente local para Windows que gestiona la impresión
 - Control de múltiples sucursales y dispositivos
 - Trial gratuito de 15 días sin tarjeta de crédito
 
 ## Planes
 
-- **Mensual** (US$10/mes): 1 sucursal, hasta 2.000 impresiones/mes
-- **Pro** (US$19/mes): hasta 3 sucursales, impresiones ilimitadas, soporte prioritario
-- **De por vida** (US$300 único): hasta 5 sucursales, todas las actualizaciones futuras
+- **Mensual** (US$12/mes): 1 sucursal
+- **Pro** (US$25/mes): hasta 3 sucursales, soporte prioritario
+- **Pro prepago** (1/3/5 años, con descuento — hasta US$800 por 5 años): mismas funciones que Pro, precio congelado por el plazo elegido
+- **Empresa**: a medida, sin límite de sucursales, soporte con SLA garantizado
 
 ## Casos de uso
 
@@ -46,7 +54,12 @@ imprimir etiquetas desde csv, etiquetas zebra argentina, etiquetas TSC, etiqueta
 etiquetas Godex, etiquetas Brother, etiquetas Bixolon, etiquetas codigo de barras,
 etiquetas QR, etiquetas precio supermercado, etiquetas logistica, etiquetas inventario,
 etiquetas envio, diseñador etiquetas online, alternativa bartender, software ZPL, software TSPL,
-etiquetas termicas argentina, etiquetas termicas mexico, impresora termica excel
+etiquetas termicas argentina, etiquetas termicas mexico, impresora termica excel,
+etiquetas mercado libre, imprimir etiqueta mercado envios, integracion mercado libre etiquetas,
+etiquetas tiendanube, imprimir etiquetas tiendanube, integracion tiendanube etiquetas,
+etiquetas shopify, etiquetas amazon, etiquetas correo argentino, etiqueta correo argentino,
+etiquetas pickit, etiquetas andreani, etiquetas via cargo, punto hop, etiquetas oca,
+etiquetas encomiendas, etiquetas paquetes, micorreo etiquetas, paq.ar etiquetas
 
 ## Tecnología
 

@@ -59,7 +59,30 @@ const faqs = [
     answer:
       "Sí. El diseñador visual incluye soporte nativo para códigos de barras (Code 128, EAN-13, EAN-8, Code 39) y códigos QR. Podés vincularlos a cualquier columna de tu planilla.",
   },
+  {
+    question: "¿Cómo funciona la integración con Mercado Libre?",
+    answer:
+      "Conectás tu cuenta de Mercado Libre con un clic (OAuth) y traés tus pedidos pagos automáticamente. Incluye la etiqueta oficial de Mercado Envíos —con el código de seguimiento real que escanea el correo— lista para mandar directo a tu impresora térmica, sin descargar el PDF.",
+  },
+  {
+    question: "¿Cómo funciona la integración con Tiendanube?",
+    answer:
+      "Conectás tu tienda de Tiendanube y traés tus pedidos pagos o tu catálogo completo de productos (con precio, SKU y variantes) para imprimir etiquetas de producto o de góndola en un clic, sin pasar por Excel.",
+  },
 ]
+
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": faqs.map((faq) => ({
+    "@type": "Question",
+    "name": faq.question,
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": faq.answer,
+    },
+  })),
+}
 
 export function FaqSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(null)
@@ -70,6 +93,10 @@ export function FaqSection() {
 
   return (
     <section id="faq" className="py-24 px-4 sm:px-6">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-12">
           <p className="text-sm font-medium text-primary mb-3 uppercase tracking-wide">FAQ</p>
