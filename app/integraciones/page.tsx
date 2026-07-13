@@ -317,7 +317,7 @@ export default function IntegracionesPage() {
                     Desconectar
                   </Button>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-3">
+                <div className="grid gap-2 sm:grid-cols-2">
                   <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3 min-w-0">
                     <p className="text-xs text-muted-foreground leading-snug">
                       Trae nombre, SKU, cantidad y precio de lo vendido en tus pedidos pagos — para etiquetar el producto en sí, no el envío.
@@ -325,15 +325,6 @@ export default function IntegracionesPage() {
                     <Button size="sm" className="gap-2 mt-auto w-full whitespace-normal h-auto py-2 bg-[#0433ff] hover:bg-[#0433ff]/90 text-white" onClick={() => importFromTiendanubeOrders("product")} disabled={tnAcctLoading}>
                       {tnAcctLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin flex-shrink-0" /> : <ArrowRight className="h-3.5 w-3.5 flex-shrink-0" />}
                       Importar productos vendidos
-                    </Button>
-                  </div>
-                  <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3 min-w-0">
-                    <p className="text-xs text-muted-foreground leading-snug">
-                      Muestra destinatario, dirección y teléfono en pantalla para chequear el paquete antes de despacharlo — no imprime nada.
-                    </p>
-                    <Button size="sm" variant="outline" className="gap-2 mt-auto w-full whitespace-normal h-auto py-2" onClick={() => viewBuyerData(["tn"])} disabled={tnAcctLoading}>
-                      {tnAcctLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin flex-shrink-0" /> : <ArrowRight className="h-3.5 w-3.5 flex-shrink-0" />}
-                      Ver datos de comprador (control interno)
                     </Button>
                   </div>
                   <div className="flex flex-col gap-1.5 rounded-lg border border-border p-3 min-w-0">
