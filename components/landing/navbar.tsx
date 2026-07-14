@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { Menu, X, Printer } from "lucide-react"
 import { analytics } from "@/lib/analytics"
 
@@ -53,6 +54,7 @@ export function Navbar() {
           </nav>
 
           <div className="hidden md:flex items-center gap-3">
+            <ThemeToggle />
             <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
               <a href="/auth/login">Iniciar sesión</a>
             </Button>
@@ -87,6 +89,10 @@ export function Navbar() {
                 Manual
               </a>
               <div className="flex flex-col gap-2 pt-4">
+                <div className="flex items-center justify-between pb-2">
+                  <span className="text-sm text-muted-foreground">Tema</span>
+                  <ThemeToggle />
+                </div>
                 <Button variant="outline" size="sm" className="w-full" asChild>
                   <a href="/auth/login">Iniciar sesión</a>
                 </Button>
