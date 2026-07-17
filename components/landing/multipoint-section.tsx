@@ -89,13 +89,18 @@ export function MultipointSection() {
             <Cloud className="w-6 h-6 text-primary" />
           </div>
           <div className="flex-1 text-center sm:text-left">
-            <p className="font-semibold text-foreground">¿Necesitás imprimir entre sucursales en redes distintas?</p>
+            <div className="flex items-center gap-2 justify-center sm:justify-start">
+              <p className="font-semibold text-foreground">¿Necesitás imprimir entre sucursales en redes distintas?</p>
+              <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-primary/15 text-primary">
+                Próximamente
+              </span>
+            </div>
             <p className="text-sm text-muted-foreground">
-              Para imprimir desde la oficina a un local o depósito en otra ciudad o red, el plan Empresa incluye Multipunto vía nube, sin límite de puntos de impresión.
+              Estamos por sumar Multipunto vía nube al plan Empresa: imprimí desde la oficina a un local o depósito en otra ciudad o red, sin límite de puntos de impresión. ¿Te interesa? Escribinos y te avisamos apenas esté disponible.
             </p>
           </div>
           <a href="#pricing" className="shrink-0 text-sm font-semibold text-primary hover:underline whitespace-nowrap">
-            Ver plan Empresa →
+            Ver planes →
           </a>
         </div>
       </div>
