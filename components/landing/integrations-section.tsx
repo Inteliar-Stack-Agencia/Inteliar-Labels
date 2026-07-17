@@ -11,7 +11,7 @@ const integrations = [
     status: "available" as const,
     bg: "#fff6cc",
     accent: "#2d3277",
-    logo: <img src="/logos/mercadolibre-icon.svg" alt="Mercado Libre" className="w-9 h-9 object-contain" />,
+    logo: <img src="/logos/mercadolibre-icon.svg" alt="Mercado Libre" width={36} height={36} className="w-9 h-9 object-contain" />,
     benefits: [
       { icon: Printer, text: "Etiqueta oficial con tracking, sin descargar PDF" },
       { icon: ScanLine, text: "Importá productos vendidos con SKU y precio" },
@@ -24,7 +24,7 @@ const integrations = [
     status: "available" as const,
     bg: "#e6ecff",
     accent: "#0433ff",
-    logo: <img src="/logos/tiendanube-icon.svg" alt="Tiendanube" className="w-9 h-9 object-contain" />,
+    logo: <img src="/logos/tiendanube-icon.svg" alt="Tiendanube" width={36} height={36} className="w-9 h-9 object-contain" />,
     benefits: [
       { icon: ScanLine, text: "Catálogo completo con precio, SKU y variantes" },
       { icon: Printer, text: "Etiquetas de producto de tus pedidos pagos" },

@@ -132,7 +132,7 @@ function IntegrationsSlide() {
             {it.isExcel ? (
               <FileSpreadsheet className="w-4 h-4 text-green-700 flex-shrink-0" />
             ) : it.logo ? (
-              <img src={it.logo} alt="" className="w-4 h-4 object-contain flex-shrink-0" />
+              <img src={it.logo} alt="" width={16} height={16} className="w-4 h-4 object-contain flex-shrink-0" />
             ) : (
               <span className="w-4 h-4 rounded-full bg-muted-foreground/30 flex-shrink-0" />
             )}

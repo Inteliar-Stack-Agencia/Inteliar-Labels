@@ -285,7 +285,9 @@ export function HowItWorksSection() {
             <img
               src="/dashboard-demo.gif"
               alt="Flujo real de Inteliar Labels: cargar Excel, elegir plantilla y enviar a imprimir"
-              className="w-full block"
+              width={1280}
+              height={640}
+              className="w-full h-auto block"
               loading="lazy"
               decoding="async"
             />
