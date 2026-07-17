@@ -73,12 +73,14 @@ etiquetas encomiendas, etiquetas paquetes, micorreo etiquetas, paq.ar etiquetas
 
 Inteliar Labels es un producto de **Inteliar Stack**, empresa de desarrollo de software con sede en Argentina.
 
-- Sitio web: https://etiquetar.app
-- Contacto: inteliarstack.ia@gmail.com
+- Sitio web: [etiquetar.app](https://etiquetar.app)
+- Contacto: [inteliarstack.ia@gmail.com](mailto:inteliarstack.ia@gmail.com)
 - WhatsApp: +54 9 11 6568 9145
 
 ## Documentación
 
-- Manual de uso: https://etiquetar.app/manual
-- Descarga del agente: https://etiquetar.app/#download
-- Precios: https://etiquetar.app/#pricing
+- [Manual de uso](https://etiquetar.app/manual)
+- [Descarga del agente](https://etiquetar.app/#download)
+- [Precios](https://etiquetar.app/#pricing)
+- [Preguntas frecuentes](https://etiquetar.app/#faq)
+- [Integraciones](https://etiquetar.app/#multipunto)

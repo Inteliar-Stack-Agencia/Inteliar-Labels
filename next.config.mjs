@@ -5,7 +5,10 @@
 // analytics silently.
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://va.vercel-scripts.com",
+  // Google Ads conversion tracking / remarketing tags load from
+  // googleadservices.com and googletagmanager loads a doubleclick script
+  // for view-through conversions — both required for Ads campaigns to track.
+  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://va.vercel-scripts.com https://www.googleadservices.com https://googleads.g.doubleclick.net",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https:",
   "font-src 'self' data:",
@@ -13,7 +16,10 @@ const csp = [
   // Inteliar Printer Agent (default port 9638, user-configurable) running
   // on the customer's own machine — without this, the browser silently
   // blocks the fetch and the agent looks "offline" even when it's running.
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://vitals.vercel-insights.com https://api.mercadopago.com https://open.er-api.com http://localhost:* http://127.0.0.1:*",
+  // ad.doubleclick.net / www.google.com (ccm/collect, rmkt/collect) and
+  // googleads.g.doubleclick.net are the Google Ads conversion + remarketing
+  // beacons fired by gtag.js when a Google Ads account is linked to GA4.
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://vitals.vercel-insights.com https://api.mercadopago.com https://open.er-api.com https://ad.doubleclick.net https://www.google.com https://googleads.g.doubleclick.net http://localhost:* http://127.0.0.1:*",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "object-src 'none'",

@@ -129,6 +129,7 @@ export function SavingsCalculatorSection() {
           <select
             value={currency}
             onChange={(e) => handleCurrencyChange(e.target.value as CurrencyCode)}
+            aria-label="Seleccionar moneda"
             className="text-sm rounded-lg border border-input bg-background px-3 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           >
             {CURRENCIES.map((c) => (
