@@ -69,6 +69,11 @@ const faqs = [
     answer:
       "Conectás tu tienda de Tiendanube y traés tus pedidos pagos o tu catálogo completo de productos (con precio, SKU y variantes) para imprimir etiquetas de producto o de góndola en un clic, sin pasar por Excel.",
   },
+  {
+    question: "¿Puedo imprimir en una sucursal distinta desde donde estoy trabajando?",
+    answer:
+      "Sí, se llama impresión Multipunto. Con el plan Pro podés conectar hasta 3 impresoras (en distintas sucursales, depósitos o puntos) a la misma cuenta, y elegir a cuál mandar cada trabajo desde un selector, sin importar desde qué computadora estés. Si la impresora es de red (tiene IP propia) el trabajo llega directo. Si es por USB, necesita una PC con el agente instalado y prendida en ese punto.",
+  },
 ]
 
 const faqJsonLd = {

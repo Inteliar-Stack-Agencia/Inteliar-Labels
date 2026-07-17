@@ -5,6 +5,7 @@ import { PrintersSection } from "@/components/landing/printers-section"
 import { PartnersSection } from "@/components/landing/partners-section"
 import { IntegrationsSection } from "@/components/landing/integrations-section"
 import { HowItWorksSection } from "@/components/landing/how-it-works-section"
+import { MultipointSection } from "@/components/landing/multipoint-section"
 import { AiTemplateSection } from "@/components/landing/ai-template-section"
 import { BeforeAfterSection } from "@/components/landing/before-after-section"
 import { FeaturesSection } from "@/components/landing/features-section"
@@ -33,6 +34,7 @@ export default function LandingPage() {
         <PartnersSection />
         <IntegrationsSection />
         <HowItWorksSection />
+        <MultipointSection />
         <BeforeAfterSection />
         <FeaturesSection />
         <SavingsCalculatorSection />

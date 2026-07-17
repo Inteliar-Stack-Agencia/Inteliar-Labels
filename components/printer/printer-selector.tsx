@@ -22,6 +22,13 @@ function connIcon(conn: PrinterConfig["connection"]) {
   return <FlaskConical className="h-4 w-4" />
 }
 
+function connLabel(conn: PrinterConfig["connection"]) {
+  if (conn === "tcp") return "Red"
+  if (conn === "usb") return "USB"
+  if (conn === "serial") return "Serie"
+  return "Simulación"
+}
+
 function summary(p: PrinterConfig) {
   if (p.connection === "tcp") return `${p.host ?? ""}:${p.port ?? 9100}`
   if (p.connection === "usb") return p.usbQueue ?? "USB"
@@ -109,7 +116,15 @@ export function PrinterSelector({ value, onChange, online, className, disabled }
               >
                 <span className="text-muted-foreground shrink-0">{connIcon(p.connection)}</span>
                 <span className="flex-1 min-w-0">
-                  <span className="block font-medium truncate">{p.name}</span>
+                  <span className="flex items-center gap-2">
+                    <span className="font-medium truncate">{p.name}</span>
+                    <span className={cn(
+                      "shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full",
+                      p.connection === "tcp" ? "bg-green-500/10 text-green-700 dark:text-green-400" : "bg-blue-500/10 text-blue-700 dark:text-blue-400"
+                    )}>
+                      {connLabel(p.connection)}
+                    </span>
+                  </span>
                   <span className="block text-xs text-muted-foreground font-mono truncate">
                     {summary(p)}
                   </span>
