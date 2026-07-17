@@ -391,7 +391,7 @@ export default function IntegracionesPage() {
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <img src="/logos/mercadolibre-icon.png" alt="" className="h-4 w-4 object-contain" />
+                    <img src="/logos/mercadolibre-icon.svg" alt="" className="h-4 w-4 object-contain" />
                     Mercado Libre · Conectado
                   </p>
                   <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={disconnectMercadolibre} disabled={mlLoading}>
@@ -432,7 +432,7 @@ export default function IntegracionesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <img src="/logos/mercadolibre-icon.png" alt="" className="h-4 w-4 object-contain" />
+                    <img src="/logos/mercadolibre-icon.svg" alt="" className="h-4 w-4 object-contain" />
                     Importar desde Mercado Libre
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">Etiquetas oficiales de envío y etiquetas de producto de tus órdenes pagas</p>
@@ -440,7 +440,7 @@ export default function IntegracionesPage() {
                 {mlStatus?.configured ? (
                   <Button variant="outline" size="sm" className="gap-2 flex-shrink-0" asChild>
                     <a href="/api/integrations/mercadolibre/authorize">
-                      <img src="/logos/mercadolibre-icon.png" alt="" className="h-4 w-4 object-contain" />
+                      <img src="/logos/mercadolibre-icon.svg" alt="" className="h-4 w-4 object-contain" />
                       Conectar cuenta
                     </a>
                   </Button>
@@ -516,7 +516,7 @@ export default function IntegracionesPage() {
                           <td className="px-3 py-2.5">
                             <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                               <img
-                                src={source === "ml" ? "/logos/mercadolibre-icon.png" : "/logos/tiendanube-icon.svg"}
+                                src={source === "ml" ? "/logos/mercadolibre-icon.svg" : "/logos/tiendanube-icon.svg"}
                                 alt=""
                                 className="h-3.5 w-3.5 object-contain"
                               />
