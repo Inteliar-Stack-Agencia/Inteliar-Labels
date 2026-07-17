@@ -110,7 +110,7 @@ function AnimatedDemo() {
 }
 
 const SLIDE_INTEGRATIONS = [
-  { name: "Mercado Libre", logo: "/logos/mercadolibre-icon.png", available: true },
+  { name: "Mercado Libre", logo: "/logos/mercadolibre-icon.svg", available: true },
   { name: "Tiendanube", logo: "/logos/tiendanube-icon.svg", available: true },
   { name: "Excel / CSV", available: true, isExcel: true },
   { name: "Shopify", available: false },

@@ -11,7 +11,7 @@ const integrations = [
     status: "available" as const,
     bg: "#fff6cc",
     accent: "#2d3277",
-    logo: <img src="/logos/mercadolibre-icon.png" alt="Mercado Libre" className="w-9 h-9 object-contain" />,
+    logo: <img src="/logos/mercadolibre-icon.svg" alt="Mercado Libre" className="w-9 h-9 object-contain" />,
     benefits: [
       { icon: Printer, text: "Etiqueta oficial con tracking, sin descargar PDF" },
       { icon: ScanLine, text: "Importá productos vendidos con SKU y precio" },
