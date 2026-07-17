@@ -28,23 +28,23 @@ export default function LandingPage() {
       <main>
         <HeroSection />
         <TrustBar />
+        <IntegrationsSection />
+        <HowItWorksSection />
         <AiTemplateSection />
+        <MultipointSection />
+        <FeaturesSection />
+        <BeforeAfterSection />
+        <SavingsCalculatorSection />
+        <UseCasesSection />
+        <ComparisonSection />
+        <ComplianceSection />
+        <TestimonialsSection />
         <StatsSection />
         <PrintersSection />
         <PartnersSection />
-        <IntegrationsSection />
-        <HowItWorksSection />
-        <MultipointSection />
-        <BeforeAfterSection />
-        <FeaturesSection />
-        <SavingsCalculatorSection />
-        <ComplianceSection />
-        <TestimonialsSection />
-        <UseCasesSection />
-        <ComparisonSection />
+        <PricingSection />
         <FaqSection />
         <DownloadSection />
-        <PricingSection />
         <FinalCtaSection />
       </main>
       <Footer />
