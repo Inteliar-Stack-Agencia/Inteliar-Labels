@@ -29,6 +29,7 @@ import { fileURLToPath } from 'url'
 import os from 'os'
 import { randomUUID } from 'crypto'
 import { createInterface } from 'readline'
+import { startRelay, stopRelay, relayConfigured } from './relay.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // CONFIG_PATH can be overridden by env (Electron passes the userData dir)
@@ -51,6 +52,19 @@ function getLicenseServer() {
   return 'https://etiquetar.app'
 }
 const LICENSE_SERVER = getLicenseServer()
+
+// Cloud relay config: env vars or agent-config.json next to the .exe.
+function getRelayConfig() {
+  let cfg = {}
+  try {
+    const cfgPath = path.join(__dirname, '..', 'agent-config.json')
+    if (fs.existsSync(cfgPath)) cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'))
+  } catch {}
+  return {
+    supabaseUrl: process.env.SUPABASE_URL || cfg.supabaseUrl || '',
+    supabaseAnonKey: process.env.SUPABASE_ANON_KEY || cfg.supabaseAnonKey || '',
+  }
+}
 
 function getDeviceId() {
   try {
@@ -745,6 +759,52 @@ async function start() {
       console.log(`  • [${p.id}] ${p.name} — ${p.connection}${detail}${p.id === config.defaultPrinterId ? ' ✓ default' : ''}`)
     })
   })
+
+  await maybeStartRelay()
 }
+
+// ── Cloud relay bootstrap ──────────────────────────────────────────────────────
+
+async function maybeStartRelay() {
+  const relayCfg = getRelayConfig()
+  if (!relayConfigured(relayCfg)) return // relay not configured → local-only mode
+
+  const stored = loadLicense()
+  const licenseKey = stored.key
+  if (!licenseKey) return
+
+  // Only pro / lifetime plans get cross-network cloud printing
+  const plan = stored.plan
+  if (plan !== 'pro' && plan !== 'lifetime') {
+    console.log('[Relay] Plan actual sin impresión remota vía nube (requiere Pro/Empresa).')
+    return
+  }
+
+  try {
+    await startRelay({
+      supabaseUrl: relayCfg.supabaseUrl,
+      supabaseAnonKey: relayCfg.supabaseAnonKey,
+      licenseKey,
+      deviceId: getDeviceId(),
+      getPrinters: () => config.printers,
+      print: async (printerId, payload) => {
+        const printer = config.printers.find(p => p.id === printerId)
+        if (!printer) throw new Error(`Impresora '${printerId}' no configurada`)
+        return doPrint(payload.data, printer)
+      },
+    })
+  } catch (e) {
+    console.warn('[Relay] No se pudo iniciar impresión remota:', e.message)
+  }
+}
+
+// Mark printers offline on graceful shutdown
+async function shutdown() {
+  const stored = loadLicense()
+  await stopRelay(stored.key).catch(() => {})
+  process.exit(0)
+}
+process.on('SIGINT', shutdown)
+process.on('SIGTERM', shutdown)
 
 start()

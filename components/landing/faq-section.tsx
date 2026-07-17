@@ -72,7 +72,7 @@ const faqs = [
   {
     question: "¿Puedo imprimir en una sucursal distinta desde donde estoy trabajando?",
     answer:
-      "Sí, se llama impresión Multipunto. Con el plan Pro podés conectar hasta 3 impresoras (en distintas sucursales, depósitos o puntos) a la misma cuenta, y elegir a cuál mandar cada trabajo desde un selector, sin importar desde qué computadora estés. Si la impresora es de red (tiene IP propia) el trabajo llega directo. Si es por USB, necesita una PC con el agente instalado y prendida en ese punto.",
+      "Sí, se llama impresión Multipunto. Con el plan Pro conectás hasta 3 impresoras dentro de la misma red (WiFi/LAN) y elegís a cuál mandar cada trabajo desde un selector. Si necesitás imprimir entre sucursales que están en redes distintas (por ejemplo, desde la oficina a un local en otra ciudad), el plan Empresa incluye Multipunto vía nube, que enruta el trabajo a la impresora remota sin importar la red.",
   },
 ]
 

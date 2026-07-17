@@ -217,3 +217,56 @@ export async function getPrinterAgentLog(agentUrl?: string): Promise<AgentLogEnt
   if (!res.ok) throw new Error('No se pudo obtener el log del agente')
   return res.json() as Promise<AgentLogEntry[]>
 }
+
+// ── Cloud relay (remote printing across networks) ──────────────────────────────
+
+export interface RemotePrinter {
+  id: string
+  name: string
+  connection: PrinterConfig['connection']
+  online: boolean
+  lastSeen: string
+}
+
+/** List printers registered by the account's agents, with live online status. */
+export async function listRemotePrinters(): Promise<RemotePrinter[]> {
+  const res = await fetch('/api/print/relay', { signal: AbortSignal.timeout(8000) })
+  if (!res.ok) return []
+  const json = (await res.json()) as { printers?: RemotePrinter[] }
+  return json.printers ?? []
+}
+
+/**
+ * Send a print job to a remote printer via the cloud relay, then poll until the
+ * agent reports done/error (or we time out waiting).
+ */
+export async function sendViaCloudRelay(
+  printerId: string,
+  data: string,
+  type: 'zpl' | 'tspl' = 'zpl',
+  opts: { timeoutMs?: number; pollMs?: number } = {},
+): Promise<PrintResult> {
+  const timeoutMs = opts.timeoutMs ?? 30000
+  const pollMs = opts.pollMs ?? 1500
+
+  const res = await fetch('/api/print/relay', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ printerId, type, data }),
+  })
+  const enqueue = (await res.json()) as { jobId?: string; error?: string }
+  if (!res.ok || !enqueue.jobId) {
+    throw new Error(enqueue.error ?? 'No se pudo encolar el trabajo remoto')
+  }
+
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, pollMs))
+    const s = await fetch(`/api/print/relay/${enqueue.jobId}`, { signal: AbortSignal.timeout(8000) })
+    if (!s.ok) continue
+    const job = (await s.json()) as { status: string; error?: string }
+    if (job.status === 'done') return { success: true, message: 'Impreso en impresora remota' }
+    if (job.status === 'error') throw new Error(job.error ?? 'Error en la impresora remota')
+  }
+  throw new Error('La impresora remota no respondió a tiempo. ¿Está encendida y conectada?')
+}
