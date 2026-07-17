@@ -277,14 +277,19 @@ export function HowItWorksSection() {
         </div>
 
         <div className="rounded-2xl border border-border bg-card shadow-lg overflow-hidden mb-10">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/dashboard-demo.gif"
-            alt="Flujo real de Inteliar Labels: cargar Excel, elegir plantilla y enviar a imprimir"
-            className="w-full block"
-            loading="lazy"
-            decoding="async"
-          />
+          {/* Smaller GIF for mobile (~2x its display width) to cut transfer size;
+              full-res version on wider screens to avoid upscale blur. */}
+          <picture>
+            <source media="(max-width: 640px)" srcSet="/dashboard-demo-mobile.gif" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/dashboard-demo.gif"
+              alt="Flujo real de Inteliar Labels: cargar Excel, elegir plantilla y enviar a imprimir"
+              className="w-full block"
+              loading="lazy"
+              decoding="async"
+            />
+          </picture>
         </div>
 
         <div className="grid lg:grid-cols-5 gap-8 items-start">
