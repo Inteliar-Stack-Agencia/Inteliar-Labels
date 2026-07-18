@@ -76,11 +76,20 @@ export const metadata: Metadata = {
     locale: 'es_AR',
     url: 'https://etiquetar.app',
     siteName: 'Inteliar Labels',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Inteliar Labels — Conectá Mercado Libre y Tiendanube, imprimí tus etiquetas en segundos',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Inteliar Labels — Etiquetas de Mercado Libre y Tiendanube en segundos',
     description: 'Sin BarTender. Sin curva de aprendizaje. Trial 15 días gratis.',
+    images: ['/og-image.png'],
   },
   robots: {
     index: true,
