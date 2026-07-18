@@ -30,18 +30,35 @@ Alternativa moderna a BarTender para empresas de alimentos, logística, depósit
 ## Setup rápido
 
 ```bash
-# 1. Instalar dependencias del frontend Next.js
+# 1. Configurar variables de entorno
+cp .env.example .env.local     # completar con las claves reales (Supabase, MP, etc.)
+
+# 2. Instalar dependencias del frontend Next.js
 pnpm install
 pnpm dev
 # → http://localhost:3000
 
-# 2. En otra terminal: iniciar el printer-agent local
+# 3. En otra terminal: iniciar el printer-agent local
 cd printer-agent
 npm install
 cp .env.example .env       # configurar PRINTER_IP, SIMULATE, etc.
 npm start
 # → http://localhost:9638
 ```
+
+Ver `.env.example` en la raíz para la lista completa de variables (Supabase,
+Mercado Libre, Tiendanube, MercadoPago, Resend, Anthropic, cron). Sin las de
+Supabase el build falla; el resto son necesarias solo para probar esa
+integración puntual.
+
+## Deploy
+
+- `main` deploya automáticamente a producción (etiquetar.app) vía Vercel.
+- Antes de mergear un cambio grande o riesgoso (pagos, licencias, auth), abrí
+  un PR — Vercel genera un preview deploy con esa URL para probar sin tocar
+  producción. Con pocos usuarios el merge directo a `main` es aceptable para
+  cambios chicos; para cambios en `/api/webhooks/*`, `/api/license/*` o
+  `/api/checkout/*`, usá el preview primero.
 
 ## Printer Agent
 
@@ -121,3 +138,6 @@ const result = await sendToPrinterAgent(zplString, 'zpl')
 - [PRD.md](./PRD.md) — Product Requirements Document
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — Arquitectura técnica
 - [MVP_TASKS.md](./MVP_TASKS.md) — Backlog de sprints
+- [docs/RELAY.md](./docs/RELAY.md) — Relay de impresión en la nube (Multipunto entre redes distintas) — construido, no activado
+- [docs/PRICING.md](./docs/PRICING.md) — Estructura de planes
+- [docs/MERCADOLIBRE.md](./docs/MERCADOLIBRE.md) — Integración Mercado Libre

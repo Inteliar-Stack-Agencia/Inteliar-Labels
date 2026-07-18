@@ -14,7 +14,7 @@ const MP_WEBHOOK_SECRET = process.env.MERCADOPAGO_WEBHOOK_SECRET
 // We need the raw query params + headers for signature verification
 export const runtime = "nodejs"
 
-function inferPlan(text: string): "monthly" | "pro" | "lifetime" {
+export function inferPlan(text: string): "monthly" | "pro" | "lifetime" {
   if (/vida|lifetime|por.?vida/i.test(text)) return "lifetime"
   if (/pro/i.test(text)) return "pro"
   return "monthly"
@@ -23,7 +23,7 @@ function inferPlan(text: string): "monthly" | "pro" | "lifetime" {
 // Prepaid multi-year Pro purchases (1/3/5 años) encode their term in
 // external_reference as "pro:<months>" (see app/api/checkout/create).
 // Falls back to inferPlan()'s text-matching for older-style preferences.
-function inferPlanAndTerm(externalRef: string, descriptor: string): { plan: "monthly" | "pro" | "lifetime"; months: number } {
+export function inferPlanAndTerm(externalRef: string, descriptor: string): { plan: "monthly" | "pro" | "lifetime"; months: number } {
   const match = /^pro:(\d+)$/.exec((externalRef || "").trim())
   if (match) return { plan: "pro", months: Number(match[1]) }
   return { plan: inferPlan(descriptor), months: 1 }
@@ -35,9 +35,12 @@ function inferPlanAndTerm(externalRef: string, descriptor: string): { plan: "mon
 //   manifest = `id:<data.id>;request-id:<x-request-id>;ts:<ts>;`
 //   hmac = HMAC-SHA256(manifest, secret)
 // https://www.mercadopago.com.ar/developers/es/docs/your-integrations/notifications/webhooks
-function verifyMercadopagoSignature(req: NextRequest, dataId: string, secret: string): boolean {
-  const xSignature = req.headers.get("x-signature") || ""
-  const xRequestId = req.headers.get("x-request-id") || ""
+export function verifyMercadopagoSignature(
+  xSignature: string,
+  xRequestId: string,
+  dataId: string,
+  secret: string
+): boolean {
   if (!xSignature || !xRequestId || !dataId) return false
 
   const parts = Object.fromEntries(
@@ -76,7 +79,9 @@ export async function POST(req: NextRequest) {
 
   // data.id used in the notification body doubles as the value signed in x-signature
   const signedDataId: string = body.data?.id ?? req.nextUrl.searchParams.get("data.id") ?? ""
-  if (!verifyMercadopagoSignature(req, signedDataId, MP_WEBHOOK_SECRET)) {
+  const xSignature = req.headers.get("x-signature") || ""
+  const xRequestId = req.headers.get("x-request-id") || ""
+  if (!verifyMercadopagoSignature(xSignature, xRequestId, signedDataId, MP_WEBHOOK_SECRET)) {
     console.error("[mp-webhook] firma inválida")
     return NextResponse.json({ error: "invalid signature" }, { status: 401 })
   }
