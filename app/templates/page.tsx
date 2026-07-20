@@ -120,10 +120,16 @@ export default function TemplatesPage() {
 
   async function handleExportExcel(template: Template) {
     const XLSX = await import("xlsx")
-    const columns = template.variables && template.variables.length > 0 ? template.variables : ["dato"]
-    const worksheet = XLSX.utils.json_to_sheet([
-      Object.fromEntries(columns.map((c) => [c, ""])),
+    const variableColumns = template.variables && template.variables.length > 0 ? template.variables : ["dato"]
+    // "cantidad" is auto-detected by /upload as the copies-per-row column
+    // (see useSavedList's cantCol lookup) — include it so users know it's
+    // supported without having to discover it themselves.
+    const columns = [...variableColumns, "cantidad"]
+    const exampleRow = Object.fromEntries([
+      ...variableColumns.map((c) => [c, `ejemplo ${c}`]),
+      ["cantidad", 1],
     ])
+    const worksheet = XLSX.utils.json_to_sheet([exampleRow])
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, "Datos")
     const safeName = template.name.replace(/[^\w\-\. ]+/g, "").trim() || "plantilla"
