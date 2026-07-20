@@ -118,6 +118,18 @@ export default function TemplatesPage() {
     }
   }
 
+  async function handleExportExcel(template: Template) {
+    const XLSX = await import("xlsx")
+    const columns = template.variables && template.variables.length > 0 ? template.variables : ["dato"]
+    const worksheet = XLSX.utils.json_to_sheet([
+      Object.fromEntries(columns.map((c) => [c, ""])),
+    ])
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Datos")
+    const safeName = template.name.replace(/[^\w\-\. ]+/g, "").trim() || "plantilla"
+    XLSX.writeFile(workbook, `${safeName}.xlsx`)
+  }
+
   async function handleExportAll() {
     const supabase = createClient()
     try {
@@ -338,6 +350,10 @@ export default function TemplatesPage() {
                           <Copy className="mr-2 h-4 w-4" />
                           Duplicar
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleExportExcel(template)}>
+                          <Download className="mr-2 h-4 w-4" />
+                          Exportar planilla
+                        </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
                           onClick={() => handleDelete(template.id)}
@@ -407,6 +423,10 @@ export default function TemplatesPage() {
                             <DropdownMenuItem onClick={() => handleDuplicate(template)}>
                               <Copy className="mr-2 h-4 w-4" />
                               Duplicar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleExportExcel(template)}>
+                              <Download className="mr-2 h-4 w-4" />
+                              Exportar planilla
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
