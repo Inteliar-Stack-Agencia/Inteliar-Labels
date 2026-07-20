@@ -13,6 +13,11 @@ next.user-config.*
 # Common ignores
 node_modules/
 .next/
+
+# Project uses pnpm (pnpm-lock.yaml is the source of truth) — an npm-generated
+# package-lock.json silently drifts out of sync and breaks Vercel's
+# `pnpm install --frozen-lockfile` step. Always use pnpm here.
+package-lock.json
 .DS_Store
 
 # Printer agent runtime config & build artifacts
