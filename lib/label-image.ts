@@ -106,9 +106,12 @@ export async function renderLabelToPng(
       // Arial is noticeably wider, which can wrap a line that fit in the
       // preview/ZPL output into two lines and shift it into elements below.
       ctx.font = `${el.bold ? "bold " : ""}${fd}px "Arial Narrow", Arial, sans-serif`
-      if ("letterSpacing" in ctx) {
-        ;(ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${-Math.round(fd * 0.04)}px`
-      }
+      // NOTE: previously applied a small negative ctx.letterSpacing here to
+      // match the ZPL condensed-font width more closely. Removed — some
+      // canvas engines apply letter-spacing symmetrically around each glyph,
+      // which shifted (and on left-aligned text, clipped) the first
+      // character. Arial Narrow alone gets close enough to the ZPL width
+      // without that risk.
       ctx.fillStyle = "#000000"
       // Extra safety inset on the right: thermal heads often don't print the
       // last 1-2mm at the edge, which clipped the final letter of long lines.
