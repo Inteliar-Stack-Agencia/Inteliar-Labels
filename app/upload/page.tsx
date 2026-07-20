@@ -88,6 +88,27 @@ export default function UploadPage() {
         const workbook = XLSX.read(buffer, { type: "array" })
         const sheetName = workbook.SheetNames[0]
         const sheet = workbook.Sheets[sheetName]
+        // Some Excel builds (seen with an unlicensed/non-activated copy) save
+        // a stale "!ref" dimension — e.g. "A1:B1" — that doesn't cover all the
+        // actual cells in the sheet. SheetJS trusts that declared range and
+        // silently drops everything outside it, so a 13-row file can come
+        // back as "1 row detected" even though the real cell data is present.
+        // Recompute the true range from the actual cell addresses before
+        // parsing, instead of trusting the file's own (possibly wrong) range.
+        const cellAddresses = Object.keys(sheet).filter((k) => k[0] !== "!")
+        if (cellAddresses.length > 0) {
+          const range = cellAddresses.reduce(
+            (acc, addr) => {
+              const { r, c } = XLSX.utils.decode_cell(addr)
+              return {
+                s: { r: Math.min(acc.s.r, r), c: Math.min(acc.s.c, c) },
+                e: { r: Math.max(acc.e.r, r), c: Math.max(acc.e.c, c) },
+              }
+            },
+            { s: { r: Infinity, c: Infinity }, e: { r: -Infinity, c: -Infinity } }
+          )
+          sheet["!ref"] = XLSX.utils.encode_range(range)
+        }
         const jsonData = XLSX.utils.sheet_to_json<Record<string, string>>(sheet, { defval: "" })
 
         if (jsonData.length === 0) {
