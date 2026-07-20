@@ -30,7 +30,18 @@
 --   5. Rename the relay's connections table so this exact collision can't
 --      recur, and give it RLS too.
 
--- 1) Move the relay-schema table out of the app's namespace.
+-- 1) Take print_jobs (still the relay-schema table at this point) out of
+--    the realtime publication BEFORE renaming it — dropping it from the
+--    publication by its post-rename name would fail with "relation does
+--    not exist" instead of the expected "not in publication" error.
+do $$
+begin
+  alter publication supabase_realtime drop table public.print_jobs;
+exception
+  when others then null; -- not in the publication, or table already renamed — fine either way
+end $$;
+
+-- 2) Move the relay-schema table out of the app's namespace.
 alter table if exists public.print_jobs rename to relay_print_jobs;
 
 alter table if exists public.relay_print_jobs
@@ -58,19 +69,12 @@ alter table public.relay_print_jobs enable row level security;
 
 do $$
 begin
-  alter publication supabase_realtime drop table print_jobs;
-exception
-  when undefined_object then null;
-end $$;
-
-do $$
-begin
-  alter publication supabase_realtime add table relay_print_jobs;
+  alter publication supabase_realtime add table public.relay_print_jobs;
 exception
   when duplicate_object then null;
 end $$;
 
--- 2) Create the app's real print_jobs table with the schema every page
+-- 3) Create the app's real print_jobs table with the schema every page
 --    already assumes.
 create table public.print_jobs (
   id             uuid primary key default gen_random_uuid(),
@@ -94,8 +98,8 @@ alter table public.print_jobs enable row level security;
 create policy "Users manage their own print jobs" on public.print_jobs
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
--- 3) Re-point print_job_rows.job_id at the new print_jobs (it currently
---    references relay_print_jobs after the rename in step 1).
+-- 4) Re-point print_job_rows.job_id at the new print_jobs (it currently
+--    references relay_print_jobs after the rename in step 2).
 do $$
 declare
   fk_name text;
@@ -119,7 +123,7 @@ alter table public.print_job_rows
   add constraint print_job_rows_job_id_fkey
   foreign key (job_id) references public.print_jobs(id) on delete cascade;
 
--- 4) print_job_rows was never confirmed to have RLS — lock it down too.
+-- 5) print_job_rows was never confirmed to have RLS — lock it down too.
 alter table public.print_job_rows enable row level security;
 
 drop policy if exists "Users manage their own print job rows" on public.print_job_rows;
@@ -136,7 +140,7 @@ create policy "Users manage their own print job rows" on public.print_job_rows
     )
   );
 
--- 5) Rename the relay's connections table so a bare "agent_connections"
+-- 6) Rename the relay's connections table so a bare "agent_connections"
 --    collision can't happen again either.
 alter table if exists public.agent_connections rename to relay_agent_connections;
 alter table if exists public.relay_agent_connections enable row level security;
