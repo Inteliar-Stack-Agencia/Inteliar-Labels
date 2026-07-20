@@ -113,31 +113,36 @@ export async function renderLabelToPng(
       // character. Arial Narrow alone gets close enough to the ZPL width
       // without that risk.
       ctx.fillStyle = "#000000"
-      // Extra safety inset on the right: thermal heads often don't print the
-      // last 1-2mm at the edge, which clipped the final letter of long lines.
+      // Safety inset on BOTH edges: thermal heads often don't print the
+      // last 1-2mm near either edge, and printers configured to print
+      // rotated 180° (common when the label stock loads reversed) flip
+      // which physical edge that is — a margin on only one side gets
+      // clipped as soon as the driver's rotation setting changes. Applying
+      // it symmetrically keeps text safe either way.
       const safety = mmToDots(2)
       if (el.boxWidth != null) {
         // Align INSIDE the element's own box, anchored at x.
         const bw = Math.max(1, tenthMmToDots(el.boxWidth))
+        const innerW = Math.max(1, bw - 2 * safety)
         if (align === "center") {
           ctx.textAlign = "center"
-          wrapText(ctx, content, x + bw / 2, y, bw, fd)
+          wrapText(ctx, content, x + bw / 2, y, innerW, fd)
         } else if (align === "right") {
           ctx.textAlign = "right"
-          wrapText(ctx, content, x + bw, y, bw, fd)
+          wrapText(ctx, content, x + bw - safety, y, innerW, fd)
         } else {
           ctx.textAlign = "left"
-          wrapText(ctx, content, x, y, bw, fd)
+          wrapText(ctx, content, x + safety, y, innerW, fd)
         }
       } else if (align === "center") {
         ctx.textAlign = "center"
         wrapText(ctx, content, margin + blockW / 2, y, blockW - 2 * safety, fd)
       } else if (align === "right") {
         ctx.textAlign = "right"
-        wrapText(ctx, content, margin + blockW - safety, y, blockW - safety, fd)
+        wrapText(ctx, content, margin + blockW - safety, y, blockW - 2 * safety, fd)
       } else {
         ctx.textAlign = "left"
-        wrapText(ctx, content, x, y, w - x - margin - safety, fd)
+        wrapText(ctx, content, x + safety, y, w - x - margin - 2 * safety, fd)
       }
     } else if (el.type === "line") {
       const lw = tenthMmToDots(el.lineWidth ?? template.width_mm * 10 - 80)
