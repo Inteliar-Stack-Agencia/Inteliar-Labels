@@ -119,6 +119,13 @@ begin
   end if;
 end $$;
 
+-- print_jobs is freshly (re)created and empty, so every existing
+-- print_job_rows row is an orphan pointing at a job id from whatever table
+-- used to occupy the print_jobs name — safe to discard, they were never
+-- reachable through the app (every read joins through print_jobs anyway).
+delete from public.print_job_rows
+where job_id not in (select id from public.print_jobs);
+
 alter table public.print_job_rows
   add constraint print_job_rows_job_id_fkey
   foreign key (job_id) references public.print_jobs(id) on delete cascade;
