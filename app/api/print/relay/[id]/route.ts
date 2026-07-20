@@ -29,7 +29,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 })
 
   const { data: job } = await supabaseAdmin
-    .from("print_jobs")
+    .from("relay_print_jobs")
     .select("id, status, error, license_key, completed_at")
     .eq("id", id)
     .maybeSingle()

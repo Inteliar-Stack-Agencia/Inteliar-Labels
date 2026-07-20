@@ -13,9 +13,11 @@ agent-side implementation.
 
 ## Pieces already in place
 
-- Migration `supabase/migrations/20260717_print_relay.sql` — `agent_connections`
-  + `print_jobs` tables, RLS enabled, `print_jobs` added to the Realtime
-  publication.
+- Migration `supabase/migrations/20260717_print_relay.sql` — original schema
+  (see incident note below for why it needed a follow-up fix).
+- Migration `supabase/migrations/20260719_fix_print_jobs_rls_and_relay_table_names.sql`
+  — renamed the relay's tables to `relay_agent_connections` and
+  `relay_print_jobs`, RLS enabled on both, no public policies.
 - `printer-agent/src/relay.js` — agent connects outbound to Supabase using the
   anon key, registers its printers, subscribes to Realtime, prints and
   reports back. Only starts for `pro`/`lifetime` plans, and only if
@@ -25,13 +27,32 @@ agent-side implementation.
   list remote printers and enqueue/poll jobs. Gated to pro/lifetime licenses.
 - `lib/printer-agent-client.ts` — `listRemotePrinters()` / `sendViaCloudRelay()`.
 
+## ⚠️ Incident: table name collision broke job creation app-wide (2026-07-17 → 2026-07-19)
+
+The original migration used `create table if not exists print_jobs (...)` —
+`print_jobs` was already the app's real, actively-used job-tracking table
+(used by `/upload`, `/jobs`, `/history`, `/dashboard`, admin stats, plan
+limits), so the `CREATE TABLE` was a silent no-op. The migration then ran
+`alter table print_jobs enable row level security` with **zero policies**
+against that same real table — RLS with no policies default-denies
+everything, so every job creation (`/upload` → "Crear trabajo") silently
+failed for every user for two days, with no error shown in the UI either.
+
+Fixed in `20260719_fix_print_jobs_rls_and_relay_table_names.sql`: added the
+missing owner policy on the app's `print_jobs`, and renamed the relay's own
+tables to `relay_agent_connections` / `relay_print_jobs` so this specific
+collision can't happen again. **Lesson for future migrations touching
+shared-sounding table names**: check `\dt` / existing migrations for a name
+collision before `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` — `CREATE TABLE
+IF NOT EXISTS` failing silently to warn you is the trap.
+
 ## The unresolved gap: agent auth vs RLS
 
-`agent_connections` and `print_jobs` have RLS **enabled with no policies**.
-The agent currently connects with the Supabase **anon key**. With RLS on and
-no policies, anon can't read/write those tables — so as shipped, the agent's
-`upsert`/`update` calls in `relay.js` will fail silently (caught and logged,
-not fatal) once you actually try to use this.
+`relay_agent_connections` and `relay_print_jobs` have RLS **enabled with no
+policies**. The agent currently connects with the Supabase **anon key**. With
+RLS on and no policies, anon can't read/write those tables — so as shipped,
+the agent's `upsert`/`update` calls in `relay.js` will fail silently (caught
+and logged, not fatal) once you actually try to use this.
 
 Before turning this on for a real customer, pick one:
 

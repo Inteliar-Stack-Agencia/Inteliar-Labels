@@ -47,7 +47,7 @@ export async function GET() {
   if (!license) return NextResponse.json({ printers: [] })
 
   const { data: conns } = await supabaseAdmin
-    .from("agent_connections")
+    .from("relay_agent_connections")
     .select("printer_id, printer_name, connection, status, last_seen")
     .eq("license_key", license.key)
     .order("printer_name")
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { data: conn } = await supabaseAdmin
-    .from("agent_connections")
+    .from("relay_agent_connections")
     .select("status, last_seen, printer_name")
     .eq("license_key", license.key)
     .eq("printer_id", printerId)
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { data: job, error } = await supabaseAdmin
-    .from("print_jobs")
+    .from("relay_print_jobs")
     .insert({
       license_key: license.key,
       printer_id: printerId,

@@ -3,7 +3,7 @@
  *
  * Lets a browser on another machine/network send a print job to this agent.
  * The agent connects OUTBOUND to Supabase (no open ports needed), registers its
- * printers as "online", and subscribes to print_jobs rows for its license_key.
+ * printers as "online", and subscribes to relay_print_jobs rows for its license_key.
  * When a job arrives it prints locally (reusing the same doPrint) and writes the
  * result back to the row.
  *
@@ -44,13 +44,13 @@ export async function startRelay(opts) {
 
   // Subscribe to new jobs for this license
   channel = supabase
-    .channel(`print_jobs:${licenseKey}`)
+    .channel(`relay_print_jobs:${licenseKey}`)
     .on(
       'postgres_changes',
       {
         event: 'INSERT',
         schema: 'public',
-        table: 'print_jobs',
+        table: 'relay_print_jobs',
         filter: `license_key=eq.${licenseKey}`,
       },
       (payload) => handleJob(payload.new, getPrinters, print)
@@ -77,7 +77,7 @@ export async function stopRelay(licenseKey) {
   if (channel) await supabase?.removeChannel(channel)
   if (supabase && licenseKey) {
     await supabase
-      .from('agent_connections')
+      .from('relay_agent_connections')
       .update({ status: 'offline', last_seen: new Date().toISOString() })
       .eq('license_key', licenseKey)
       .catch(() => {})
@@ -97,7 +97,7 @@ async function registerPrinters(licenseKey, deviceId, printers) {
   }))
   if (rows.length === 0) return
   const { error } = await supabase
-    .from('agent_connections')
+    .from('relay_agent_connections')
     .upsert(rows, { onConflict: 'license_key,printer_id' })
   if (error) console.warn('[Relay] No se pudo registrar impresoras:', error.message)
 }
@@ -111,14 +111,14 @@ async function handleJob(job, getPrinters, print) {
   try {
     const result = await print(job.printer_id, job.payload)
     await supabase
-      .from('print_jobs')
+      .from('relay_print_jobs')
       .update({ status: 'done', result, completed_at: new Date().toISOString() })
       .eq('id', job.id)
       .eq('status', 'pending')
     console.log(`[Relay] ✓ Trabajo ${job.id} impreso`)
   } catch (e) {
     await supabase
-      .from('print_jobs')
+      .from('relay_print_jobs')
       .update({ status: 'error', error: e.message, completed_at: new Date().toISOString() })
       .eq('id', job.id)
       .eq('status', 'pending')
@@ -132,7 +132,7 @@ async function drainPending(licenseKey, getPrinters, print) {
   const ids = getPrinters().map((p) => p.id)
   if (ids.length === 0) return
   const { data } = await supabase
-    .from('print_jobs')
+    .from('relay_print_jobs')
     .select('*')
     .eq('license_key', licenseKey)
     .eq('status', 'pending')

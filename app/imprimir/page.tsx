@@ -235,7 +235,11 @@ function ImprimirPageInner() {
       source_file: "manual",
     }).select("id").single()
 
-    if (error || !job) { setSaving(false); return }
+    if (error || !job) {
+      setSaving(false)
+      alert(`No se pudo crear el trabajo de impresión${error ? `: ${error.message}` : ""}. Probá de nuevo o contactanos si persiste.`)
+      return
+    }
 
     const rowsToInsert = rows.map((r, i) => ({
       job_id: job.id,

@@ -242,7 +242,11 @@ export default function UploadPage() {
       source_file: data.fileName,
     }).select("id").single()
 
-    if (error || !job) { setLoading(false); return }
+    if (error || !job) {
+      setLoading(false)
+      alert(`No se pudo crear el trabajo de impresión${error ? `: ${error.message}` : ""}. Probá de nuevo o contactanos si persiste.`)
+      return
+    }
 
     // Only include rows the user kept selected (re-indexed sequentially)
     const rowsToInsert = data.rows
