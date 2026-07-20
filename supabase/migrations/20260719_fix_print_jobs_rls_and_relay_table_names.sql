@@ -1,63 +1,67 @@
--- CRITICAL FIX: migration 20260717_print_relay.sql did
---   `create table if not exists print_jobs (...)`
--- which was a no-op — the app's real print_jobs table already existed,
--- used by /upload, /jobs, /history, /dashboard, admin stats, plan limits —
--- with a completely different schema (user_id, template_id, name, status,
--- total_labels, printed_labels, source_file, printer_name, error_message).
+-- CRITICAL FIX for a two-part incident. Run this whole file as one script.
 --
--- But the migration then ran, against that SAME pre-existing table:
---   alter table print_jobs enable row level security;
---   alter publication supabase_realtime add table print_jobs;
--- with zero policies defined. RLS with no policies default-denies all
--- access, silently breaking every insert/select/update on the app's real
--- print_jobs table for every user since 2026-07-17 (job creation from
--- /upload just silently failed — no error surfaced in the UI either,
--- compounding the problem).
+-- Part 1 — what the 2026-07-17 print relay migration broke:
+--   It ran `create table if not exists print_jobs (...)` with the relay's
+--   own schema (license_key, printer_id, payload, status, result, error,
+--   created_at, completed_at). Checking information_schema in prod showed
+--   this was NOT a no-op — the app's real print_jobs table (user_id,
+--   template_id, name, status, total_labels, printed_labels, printer_name,
+--   error_message, source_file, created_at, completed_at), used everywhere
+--   (/upload, /imprimir, /jobs, /jobs/[id], /history, /dashboard, admin
+--   stats, plan limits), never existed as an actual Postgres table before
+--   that migration. So the relay migration's CREATE TABLE actually created
+--   print_jobs for the first time — with the wrong (relay) schema — turning
+--   a pre-existing "table missing" bug into a "column missing" bug and
+--   masking it further by also enabling RLS with zero policies on it.
 --
--- Fix: add the owner-based policy this table always needed (matching the
--- pattern used by print_favorites, saved_lists, etc.), drop it from the
--- realtime publication (never should have been added), and give the
--- relay's own queue tables names that can never collide with the app's
--- tables again.
+-- Part 2 — the fix:
+--   1. Rename the relay-schema table (created 07-17) to relay_print_jobs,
+--      where it always should have lived, and give it its own RLS (no
+--      public policies — relay access goes through the service role).
+--   2. Create the app's real print_jobs table with the schema every page
+--      already assumes, with an owner-based RLS policy (auth.uid() =
+--      user_id), matching the pattern used by print_favorites/saved_lists.
+--   3. Re-point print_job_rows.job_id (which already existed correctly) at
+--      the new print_jobs, since the rename in step 1 carried its old FK
+--      along to relay_print_jobs.
+--   4. Lock down print_job_rows with RLS too (ownership via the parent
+--      job's user_id, since rows have no user_id column of their own) —
+--      it was never confirmed to have RLS before.
+--   5. Rename the relay's connections table so this exact collision can't
+--      recur, and give it RLS too.
 
--- 1) Restore access to the app's real print_jobs table.
-create policy "Users manage their own print jobs" on public.print_jobs
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+-- 1) Move the relay-schema table out of the app's namespace.
+alter table if exists public.print_jobs rename to relay_print_jobs;
 
--- 2) Undo the accidental realtime broadcast on the app's real table.
+alter table if exists public.relay_print_jobs
+  add column if not exists license_key text,
+  add column if not exists printer_id text,
+  add column if not exists payload jsonb,
+  add column if not exists result jsonb,
+  add column if not exists error text;
+
 do $$
 begin
-  alter publication supabase_realtime drop table print_jobs;
+  alter table public.relay_print_jobs
+    add constraint relay_print_jobs_license_key_fkey
+    foreign key (license_key) references public.licenses(key) on delete cascade;
 exception
-  when undefined_object then null;
+  when duplicate_object then null;
 end $$;
-
--- 3) Rename the (still-dormant, empty) relay connections table out of the
---    app's namespace so a collision like this can't happen again.
-alter table if exists public.agent_connections rename to relay_agent_connections;
-
--- 4) The relay's own job queue table was never actually created under its
---    own name (step 2 of the original migration was a no-op against the
---    app's table) — create it now, correctly isolated.
-create table if not exists public.relay_print_jobs (
-  id uuid primary key default gen_random_uuid(),
-  license_key text not null references public.licenses(key) on delete cascade,
-  printer_id text not null,
-  payload jsonb not null,
-  status text not null default 'pending',
-  result jsonb,
-  error text,
-  created_at timestamptz not null default now(),
-  completed_at timestamptz
-);
 
 create index if not exists idx_relay_print_jobs_license_status on public.relay_print_jobs(license_key, status);
 create index if not exists idx_relay_print_jobs_created on public.relay_print_jobs(created_at);
 
 alter table public.relay_print_jobs enable row level security;
 -- No public policies: relay reads/writes go through the service role via
--- app/api/print/relay/*, same isolation model as before, just correctly
--- named this time.
+-- app/api/print/relay/*.
+
+do $$
+begin
+  alter publication supabase_realtime drop table print_jobs;
+exception
+  when undefined_object then null;
+end $$;
 
 do $$
 begin
@@ -66,4 +70,73 @@ exception
   when duplicate_object then null;
 end $$;
 
+-- 2) Create the app's real print_jobs table with the schema every page
+--    already assumes.
+create table public.print_jobs (
+  id             uuid primary key default gen_random_uuid(),
+  user_id        uuid not null references auth.users(id) on delete cascade,
+  template_id    uuid references public.templates(id) on delete set null,
+  name           text not null,
+  status         text not null default 'pending', -- pending | completed | error
+  total_labels   int not null default 0,
+  printed_labels int not null default 0,
+  printer_name   text,
+  error_message  text,
+  source_file    text,
+  created_at     timestamptz not null default now(),
+  completed_at   timestamptz
+);
+
+create index print_jobs_user_idx on public.print_jobs (user_id, created_at desc);
+
+alter table public.print_jobs enable row level security;
+
+create policy "Users manage their own print jobs" on public.print_jobs
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- 3) Re-point print_job_rows.job_id at the new print_jobs (it currently
+--    references relay_print_jobs after the rename in step 1).
+do $$
+declare
+  fk_name text;
+begin
+  select tc.constraint_name into fk_name
+  from information_schema.table_constraints tc
+  join information_schema.key_column_usage kcu
+    on tc.constraint_name = kcu.constraint_name
+  where tc.table_schema = 'public'
+    and tc.table_name = 'print_job_rows'
+    and tc.constraint_type = 'FOREIGN KEY'
+    and kcu.column_name = 'job_id'
+  limit 1;
+
+  if fk_name is not null then
+    execute format('alter table public.print_job_rows drop constraint %I', fk_name);
+  end if;
+end $$;
+
+alter table public.print_job_rows
+  add constraint print_job_rows_job_id_fkey
+  foreign key (job_id) references public.print_jobs(id) on delete cascade;
+
+-- 4) print_job_rows was never confirmed to have RLS — lock it down too.
+alter table public.print_job_rows enable row level security;
+
+drop policy if exists "Users manage their own print job rows" on public.print_job_rows;
+create policy "Users manage their own print job rows" on public.print_job_rows
+  for all using (
+    exists (
+      select 1 from public.print_jobs pj
+      where pj.id = print_job_rows.job_id and pj.user_id = auth.uid()
+    )
+  ) with check (
+    exists (
+      select 1 from public.print_jobs pj
+      where pj.id = print_job_rows.job_id and pj.user_id = auth.uid()
+    )
+  );
+
+-- 5) Rename the relay's connections table so a bare "agent_connections"
+--    collision can't happen again either.
+alter table if exists public.agent_connections rename to relay_agent_connections;
 alter table if exists public.relay_agent_connections enable row level security;
