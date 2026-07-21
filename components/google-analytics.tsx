@@ -5,9 +5,9 @@ import Script from "next/script"
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
 // Google Ads account conversion ID (etiqueta global). No es sensible — viaja
 // al cliente igual que el GA_ID. Cuenta: inteliarstack.ia@gmail.com
-const GOOGLE_ADS_ID = "AW-18333968448"
+const GOOGLE_ADS_ID = process.env.NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID
 // Fragmento de evento de la acción de conversión "Registro"
-export const GOOGLE_ADS_REGISTER_CONVERSION = "AW-18333968448/f4eGCLe5-dMcEMDQqKZE"
+export const GOOGLE_ADS_REGISTER_CONVERSION = GOOGLE_ADS_ID ? `${GOOGLE_ADS_ID}/f4eGCLe5-dMcEMDQqKZE` : undefined
 
 declare global {
   interface Window {
@@ -35,7 +35,7 @@ export function GoogleAnalytics() {
             page_path: window.location.pathname,
             send_page_view: true
           });` : ""}
-          gtag('config', '${GOOGLE_ADS_ID}');
+          ${GOOGLE_ADS_ID ? `gtag('config', '${GOOGLE_ADS_ID}');` : ""}
         `}
       </Script>
     </>
@@ -50,7 +50,8 @@ export function gtagEvent(eventName: string, params?: Record<string, any>) {
 }
 
 // Dispara una conversión de Google Ads (send_to: "AW-XXXX/label")
-export function gtagAdsConversion(sendTo: string, params?: Record<string, any>) {
+export function gtagAdsConversion(sendTo: string | undefined, params?: Record<string, any>) {
+  if (!sendTo) return
   if (typeof window !== "undefined" && window.gtag) {
     window.gtag("event", "conversion", { send_to: sendTo, ...params })
   }
