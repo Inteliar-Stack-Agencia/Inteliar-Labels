@@ -1,5 +1,6 @@
 import { track } from "@vercel/analytics"
 import { gtagEvent, gtagAdsConversion, GOOGLE_ADS_REGISTER_CONVERSION } from "@/components/google-analytics"
+import { fbqEvent } from "@/components/meta-pixel"
 
 function event(name: string, params?: Record<string, any>) {
   track(name, params)
@@ -38,6 +39,7 @@ export const analytics = {
     event("sign_up", { method: "email" })           // nombre estándar GA4
     event("register_complete", { email })
     gtagAdsConversion(GOOGLE_ADS_REGISTER_CONVERSION)  // conversión "Registro" en Google Ads
+    fbqEvent("CompleteRegistration")                   // conversión estándar en Meta Ads
   },
 
   // ── Onboarding (embudo paso 3) ────────────────────────────────────────────
@@ -58,12 +60,14 @@ export const analytics = {
 
   // ── License / pago (embudo paso 6) ───────────────────────────────────────
   licenseActivated: (plan: string) => {
+    const value = plan === "monthly" ? 10 : plan === "pro" ? 19 : 300
     event("purchase", {                              // nombre estándar GA4 / Google Ads
       transaction_id: `license_${Date.now()}`,
-      value: plan === "monthly" ? 10 : plan === "pro" ? 19 : 300,
+      value,
       currency: "USD",
       items: [{ item_name: `plan_${plan}`, quantity: 1 }],
     })
+    fbqEvent("Purchase", { value, currency: "USD" })  // conversión estándar en Meta Ads
     event("license_activated", { plan })
   },
 
