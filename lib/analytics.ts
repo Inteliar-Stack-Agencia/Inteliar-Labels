@@ -1,5 +1,5 @@
 import { track } from "@vercel/analytics"
-import { gtagEvent } from "@/components/google-analytics"
+import { gtagEvent, gtagAdsConversion, GOOGLE_ADS_REGISTER_CONVERSION } from "@/components/google-analytics"
 
 function event(name: string, params?: Record<string, any>) {
   track(name, params)
@@ -37,6 +37,7 @@ export const analytics = {
   registerComplete: (email: string) => {
     event("sign_up", { method: "email" })           // nombre estándar GA4
     event("register_complete", { email })
+    gtagAdsConversion(GOOGLE_ADS_REGISTER_CONVERSION)  // conversión "Registro" en Google Ads
   },
 
   // ── Onboarding (embudo paso 3) ────────────────────────────────────────────
