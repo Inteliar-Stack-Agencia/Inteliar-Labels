@@ -137,6 +137,11 @@ export default function AdminPage() {
   // Users tab
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([])
   const [usersLoading, setUsersLoading] = useState(false)
+  const [showCreateUser, setShowCreateUser] = useState(false)
+  const [creatingUser, setCreatingUser] = useState(false)
+  const [newUserForm, setNewUserForm] = useState({ firstName: "", lastName: "", email: "", countryCode: "+54", phone: "" })
+  const [newUserResult, setNewUserResult] = useState<{ email: string; password: string } | null>(null)
+  const [newUserError, setNewUserError] = useState<string | null>(null)
 
   // Payments tab
   const [payments, setPayments] = useState<PaymentEvent[]>([])
@@ -203,6 +208,30 @@ export default function AdminPage() {
     }
     setUsersLoading(false)
   }, [])
+
+  const handleCreateUser = async () => {
+    setCreatingUser(true)
+    setNewUserError(null)
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newUserForm),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        setNewUserError(json.error ?? "No se pudo crear el usuario")
+        return
+      }
+      setNewUserResult({ email: json.email, password: json.password })
+      setNewUserForm({ firstName: "", lastName: "", email: "", countryCode: "+54", phone: "" })
+      fetchUsers()
+    } catch {
+      setNewUserError("Error de red al crear el usuario")
+    } finally {
+      setCreatingUser(false)
+    }
+  }
 
   const fetchPayments = useCallback(async () => {
     setPaymentsLoading(true)
@@ -468,6 +497,15 @@ export default function AdminPage() {
         {/* ── USERS TAB ── */}
         {activeTab === "users" && (
           <div className="space-y-3">
+            <div className="flex justify-end">
+              <button
+                onClick={() => { setShowCreateUser(true); setNewUserResult(null); setNewUserError(null) }}
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                <Users className="h-4 w-4" />
+                Crear usuario
+              </button>
+            </div>
             {printerStats && (printerStats.brands.length > 0 || printerStats.models.length > 0) && (
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="rounded-xl border border-border bg-background p-4">
@@ -967,6 +1005,126 @@ export default function AdminPage() {
         )}
 
       </div>
+
+      {/* Create user modal: manually onboard a client, same fields/flow as the landing signup */}
+      {showCreateUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setShowCreateUser(false)}>
+          <div className="relative w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
+              <h3 className="text-sm font-semibold text-foreground">Crear usuario manualmente</h3>
+              <button onClick={() => setShowCreateUser(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {newUserResult ? (
+                <div className="space-y-3">
+                  <div className="rounded-lg border border-success/30 bg-success/10 p-3 text-sm text-foreground">
+                    Usuario creado. Con trial de 15 días activo, igual que un registro por la landing.
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Email: </span>
+                      <span className="font-medium text-foreground">{newUserResult.email}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Contraseña generada: </span>
+                      <span className="font-mono font-medium text-foreground">{newUserResult.password}</span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Guardá esta contraseña ahora — no se vuelve a mostrar. Compartísela al cliente por WhatsApp o email; puede cambiarla después con &quot;Olvidé mi contraseña&quot;.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowCreateUser(false)}
+                    className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {newUserError && (
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                      {newUserError}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground">Nombre</label>
+                      <input
+                        type="text"
+                        value={newUserForm.firstName}
+                        onChange={(e) => setNewUserForm((f) => ({ ...f, firstName: e.target.value }))}
+                        placeholder="Juan"
+                        className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground">Apellido</label>
+                      <input
+                        type="text"
+                        value={newUserForm.lastName}
+                        onChange={(e) => setNewUserForm((f) => ({ ...f, lastName: e.target.value }))}
+                        placeholder="Pérez"
+                        className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">Email</label>
+                    <input
+                      type="email"
+                      value={newUserForm.email}
+                      onChange={(e) => setNewUserForm((f) => ({ ...f, email: e.target.value }))}
+                      placeholder="cliente@email.com"
+                      className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">WhatsApp</label>
+                    <div className="flex gap-2">
+                      <select
+                        aria-label="Código de país"
+                        value={newUserForm.countryCode}
+                        onChange={(e) => setNewUserForm((f) => ({ ...f, countryCode: e.target.value }))}
+                        className="rounded-lg border border-input bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                      >
+                        <option value="+54">🇦🇷 +54</option>
+                        <option value="+598">🇺🇾 +598</option>
+                        <option value="+56">🇨🇱 +56</option>
+                        <option value="+595">🇵🇾 +595</option>
+                        <option value="+591">🇧🇴 +591</option>
+                        <option value="+51">🇵🇪 +51</option>
+                        <option value="+57">🇨🇴 +57</option>
+                        <option value="+52">🇲🇽 +52</option>
+                        <option value="+55">🇧🇷 +55</option>
+                        <option value="+34">🇪🇸 +34</option>
+                        <option value="+1">🇺🇸 +1</option>
+                      </select>
+                      <input
+                        type="tel"
+                        value={newUserForm.phone}
+                        onChange={(e) => setNewUserForm((f) => ({ ...f, phone: e.target.value }))}
+                        placeholder="9 11 1234 5678"
+                        className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleCreateUser}
+                    disabled={creatingUser || !newUserForm.firstName || !newUserForm.lastName || !newUserForm.email || !newUserForm.phone}
+                    className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                  >
+                    {creatingUser ? "Creando..." : "Crear usuario · trial 15 días"}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* User detail modal: what a user builds and prints (demand insight) */}
       {detailUser && (

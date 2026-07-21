@@ -47,3 +47,48 @@ export async function GET() {
 
   return NextResponse.json(result)
 }
+
+function generatePassword(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789"
+  return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join("")
+}
+
+// POST /api/admin/users — manually create a user, exactly like a landing
+// signup (same metadata shape as app/auth/register), so the 15-day trial
+// (computed from auth.users.created_at) kicks in the same way.
+export async function POST(req: Request) {
+  const admin = await requireAdmin()
+  if (!admin) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+
+  const { firstName, lastName, email, countryCode, phone } = await req.json()
+  if (!firstName?.trim() || !lastName?.trim() || !email?.trim() || !phone?.trim()) {
+    return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 })
+  }
+
+  const whatsapp = `${countryCode || "+54"}${String(phone).replace(/\D/g, "")}`
+  const password = generatePassword()
+
+  const { data, error } = await supabaseAdmin.auth.admin.createUser({
+    email: email.trim(),
+    password,
+    email_confirm: true, // admin-created: skip the confirmation email step
+    user_metadata: {
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
+      full_name: `${firstName.trim()} ${lastName.trim()}`.trim(),
+      whatsapp,
+      created_by_admin: true,
+    },
+  })
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+  // Fire-and-forget welcome email, same as a real landing signup
+  fetch(`${process.env.NEXT_PUBLIC_APP_URL ?? "https://etiquetar.app"}/api/auth/welcome`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: email.trim() }),
+  }).catch(() => {})
+
+  return NextResponse.json({ id: data.user.id, email: data.user.email, password })
+}
