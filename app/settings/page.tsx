@@ -35,6 +35,7 @@ import {
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 import { PrinterAgentStatus } from "@/components/printer/agent-status"
+import { PasswordInput } from "@/components/ui/password-input"
 import {
   listPrinters,
   savePrinter,
@@ -133,6 +134,11 @@ export default function SettingsPage() {
   // --- Account state ---
   const [userEmail, setUserEmail] = useState("")
   const [signingOut, setSigningOut] = useState(false)
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [changingPassword, setChangingPassword] = useState(false)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [passwordSuccess, setPasswordSuccess] = useState(false)
 
   // --- License state ---
   interface LicenseRow {
@@ -362,6 +368,30 @@ export default function SettingsPage() {
     } finally {
       setDiscoveringNet(false)
     }
+  }
+
+  async function handleChangePassword() {
+    setPasswordError(null)
+    setPasswordSuccess(false)
+    if (newPassword.length < 8) {
+      setPasswordError("La contraseña debe tener al menos 8 caracteres.")
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("Las contraseñas no coinciden.")
+      return
+    }
+    setChangingPassword(true)
+    const supabase = createClient()
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    setChangingPassword(false)
+    if (error) {
+      setPasswordError(error.message)
+      return
+    }
+    setPasswordSuccess(true)
+    setNewPassword("")
+    setConfirmPassword("")
   }
 
   async function handleSignOut() {
@@ -1176,6 +1206,54 @@ export default function SettingsPage() {
                         El correo no puede modificarse desde aquí.
                       </p>
                     </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-border bg-card p-6">
+                  <h3 className="font-semibold text-foreground">Cambiar contraseña</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Elegí una contraseña nueva para tu cuenta.
+                  </p>
+                  <div className="mt-4 space-y-3 max-w-sm">
+                    {passwordError && (
+                      <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                        {passwordError}
+                      </div>
+                    )}
+                    {passwordSuccess && (
+                      <div className="rounded-md bg-success/10 p-3 text-sm text-success">
+                        Contraseña actualizada correctamente.
+                      </div>
+                    )}
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-foreground">
+                        Nueva contraseña
+                      </label>
+                      <PasswordInput
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Mínimo 8 caracteres"
+                        minLength={8}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-foreground">
+                        Confirmar contraseña
+                      </label>
+                      <PasswordInput
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Repetí la contraseña"
+                        minLength={8}
+                      />
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={handleChangePassword}
+                      disabled={changingPassword || !newPassword || !confirmPassword}
+                    >
+                      {changingPassword ? "Guardando..." : "Cambiar contraseña"}
+                    </Button>
                   </div>
                 </div>
 
