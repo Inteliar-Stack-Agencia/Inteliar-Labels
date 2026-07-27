@@ -224,6 +224,8 @@ export default function JobDetailPage() {
   const [generatingZpl, setGeneratingZpl] = useState(false)
   const [startFromLabel, setStartFromLabel] = useState(1)
   const [endAtLabel, setEndAtLabel] = useState<number | "">("")
+  const [confirmingPrint, setConfirmingPrint] = useState<{ from: number; to: number } | null>(null)
+  const [stoppedAtInput, setStoppedAtInput] = useState("")
 
   // Printer agent state
   const [agentOnline, setAgentOnline] = useState(false)
@@ -323,26 +325,56 @@ export default function JobDetailPage() {
           ? (result.message ?? "Enviado a la impresora")
           : `Rango ${startFromLabel}–${endAtLabel === "" ? total : endAtLabel} enviado (${printedCount} etiquetas)`,
       })
-      // Only auto-complete when the whole job was printed, not a partial range.
-      if (job?.status === "pending" && isFullRange) {
-        await supabase
-          .from("print_jobs")
-          .update({ status: "completed", printed_labels: total, completed_at: new Date().toISOString() })
-          .eq("id", jobId)
-        setJob((prev) => prev ? { ...prev, status: "completed", printed_labels: prev.total_labels } : prev)
-        analytics.printJobCompleted(total)
-        // Track first print if this is the first completed job
-        const firstPrintKey = "first_print_done"
-        if (!localStorage.getItem(firstPrintKey)) {
-          analytics.firstPrint()
-          localStorage.setItem(firstPrintKey, "1")
-        }
+      // We only know the print job was accepted by the driver/spooler, not
+      // that the printer physically finished — a jam, empty roll, or offline
+      // error mid-job leaves the driver call "successful" with no signal
+      // back to us. Ask for confirmation instead of blindly marking complete
+      // (reported: printer stopped at label 8/79, job still showed
+      // "Completado"). If they say it didn't finish, capture where it
+      // stopped and pre-fill the range to make resuming a single click.
+      if (job?.status === "pending") {
+        setConfirmingPrint({ from: startFromLabel, to: endAtLabel === "" ? total : endAtLabel })
       }
     } catch (err) {
       setPrintResult({ ok: false, message: (err as Error).message })
     } finally {
       setPrinting(false)
     }
+  }
+
+  async function confirmPrintSucceeded() {
+    if (!confirmingPrint) return
+    const total = job?.total_labels ?? 0
+    await supabase
+      .from("print_jobs")
+      .update({ status: "completed", printed_labels: total, completed_at: new Date().toISOString() })
+      .eq("id", jobId)
+    setJob((prev) => prev ? { ...prev, status: "completed", printed_labels: prev.total_labels } : prev)
+    analytics.printJobCompleted(total)
+    const firstPrintKey = "first_print_done"
+    if (!localStorage.getItem(firstPrintKey)) {
+      analytics.firstPrint()
+      localStorage.setItem(firstPrintKey, "1")
+    }
+    setConfirmingPrint(null)
+    setStoppedAtInput("")
+  }
+
+  function confirmPrintFailed() {
+    const stoppedAt = Number(stoppedAtInput)
+    // Resume from the next label after the last one that actually printed.
+    if (stoppedAt > 0 && confirmingPrint) {
+      setStartFromLabel(Math.min(stoppedAt + 1, job?.total_labels ?? stoppedAt + 1))
+      setEndAtLabel(confirmingPrint.to)
+    }
+    setPrintResult({
+      ok: false,
+      message: stoppedAt > 0
+        ? `Anotado: se cortó en la etiqueta ${stoppedAt}. El rango ya quedó listo para reanudar desde ${stoppedAt + 1}.`
+        : "Job no marcado como completado — ajustá el rango e imprimí de nuevo cuando quieras.",
+    })
+    setConfirmingPrint(null)
+    setStoppedAtInput("")
   }
 
   async function markCompleted() {
@@ -483,6 +515,48 @@ export default function JobDetailPage() {
           <button onClick={() => setPrintResult(null)} className="ml-auto opacity-60 hover:opacity-100">
             ×
           </button>
+        </div>
+      )}
+
+      {/* Post-print confirmation: sending to the driver doesn't guarantee the
+          printer actually finished — confirm instead of auto-marking complete. */}
+      {confirmingPrint && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-5 shadow-2xl">
+            <h3 className="text-sm font-semibold text-foreground">¿Se imprimieron todas las etiquetas?</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Enviamos el rango {confirmingPrint.from}–{confirmingPrint.to} a la impresora. Confirmá que salieron bien —
+              a veces la impresora se traba o se queda sin papel a mitad de camino sin que el sistema se entere.
+            </p>
+            <div className="mt-4 flex gap-2">
+              <Button size="sm" className="flex-1" onClick={confirmPrintSucceeded}>
+                Sí, salieron todas
+              </Button>
+              <Button size="sm" variant="outline" className="flex-1" onClick={() => setStoppedAtInput("0")}>
+                No, se cortó
+              </Button>
+            </div>
+            {stoppedAtInput !== "" && (
+              <div className="mt-4 space-y-2 border-t border-border pt-4">
+                <label className="block text-xs font-medium text-foreground">
+                  ¿En qué número de etiqueta se cortó?
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={confirmingPrint.to}
+                  value={stoppedAtInput === "0" ? "" : stoppedAtInput}
+                  onChange={(e) => setStoppedAtInput(e.target.value)}
+                  placeholder={`entre ${confirmingPrint.from} y ${confirmingPrint.to}`}
+                  autoFocus
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+                <Button size="sm" className="w-full" onClick={confirmPrintFailed} disabled={!Number(stoppedAtInput)}>
+                  Preparar reanudación
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
