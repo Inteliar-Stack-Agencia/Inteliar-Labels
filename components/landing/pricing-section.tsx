@@ -15,6 +15,7 @@ const plansARS = [
     description: "Ideal para arrancar. Suscripción automática, cancelás cuando quieras.",
     features: [
       "1 sucursal",
+      "1 impresora",
       "Hasta 2.000 impresiones/mes",
       "Diseñador visual + IA",
       "Plantillas predeterminadas",
@@ -34,6 +35,7 @@ const plansARS = [
     description: "Para cuando el límite de 2.000 impresiones te queda chico — sin techo de impresión.",
     features: [
       "Hasta 3 sucursales",
+      "Impresoras ilimitadas",
       "Impresiones ilimitadas",
       "Diseñador visual + IA",
       "Plantillas predeterminadas",
@@ -75,6 +77,7 @@ const plansUSD = [
     description: "Ideal para arrancar. Suscripción automática, cancelás cuando quieras.",
     features: [
       "1 sucursal",
+      "1 impresora",
       "Hasta 2.000 impresiones/mes",
       "Diseñador visual + IA",
       "Plantillas predeterminadas",
@@ -94,6 +97,7 @@ const plansUSD = [
     description: "Para cuando el límite de 2.000 impresiones te queda chico — sin techo de impresión.",
     features: [
       "Hasta 3 sucursales",
+      "Impresoras ilimitadas",
       "Impresiones ilimitadas",
       "Diseñador visual + IA",
       "Plantillas predeterminadas",

@@ -85,7 +85,10 @@ export async function savePrinter(printer: PrinterConfig, agentUrl?: string): Pr
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(printer),
   })
-  if (!res.ok) throw new Error(`Error guardando impresora: ${res.status}`)
+  if (!res.ok) {
+    const body = await res.json().catch(() => null)
+    throw new Error(body?.error ?? `Error guardando impresora: ${res.status}`)
+  }
   return res.json()
 }
 

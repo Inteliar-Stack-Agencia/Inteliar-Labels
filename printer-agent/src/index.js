@@ -85,6 +85,13 @@ function loadLicense() {
   return {}
 }
 
+// Plan monthly: 1 real printer per device. Pro/lifetime: unlimited (their
+// only cap is on devices, enforced server-side at license validation).
+function maxPrintersForPlan(plan) {
+  if (plan === 'pro' || plan === 'lifetime') return Infinity
+  return 1
+}
+
 function saveLicense(data) {
   const current = loadLicense()
   fs.writeFileSync(LICENSE_PATH, JSON.stringify({ ...current, ...data }, null, 2))
@@ -558,11 +565,23 @@ app.post('/printers', (req, res) => {
     return res.status(400).json({ error: 'Faltan campos requeridos: id, name, connection' })
   }
   const idx = config.printers.findIndex(x => x.id === p.id)
+  if (idx < 0) {
+    // Adding a NEW printer (not editing an existing one) — enforce the
+    // plan's printer cap. The 'Simulador' placeholder doesn't count.
+    const plan = loadLicense().plan
+    const max = maxPrintersForPlan(plan)
+    const realPrinterCount = config.printers.filter(x => x.connection !== 'simulate').length
+    if (realPrinterCount >= max) {
+      return res.status(403).json({
+        error: `Tu plan permite hasta ${max} impresora${max === 1 ? '' : 's'}. Actualizá a Pro para impresoras ilimitadas.`,
+      })
+    }
+  }
   if (idx >= 0) {
     config.printers[idx] = p
   } else {
     config.printers.push(p)
-    if (config.printers.length === 1) config.defaultPrinterId = p.id
+    if (config.printers.length === 1 || config.defaultPrinterId === 'default') config.defaultPrinterId = p.id
   }
   saveConfig(config)
   res.json({ success: true, printer: p })
