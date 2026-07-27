@@ -153,16 +153,22 @@ export default function UploadPage() {
     if (!tmpl) return
     setTemplates(tmpl)
 
-    // Auto-suggest the template whose variables best match the Excel columns
+    // Auto-suggest the template whose variables best match the Excel columns.
+    // Rank by match RATIO (matched/total) first, not raw matched count — a
+    // template needing just {{plato}} and getting it is a better fit than
+    // one needing {{plato}} + {{comensal}} and only getting plato, even
+    // though both have "matched = 1". Raw count only breaks ties between
+    // equally-proportioned matches.
     if (columns && columns.length > 0) {
       const cols = columns.map((c) => c.toLowerCase().trim())
-      let best: { id: string; name: string; matched: number; total: number } | null = null
+      let best: { id: string; name: string; matched: number; total: number; ratio: number } | null = null
       for (const t of tmpl) {
         const vars = (t.variables ?? []).map((v: string) => v.toLowerCase().trim())
         if (vars.length === 0) continue
         const matched = vars.filter((v: string) => cols.includes(v)).length
-        if (!best || matched > best.matched) {
-          best = { id: t.id, name: t.name, matched, total: vars.length }
+        const ratio = matched / vars.length
+        if (!best || ratio > best.ratio || (ratio === best.ratio && matched > best.matched)) {
+          best = { id: t.id, name: t.name, matched, total: vars.length, ratio }
         }
       }
       // Only suggest if at least one variable matches
@@ -571,16 +577,15 @@ export default function UploadPage() {
                 <p className="text-xs text-muted-foreground">{data.totalRows} filas · {data.columns.length} columnas detectadas</p>
               </div>
               <Button
-                variant="outline"
-                size="sm"
+                size="default"
                 className="gap-2 flex-shrink-0"
                 onClick={handleSaveList}
                 disabled={savingList}
               >
                 {savingList
-                  ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
                   : <FileSpreadsheet className="h-4 w-4" />}
-                Guardar lista
+                Guardar lista frecuente
               </Button>
               <button onClick={() => { setData(null); setStep(1) }} className="text-muted-foreground hover:text-foreground">
                 <X className="h-4 w-4" />
