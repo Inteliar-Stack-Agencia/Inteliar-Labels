@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
@@ -227,6 +227,22 @@ export default function JobDetailPage() {
   const [confirmingPrint, setConfirmingPrint] = useState<{ from: number; to: number } | null>(null)
   const [stoppedAtInput, setStoppedAtInput] = useState("")
 
+  // Maps each unique row to the actual printed label numbers it occupies
+  // (a row with quantity 6 spans 6 consecutive label numbers) — lets the
+  // "¿dónde se cortó?" flow show real dish names instead of making the
+  // user manually add up the cantidad column to find which label a raw
+  // number corresponds to.
+  const rowLabelRanges = useMemo(() => {
+    let cursor = 1
+    return rows.map((r) => {
+      const from = cursor
+      const to = cursor + r.quantity - 1
+      cursor = to + 1
+      const primary = r.row_data ? Object.values(r.row_data)[0] : undefined
+      return { from, to, quantity: r.quantity, label: primary || "(sin nombre)", row: r }
+    })
+  }, [rows])
+
   // Printer agent state
   const [agentOnline, setAgentOnline] = useState(false)
   const [printing, setPrinting] = useState(false)
@@ -410,7 +426,10 @@ export default function JobDetailPage() {
 
   const status = statusConfig[job.status] ?? statusConfig.pending
   const StatusIcon = status.icon
-  const previewRows = rows.slice(0, visibleCount)
+  const effectiveEndLabel = endAtLabel === "" ? (job?.total_labels ?? 0) : endAtLabel
+  const isPartialRange = startFromLabel > 1 || effectiveEndLabel < (job?.total_labels ?? 0)
+  const rowsInSelectedRange = rowLabelRanges.filter((r) => r.to >= startFromLabel && r.from <= effectiveEndLabel)
+  const previewRows = rowsInSelectedRange.slice(0, visibleCount)
   const canPrint = rows.length > 0 && !!template
 
   return (
@@ -522,10 +541,10 @@ export default function JobDetailPage() {
           printer actually finished — confirm instead of auto-marking complete. */}
       {confirmingPrint && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-5 shadow-2xl">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl">
             <h3 className="text-sm font-semibold text-foreground">¿Se imprimieron todas las etiquetas?</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Enviamos el rango {confirmingPrint.from}–{confirmingPrint.to} a la impresora. Confirmá que salieron bien —
+              Enviamos {confirmingPrint.to - confirmingPrint.from + 1} etiquetas ({confirmingPrint.from}–{confirmingPrint.to}) a la impresora. Confirmá que salieron bien —
               a veces la impresora se traba o se queda sin papel a mitad de camino sin que el sistema se entere.
             </p>
             <div className="mt-4 flex gap-2">
@@ -539,18 +558,32 @@ export default function JobDetailPage() {
             {stoppedAtInput !== "" && (
               <div className="mt-4 space-y-2 border-t border-border pt-4">
                 <label className="block text-xs font-medium text-foreground">
-                  ¿En qué número de etiqueta se cortó?
+                  ¿En qué plato se cortó? Elegí el último que SÍ salió impreso.
                 </label>
-                <input
-                  type="number"
-                  min={1}
-                  max={confirmingPrint.to}
-                  value={stoppedAtInput === "0" ? "" : stoppedAtInput}
-                  onChange={(e) => setStoppedAtInput(e.target.value)}
-                  placeholder={`entre ${confirmingPrint.from} y ${confirmingPrint.to}`}
-                  autoFocus
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                />
+                <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-border">
+                  {rowLabelRanges
+                    .filter((r) => r.from >= confirmingPrint.from && r.from <= confirmingPrint.to)
+                    .map((r, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setStoppedAtInput(String(r.to))}
+                        className={cn(
+                          "flex w-full items-center justify-between gap-2 border-b border-border px-3 py-2 text-left text-sm last:border-0 hover:bg-muted/60",
+                          Number(stoppedAtInput) === r.to && "bg-primary/10"
+                        )}
+                      >
+                        <span className="truncate text-foreground">{r.label}</span>
+                        <span className="shrink-0 text-xs text-muted-foreground">
+                          etiquetas {r.from}–{r.to} {r.quantity > 1 ? `(×${r.quantity})` : ""}
+                        </span>
+                      </button>
+                    ))}
+                </div>
+                {Number(stoppedAtInput) > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Se va a reanudar desde la etiqueta {Number(stoppedAtInput) + 1} (el siguiente plato después del que elegiste).
+                  </p>
+                )}
                 <Button size="sm" className="w-full" onClick={confirmPrintFailed} disabled={!Number(stoppedAtInput)}>
                   Preparar reanudación
                 </Button>
@@ -602,23 +635,29 @@ export default function JobDetailPage() {
               )}
             </div>
 
+            {isPartialRange && (
+              <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-foreground">
+                Mostrando solo lo que va a imprimir el rango seleccionado ({startFromLabel}–{effectiveEndLabel}, {rowsInSelectedRange.length} plato{rowsInSelectedRange.length !== 1 ? "s" : ""}) — no el trabajo completo.
+              </div>
+            )}
+
             <div className="flex flex-wrap gap-4">
               {previewRows.map((r, i) => (
                 <div key={i} className="flex flex-col items-center gap-1">
-                  <LabelPreview template={template} row={r.row_data} />
+                  <LabelPreview template={template} row={r.row.row_data} />
                   <span className="text-[10px] text-muted-foreground">
-                    #{i + 1}{r.quantity > 1 ? ` ×${r.quantity}` : ""}
+                    etiquetas {r.from}–{r.to}{r.quantity > 1 ? ` ×${r.quantity}` : ""}
                   </span>
                 </div>
               ))}
             </div>
 
-            {rows.length > visibleCount && (
+            {rowsInSelectedRange.length > visibleCount && (
               <button
                 onClick={() => setVisibleCount((v) => v + 12)}
                 className="text-xs text-primary hover:underline"
               >
-                Ver más ({rows.length - visibleCount} restantes)
+                Ver más ({rowsInSelectedRange.length - visibleCount} restantes)
               </button>
             )}
           </div>
