@@ -367,17 +367,26 @@ const SECTIONS: Section[] = [
         ),
       },
       {
-        q: "Error de permisos en Windows al instalar el Agente",
+        q: "Windows / el antivirus bloquea la instalación del Agente",
         a: (
           <div className="space-y-3 text-xs text-muted-foreground">
-            <p>Windows puede bloquear la ejecución de archivos descargados de Internet.</p>
+            <p>
+              Es normal — el instalador todavía no tiene firma digital (certificado de código), y Windows
+              desconfía por defecto de cualquier .exe nuevo sin esa firma. No significa que tenga virus.
+            </p>
+            <p className="font-medium text-foreground">Si aparece la pantalla azul "Windows protegió su PC" (SmartScreen):</p>
+            <ol className="list-decimal pl-5 space-y-2">
+              <li>Hacé click en <strong>"Más información"</strong> (texto chico, abajo a la izquierda del mensaje).</li>
+              <li>Va a aparecer un botón <strong>"Ejecutar de todas formas"</strong> — clickealo.</li>
+            </ol>
+            <p className="font-medium text-foreground">Si Windows bloquea el archivo antes de eso (propiedades del archivo):</p>
             <ol className="list-decimal pl-5 space-y-2">
               <li>Localizá el archivo <code className="text-primary">InteliarPrinterAgent.exe</code> en tu PC.</li>
               <li>Hacé clic derecho → <strong>Propiedades</strong>.</li>
               <li>En la parte inferior de la ventana, buscá la sección "Seguridad". Si dice algo como "Este archivo proviene de otra computadora...", hacé click en <strong>"Desbloquear"</strong> o tildar la opción.</li>
               <li>Aplicá los cambios y ejecutá el archivo normalmente.</li>
             </ol>
-            <p className="mt-2 font-medium text-foreground">Si Windows Defender sigue bloqueándolo, agregá una excepción: Windows Defender → Protección contra virus y amenazas → Administrar la configuración → Exclusiones → Agregar carpeta (seleccioná la carpeta donde está el .exe).</p>
+            <p className="mt-2 font-medium text-foreground">Si un antivirus de terceros (Avast, AVG, Norton, etc.) sigue bloqueándolo, agregá una excepción manual para el archivo desde la configuración de ese antivirus. En Windows Defender: Protección contra virus y amenazas → Administrar la configuración → Exclusiones → Agregar carpeta (seleccioná la carpeta donde está el .exe).</p>
           </div>
         ),
       },

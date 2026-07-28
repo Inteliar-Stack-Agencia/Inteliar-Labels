@@ -427,6 +427,9 @@ export default function DashboardPage() {
             <div>
               <p className="text-sm font-medium text-foreground">Agente de impresión para Windows</p>
               <p className="text-xs text-muted-foreground">Necesario para enviar a tu impresora térmica · Última versión · Windows 10/11</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Si Windows muestra una advertencia al abrirlo, hacé clic en &quot;Más información → Ejecutar de todas formas&quot;. No es un virus, es que el instalador todavía no tiene firma digital.
+              </p>
             </div>
           </div>
           <a
