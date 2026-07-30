@@ -211,6 +211,27 @@ function ImprimirPageInner() {
       )
       analytics.printJobCompleted(totalLabels)
       setPrintResult({ ok: true, message: result.message ?? "Enviado a la impresora" })
+      // "Imprimir ahora" used to bypass print_jobs entirely, so this print
+      // never showed up in "Etiquetas impresas hoy" or el Historial — record
+      // it as completed (same as confirming a batch job finished OK).
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: job } = await supabase.from("print_jobs").insert({
+          user_id: user.id,
+          template_id: selectedTemplate.id,
+          name: `${selectedTemplate.name} - manual`,
+          status: "completed",
+          total_labels: totalLabels,
+          printed_labels: totalLabels,
+          source_file: "manual",
+          completed_at: new Date().toISOString(),
+        }).select("id").single()
+        if (job) {
+          await supabase.from("print_job_rows").insert(
+            rows.map((r, i) => ({ job_id: job.id, row_index: i, row_data: r.data, quantity: r.quantity }))
+          )
+        }
+      }
     } catch (err) {
       setPrintResult({ ok: false, message: `${(err as Error).message} — Verificá que la impresora esté encendida, con papel y conectada.` })
     } finally {
