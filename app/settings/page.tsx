@@ -732,6 +732,13 @@ export default function SettingsPage() {
                               Detectar
                             </Button>
                           </div>
+                          <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                            ⚠️ Obligatorio: tiene que ser el nombre <strong>exacto</strong> de la impresora tal como
+                            aparece en Windows (Configuración → Bluetooth y dispositivos → Impresoras y escáneres).
+                            Un nombre parecido pero no idéntico (mayúsculas, "(203 dpi)", sufijos como "- DP", etc.)
+                            hace que falle con "OpenPrinter failed". Mejor usá "Detectar" para elegirlo de la lista
+                            en vez de escribirlo a mano.
+                          </p>
                           {usbQueues.length > 0 && (
                             <div className="space-y-1">
                               {usbQueues.map((q) => (
