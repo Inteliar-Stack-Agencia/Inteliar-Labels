@@ -18,11 +18,15 @@ Esto confirma que BarTender **no es liviano** — instala una base de datos SQL 
 
 Instala por default en `C:\Program Files\Seagull\BarTender 12.0`.
 
-## Pendiente de confirmar una vez instalado
+## ✅ RESUELTO: cómo funciona el "filtro por día"
 
-- Cómo funciona el filtro por día (¿carpeta con un archivo por día? ¿una tabla en la SQL Server Express con columna de día? ¿el desplegable de plantillas lee de esa base?).
-- Cómo se conecta el software de pedidos del cliente (Expocater / el otro prospecto) a esa base — ¿escribe directo a la SQL Server Express de BarTender, o hay un paso intermedio (export a Excel/CSV que BarTender importa)?
-- Si el "filtro por día" es una feature nativa de BarTender (Database Connectivity setup) o es algo que el cliente armó a medida.
+Conectamos un Excel real (uno de los nuestros, "Viandas Diarias 70x30", columnas `plato`/`cantidad`) a través de "Configurar conexión a la base de datos" → panel "Configuración de la base de datos", que tiene en el menú izquierdo: Instrucción SQL, Tablas, Campos, Criterio de ordenación, **Filtro**, Opciones, Registros por elemento, Navegador de registros.
+
+**"Filtro" es un constructor de condiciones genérico** ("Haga clic en el botón '+' para añadir una Condición de filtro"), tipo WHERE de SQL, mostrando como columnas disponibles las que tenga el Excel conectado (en nuestra prueba: `plato`, `cantidad`). **No es una función específica de "día de la semana"** — es un filtro de filas por cualquier columna y valor.
+
+Conclusión: lo que el prospecto/cliente describió ("filtra por día") es simplemente este filtro genérico aplicado sobre un Excel que tiene una columna de día (o una columna por día, según la captura original con LUNES/MARTES/etc. como nombres de campo) — no hay ninguna feature "day-of-week aware" nativa en BarTender. Es exactamente lo que nosotros podríamos construir: un filtro de filas por columna+valor en nuestro propio flujo de `/upload`, sin necesitar nada BarTender-específico.
+
+**Idea concreta y acotada para Inteliar Labels**: agregar un filtro simple en el paso 2 de `/upload` — "mostrar solo filas donde [columna] = [valor]" — antes de la vista previa/confirmación. Con esto el cliente podría subir un Excel con columna "día" (o una por cada día) y quedarse solo con las filas de hoy antes de imprimir. Bajo costo de desarrollo, resuelve exactamente el caso de uso sin copiar nada de BarTender (es una función de filtrado de datos genérica y obvia, no algo propietario de ellos).
 
 ## Hallazgos previos de esta investigación (sesión anterior)
 
@@ -74,8 +78,6 @@ Extremadamente amplio: Archivo de texto/CSV, XML, BarTender Data Builder, **Micr
 
 **Lectura competitiva**: esta lista confirma que BarTender apunta a integración con sistemas empresariales pesados (SAP, Oracle, ERPs). Es un argumento de venta a favor nuestro con el público chico: paga esa complejidad (aunque nunca la use) con una curva de aprendizaje más alta, mientras que nosotros vamos directo a lo que ese público realmente usa (Excel/CSV).
 
-**Nota metodológica**: no llegamos a conectar un Excel real ni a ver el mecanismo del filtro por día — quedó pendiente para la próxima sesión de prueba, con un Excel armado a propósito (columnas LUNES/MARTES/MIÉRCOLES/JUEVES/VIERNES + EMPRESA + NOMBRE Y APELLIDO, tal como se vio en la captura original del prospecto).
-
 ### Serialización (numeración incremental)
 
 Diálogo completo: valor inicial, incremento/decremento, método (numérico o alfabético A-Z), preservar cantidad de caracteres, cuándo incrementar (por evento, con intervalo configurable), y "Cantidad de impresión" separada en "Números de serie" (cuántos valores distintos) x "Copias por número de serie" (cuántas copias idénticas de cada uno). Nuestro elemento `serial` (`lib/label-types.ts`) ya cubre prefix/suffix/start/increment/digits — el matiz que nos falta es la separación entre "números de serie distintos" y "copias por cada uno" como dos controles independientes en la pantalla de impresión (hoy lo resolvemos con la columna `cantidad` del Excel, que es distinto pero cumple un rol similar).
@@ -91,7 +93,7 @@ La diferencia es enorme en cantidad, pero la mayoría de esas 119 son de nicho (
 - [ ] Certificado de firma de código para el instalador (evita el bloqueo de SmartScreen/antivirus reportado por clientes). Costo ~US$100-400/año, requiere verificación de la empresa — decisión de negocio, no solo técnica.
 - [ ] Checkbox de aceptación de Términos y Condiciones durante la instalación del agente.
 - [ ] "Opciones avanzadas de instalación" (carpeta destino configurable, etc.) — baja prioridad, nice-to-have.
-- [ ] Evaluar si conviene soportar import de Excel filtrado por columna de día de la semana (a confirmar si es lo que el prospecto realmente necesita, una vez se entienda cómo lo hace BarTender).
+- [ ] **Construir filtro de filas por columna+valor en `/upload` paso 2** — ya confirmado que resuelve el caso "filtrar por día" sin nada BarTender-específico (ver sección "RESUELTO" arriba). Falta decidir si lo prioriza el equipo y confirmar con el prospecto que efectivamente lo necesita antes de construirlo.
 - [ ] Evaluar si conviene soportar ingesta automática de archivos (carpeta compartida o API) desde un software de pedidos externo, en vez de requerir upload manual a `/upload` — depende de qué tan atado esté el cliente a su software actual.
 - [ ] Evaluar si vale la pena un "Historial" con más trazabilidad (por etiqueta individual, no solo por trabajo) — BarTender tiene "History Explorer" nativo, nosotros no.
 - [ ] Si en el futuro apuntamos a carnicerías/verdulerías/fiambrerías: BarTender soporta integración nativa con balanzas — anotado para no reinventar la rueda si surge esa necesidad.
