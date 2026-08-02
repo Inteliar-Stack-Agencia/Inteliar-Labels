@@ -50,6 +50,32 @@ A partir de esta lectura, se agregaron dos secciones a `/terminos` (`app/termino
 
 No se copió texto de BarTender — son cláusulas propias, redactadas en base a qué huecos tenía nuestro documento comparado con el de ellos. **Nota: no es asesoramiento legal formal**, conviene que un abogado las revise antes de considerarlas definitivas.
 
+## Recorrido por BarTender Designer (trial activado, edición Enterprise)
+
+Activación: trial de 30 días, 3 impresoras (aunque en el formulario de calificación se había puesto "1 impresora" — el trial siempre da 3 fijo, no ajusta según la respuesta). Licencia compartida por red con un "Servidor" con nombre propio (confirma el modelo de licencia atada a un servidor local, coherente con el problema de la clienta al cambiar de IP/oficina).
+
+### Asistente para nuevo documento (8 pantallas)
+
+Punto de inicio → Selección de impresora → Selección de material → Elementos por página → Bordes laterales (pide en mm el margen sin usar a cada lado — nosotros resolvemos esto automático con un margen fijo de 2mm, sin pedirle nada al usuario) → Forma del elemento → Tamaño de la plantilla (con opción de orientación "Vertical 180°", mismo tipo de rotación que tuvimos que resolver nosotros) → Fondo de la plantilla → Completado.
+
+**Conclusión de UX**: 8 pantallas de asistente solo para crear una plantilla en blanco, antes de tocar el diseño real. Nuestro flujo (subir Excel → elegir/crear plantilla con IA → imprimir) es sensiblemente más corto. Punto fuerte para la venta a comercios chicos sin experiencia en software de diseño.
+
+### Menú completo del Designer
+
+- **Archivo**: Configurar conexión a la base de datos, Reprint Console, Exportar plantilla de código de impresora, Opciones del documento, Contraseña del documento, Ver registro de revisión incrustado.
+- **Ver**: Diseño de plantilla (F7) / **Formulario de entrada de datos (F8)** — confirma en vivo la función de carga manual que en la comparativa marcamos como exclusiva de ediciones pagas superiores (Starter no la tiene).
+- **Administrar**: Configurar alertas, Configurar el documento de BarTender, **Configuración del escáner y la cámara**, **Configurar la balanza** — soporte nativo para hardware de báscula/scanner integrado a la impresión, algo que nosotros no tenemos y probablemente no necesitemos para el público actual, pero vale tenerlo en cuenta si en el futuro apuntamos a comercios con balanza (carnicerías, verdulerías, fiambrerías).
+- **Herramientas**: Librarian, **Printer Maestro** (monitoreo de impresoras), Reprint Console, Administration Console, Process Builder, **Data Builder** (arma la base de datos propia de BarTender), Integration Builder, **History Explorer** (auditoría/trazabilidad de impresiones — nosotros no tenemos un equivalente; nuestro Historial es más básico, sin trazabilidad detallada por etiqueta individual), **Print Station** (probablemente la app simplificada "solo imprimir" para operarios de planta, sin acceso al diseñador completo — el punto de comparación más justo contra nuestra UI de impresión, no contra el Designer completo).
+- **Origen de datos** (panel lateral): tipos disponibles — Datos incrustados, Hora, Fecha, Número de serie, Base de datos, Campos de datos de tabla, Campos de entrada de datos, Orígenes de datos con nombre, Bibliotecas, Campos de datos globales, Valores de objeto, Campos del trabajo de impresión, Archivo externo, **Comando Visual Basic** (scripting), Campos de plantilla de código de impresión.
+
+### Asistente de conexión a base de datos — tipos soportados
+
+Extremadamente amplio: Archivo de texto/CSV, XML, BarTender Data Builder, **Microsoft Excel**, Excel Online, Microsoft Access, Microsoft SQL Server, Oracle, JSON, Firebird, IBM DB2, IBM Informix, **Hojas de Google**, Microsoft Azure SQL, MySQL, MariaDB, PostgreSQL, **QuickBooks Online**, SAP IDoc, SAP HANA, conexión OLE DB genérica, conexión ODBC genérica, e importar configuración desde archivo.
+
+**Lectura competitiva**: esta lista confirma que BarTender apunta a integración con sistemas empresariales pesados (SAP, Oracle, ERPs). Es un argumento de venta a favor nuestro con el público chico: paga esa complejidad (aunque nunca la use) con una curva de aprendizaje más alta, mientras que nosotros vamos directo a lo que ese público realmente usa (Excel/CSV).
+
+**Nota metodológica**: no llegamos a conectar un Excel real ni a ver el mecanismo del filtro por día — quedó pendiente para la próxima sesión de prueba, con un Excel armado a propósito (columnas LUNES/MARTES/MIÉRCOLES/JUEVES/VIERNES + EMPRESA + NOMBRE Y APELLIDO, tal como se vio en la captura original del prospecto).
+
 ## Pendientes para Inteliar Labels (backlog, sin decidir fecha)
 
 - [ ] Certificado de firma de código para el instalador (evita el bloqueo de SmartScreen/antivirus reportado por clientes). Costo ~US$100-400/año, requiere verificación de la empresa — decisión de negocio, no solo técnica.
@@ -57,3 +83,5 @@ No se copió texto de BarTender — son cláusulas propias, redactadas en base a
 - [ ] "Opciones avanzadas de instalación" (carpeta destino configurable, etc.) — baja prioridad, nice-to-have.
 - [ ] Evaluar si conviene soportar import de Excel filtrado por columna de día de la semana (a confirmar si es lo que el prospecto realmente necesita, una vez se entienda cómo lo hace BarTender).
 - [ ] Evaluar si conviene soportar ingesta automática de archivos (carpeta compartida o API) desde un software de pedidos externo, en vez de requerir upload manual a `/upload` — depende de qué tan atado esté el cliente a su software actual.
+- [ ] Evaluar si vale la pena un "Historial" con más trazabilidad (por etiqueta individual, no solo por trabajo) — BarTender tiene "History Explorer" nativo, nosotros no.
+- [ ] Si en el futuro apuntamos a carnicerías/verdulerías/fiambrerías: BarTender soporta integración nativa con balanzas — anotado para no reinventar la rueda si surge esa necesidad.
