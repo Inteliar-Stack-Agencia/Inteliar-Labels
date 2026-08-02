@@ -147,7 +147,7 @@ export default function TemplateEditPage() {
     )
   }
 
-  const SCALE = realSize ? 96 / 25.4 : 6  // 96dpi/25.4mm = screen real size; 6 = edit scale
+  const SCALE = realSize ? 96 / 25.4 : 9  // 96dpi/25.4mm = screen real size; 9 = edit scale
   const canvasW = widthMm * SCALE
   const canvasH = heightMm * SCALE
 
@@ -525,7 +525,7 @@ export default function TemplateEditPage() {
       <div className="flex h-[calc(100vh-4rem)]">
         {/* Left Panel - Canvas */}
         <div className="flex-1 overflow-auto bg-muted/30 p-8">
-          <div className="mx-auto max-w-3xl space-y-6">
+          <div className="mx-auto max-w-5xl space-y-6">
 
             {showSizePanel && (
               <div className="rounded-xl border border-border bg-card p-5 space-y-4">
