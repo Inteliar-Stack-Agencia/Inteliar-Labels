@@ -36,6 +36,10 @@ Es decir: **no es el "Filtro" genérico de BarTender el que resuelve esto** — 
 
 **Pregunta concreta a hacerle al cliente**: *"Tu sistema de pedidos, ¿puede exportar un archivo Excel con los pedidos del día (plato, cantidad, empresa, etc.), además de lo que ya usa para mandarle a BarTender?"* Si la respuesta es sí, no hay nada nuevo que construir — usa `/upload` como cualquier cliente. Si la respuesta es no (el software solo sabe generar el formato específico para BarTender), ahí sí habría que evaluar una integración a medida con ese software.
 
+### ✅ Ya cubierto: "destildar un item antes de imprimir"
+
+El cliente también mencionó que antes de imprimir podía destildar filas que no quería imprimir. **Ya lo tenemos** — en `/upload`, paso de confirmación, la sección "Vista previa de datos" tiene un checkbox por fila ("Destildá las filas que no querés imprimir esta vez") más botones "Todas"/"Ninguna". No requiere ningún desarrollo nuevo, es un punto a favor para la comparativa (no hace falta un diálogo aparte como en BarTender).
+
 ## Hallazgos previos de esta investigación (sesión anterior)
 
 - BarTender licencia por **impresora en uso simultáneo**, no por IP/computadora — ver `docs/google-ads-campaign.md` y el PDF comparativo armado para Expocater (Inteliar-vs-BarTender-Expocater.pdf) para el detalle completo de precios y diferencias.
