@@ -32,6 +32,12 @@ interface ParsedData {
   totalRows: number
 }
 
+const DAY_NAMES_ES = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"]
+
+function detectDayColumn(columns: string[]): string | null {
+  return columns.find((c) => ["dia", "día", "day", "weekday"].includes(c.toLowerCase().trim())) ?? null
+}
+
 export default function UploadPage() {
   const router = useRouter()
   const supabase = createClient()
@@ -54,6 +60,8 @@ export default function UploadPage() {
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [excludedRows, setExcludedRows] = useState<Set<number>>(new Set())
   const [suggestedMatch, setSuggestedMatch] = useState<{ name: string; matched: number; total: number } | null>(null)
+  const [filterColumn, setFilterColumn] = useState<string>("")
+  const [filterValue, setFilterValue] = useState<string>("")
 
   useEffect(() => {
     loadSavedLists()
@@ -69,6 +77,7 @@ export default function UploadPage() {
           const handoff: ImportHandoff = JSON.parse(raw)
           setData(handoff)
           setExcludedRows(new Set())
+          applyDayColumnDefault(handoff.columns, handoff.rows)
           setStep(2)
           loadTemplates(handoff.columns)
         }
@@ -76,6 +85,24 @@ export default function UploadPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // If the file has a "día"/"day" column, default the filter to today's
+  // weekday when that value actually appears in the data — matches the
+  // BarTender-style workflow where the same weekly file is filtered by
+  // day before printing, instead of requiring a separate file per day.
+  const applyDayColumnDefault = (columns: string[], rows: Record<string, string>[]) => {
+    const dayCol = detectDayColumn(columns)
+    if (!dayCol) {
+      setFilterColumn("")
+      setFilterValue("")
+      return
+    }
+    setFilterColumn(dayCol)
+    const todayName = DAY_NAMES_ES[new Date().getDay()]
+    const values = rows.map((r) => String(r[dayCol] ?? "").trim())
+    const todayMatch = values.find((v) => v.toLowerCase() === todayName)
+    setFilterValue(todayMatch ?? "")
+  }
 
   const parseFile = useCallback((file: File) => {
     setError(null)
@@ -130,6 +157,8 @@ export default function UploadPage() {
           ["cantidad", "quantity", "cant", "qty", "copias", "copies"].includes(c.toLowerCase())
         )
         if (cantCol) setQuantityColumn(cantCol)
+
+        applyDayColumnDefault(columns, jsonData)
 
         setStep(2)
         loadTemplates(columns)
@@ -193,7 +222,17 @@ export default function UploadPage() {
     if (file) parseFile(file)
   }
 
-  const includedRows = data ? data.rows.filter((_, i) => !excludedRows.has(i)) : []
+  const filterValues = data && filterColumn
+    ? Array.from(new Set(data.rows.map((r) => String(r[filterColumn] ?? "").trim()).filter(Boolean)))
+    : []
+
+  const matchesFilter = (row: Record<string, string>) =>
+    !filterColumn || !filterValue || String(row[filterColumn] ?? "").trim() === filterValue
+
+  const visibleRows = data ? data.rows.filter((row) => matchesFilter(row)) : []
+  const includedRows = data
+    ? data.rows.filter((row, i) => !excludedRows.has(i) && matchesFilter(row))
+    : []
   const includedCount = includedRows.length
 
   // Render a preview image of the first label once the user reaches the confirm step.
@@ -275,9 +314,10 @@ export default function UploadPage() {
       return
     }
 
-    // Only include rows the user kept selected (re-indexed sequentially)
+    // Only include rows the user kept selected and that pass the active
+    // column filter (re-indexed sequentially)
     const rowsToInsert = data.rows
-      .filter((_, i) => !excludedRows.has(i))
+      .filter((row, i) => !excludedRows.has(i) && matchesFilter(row))
       .map((row, i) => ({
         job_id: job.id,
         row_index: i,
@@ -336,6 +376,7 @@ export default function UploadPage() {
       ["cantidad", "quantity", "cant", "qty", "copias", "copies"].includes(c.toLowerCase())
     )
     if (cantCol) setQuantityColumn(cantCol)
+    applyDayColumnDefault(list.columns, list.rows)
     setStep(2)
     loadTemplates(list.columns)
   }
@@ -684,13 +725,50 @@ export default function UploadPage() {
               )}
             </div>
 
+            {data.columns.length > 0 && (
+              <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+                <h3 className="text-sm font-semibold">Filtrar por columna</h3>
+                <p className="text-xs text-muted-foreground">
+                  Si tu Excel tiene una sola planilla con todo (por ejemplo, con una columna "Día"), elegí qué valor mostrar antes de imprimir — como cuando en BarTender filtrás por día.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <select
+                    value={filterColumn}
+                    onChange={(e) => { setFilterColumn(e.target.value); setFilterValue("") }}
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  >
+                    <option value="">Sin filtro (mostrar todas las filas)</option>
+                    {data.columns.map((col) => (
+                      <option key={col} value={col}>{col}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={filterValue}
+                    onChange={(e) => setFilterValue(e.target.value)}
+                    disabled={!filterColumn}
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+                  >
+                    <option value="">Todos los valores</option>
+                    {filterValues.map((v) => (
+                      <option key={v} value={v}>{v}</option>
+                    ))}
+                  </select>
+                </div>
+                {filterColumn && filterValue && (
+                  <p className="text-xs text-primary">
+                    Mostrando solo filas donde <strong>{filterColumn} = {filterValue}</strong> ({visibleRows.length} de {data.totalRows})
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="rounded-xl border border-border bg-card p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-semibold">Vista previa de datos</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Destildá las filas que no querés imprimir esta vez —
-                    <strong className="text-foreground"> {includedCount} de {data.totalRows} seleccionadas</strong>
+                    <strong className="text-foreground"> {includedCount} de {visibleRows.length} seleccionadas</strong>
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -717,33 +795,37 @@ export default function UploadPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {data.rows.slice(0, previewRows).map((row, i) => {
-                      const excluded = excludedRows.has(i)
-                      return (
-                        <tr
-                          key={i}
-                          className={cn("hover:bg-muted/50 cursor-pointer", excluded && "opacity-40")}
-                          onClick={() => setExcludedRows((prev) => {
-                            const next = new Set(prev)
-                            if (next.has(i)) next.delete(i); else next.add(i)
-                            return next
-                          })}
-                        >
-                          <td className="px-3 py-2 text-center">
-                            <input type="checkbox" checked={!excluded} readOnly className="accent-primary" />
-                          </td>
-                          {data.columns.map((col) => (
-                            <td key={col} className={cn("px-3 py-2 text-foreground", excluded && "line-through")}>{row[col]}</td>
-                          ))}
-                        </tr>
-                      )
-                    })}
+                    {data.rows
+                      .map((row, i) => ({ row, i }))
+                      .filter(({ row }) => matchesFilter(row))
+                      .slice(0, previewRows)
+                      .map(({ row, i }) => {
+                        const excluded = excludedRows.has(i)
+                        return (
+                          <tr
+                            key={i}
+                            className={cn("hover:bg-muted/50 cursor-pointer", excluded && "opacity-40")}
+                            onClick={() => setExcludedRows((prev) => {
+                              const next = new Set(prev)
+                              if (next.has(i)) next.delete(i); else next.add(i)
+                              return next
+                            })}
+                          >
+                            <td className="px-3 py-2 text-center">
+                              <input type="checkbox" checked={!excluded} readOnly className="accent-primary" />
+                            </td>
+                            {data.columns.map((col) => (
+                              <td key={col} className={cn("px-3 py-2 text-foreground", excluded && "line-through")}>{row[col]}</td>
+                            ))}
+                          </tr>
+                        )
+                      })}
                   </tbody>
                 </table>
               </div>
-              {data.totalRows > previewRows && (
+              {visibleRows.length > previewRows && (
                 <p className="text-xs text-muted-foreground text-center">
-                  Mostrando {previewRows} de {data.totalRows} filas — tocá <strong>Ver todo</strong> para elegir cuáles imprimir
+                  Mostrando {previewRows} de {visibleRows.length} filas — tocá <strong>Ver todo</strong> para elegir cuáles imprimir
                 </p>
               )}
             </div>
