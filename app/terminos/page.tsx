@@ -16,7 +16,7 @@ export default function TerminosPage() {
 
         <article className="prose prose-slate max-w-none">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Términos y Condiciones</h1>
-          <p className="text-sm text-gray-500 mb-8">Última actualización: 28 de junio de 2026</p>
+          <p className="text-sm text-gray-500 mb-8">Última actualización: 28 de julio de 2026</p>
 
           <section className="mb-8">
             <h2 className="text-xl font-semibold text-gray-800 mb-3">1. Objeto del servicio</h2>
@@ -64,7 +64,23 @@ export default function TerminosPage() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-xl font-semibold text-gray-800 mb-3">5. Propiedad intelectual</h2>
+            <h2 className="text-xl font-semibold text-gray-800 mb-3">5. Límites de uso según plan</h2>
+            <p className="text-gray-600 leading-relaxed mb-3">
+              Cada plan tiene límites definidos en la página de precios (cantidad de sucursales/dispositivos,
+              cantidad de impresoras por dispositivo, e impresiones mensuales, según corresponda). Estos
+              límites forman parte del contrato y pueden aplicarse técnicamente por el Servicio. Si tu uso
+              supera el límite de tu plan, vas a necesitar actualizar a un plan superior para continuar
+              usando el Servicio sin restricciones.
+            </p>
+            <p className="text-gray-600 leading-relaxed">
+              No está permitido compartir credenciales de cuenta ni de licencia entre distintos usuarios o
+              negocios con el fin de eludir los límites de dispositivos o impresoras de tu plan, ni realizar
+              ingeniería inversa del software o los agentes de impresión provistos por el Servicio.
+            </p>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-800 mb-3">6. Propiedad intelectual</h2>
             <p className="text-gray-600 leading-relaxed">
               Todo el software, diseño, código fuente y documentación del Servicio son propiedad exclusiva
               de Inteliar Stack. El usuario recibe una licencia de uso limitada, no exclusiva e
@@ -75,7 +91,7 @@ export default function TerminosPage() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-xl font-semibold text-gray-800 mb-3">6. Limitación de responsabilidad</h2>
+            <h2 className="text-xl font-semibold text-gray-800 mb-3">7. Limitación de responsabilidad</h2>
             <p className="text-gray-600 leading-relaxed">
               El Servicio se provee "tal como está". Inteliar Stack no garantiza disponibilidad
               ininterrumpida ni ausencia de errores. En ningún caso la responsabilidad total de Inteliar
@@ -86,7 +102,17 @@ export default function TerminosPage() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-xl font-semibold text-gray-800 mb-3">7. Contacto</h2>
+            <h2 className="text-xl font-semibold text-gray-800 mb-3">8. Ley aplicable y jurisdicción</h2>
+            <p className="text-gray-600 leading-relaxed">
+              Estos Términos y Condiciones se rigen por las leyes de la República Argentina. Cualquier
+              controversia derivada del uso del Servicio será sometida a los tribunales ordinarios
+              competentes de la Ciudad Autónoma de Buenos Aires, con renuncia expresa a cualquier otro fuero
+              o jurisdicción que pudiera corresponder.
+            </p>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-800 mb-3">9. Contacto</h2>
             <p className="text-gray-600 leading-relaxed">
               Para consultas sobre estos Términos y Condiciones podés escribirnos a{" "}
               <a href="mailto:inteliarstack.ia@gmail.com" className="text-blue-600 hover:underline">
