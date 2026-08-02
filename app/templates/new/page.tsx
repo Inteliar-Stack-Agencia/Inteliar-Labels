@@ -1071,7 +1071,9 @@ export default function NewTemplatePage() {
               ) : selectedElementData.type !== "serial" && selectedElementData.type !== "line" && selectedElementData.type !== "rect" && selectedElementData.type !== "ellipse" ? (
                 <>
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Tamaño de fuente (px)</label>
+                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                      Tamaño de fuente (px) · altura impresa ≈ {(selectedElementData.fontSize / 3).toFixed(1)} mm
+                    </label>
                     <input type="number" value={selectedElementData.fontSize}
                       onChange={(e) => updateElement(selectedElementData.id, { fontSize: Number(e.target.value) })}
                       className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
@@ -1113,7 +1115,9 @@ export default function NewTemplatePage() {
                 </>
               ) : (
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Tamaño de fuente (px)</label>
+                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                    Tamaño de fuente (px) · altura impresa ≈ {(selectedElementData.fontSize / 3).toFixed(1)} mm
+                  </label>
                   <input type="number" value={selectedElementData.fontSize}
                     onChange={(e) => updateElement(selectedElementData.id, { fontSize: Number(e.target.value) })}
                     className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
