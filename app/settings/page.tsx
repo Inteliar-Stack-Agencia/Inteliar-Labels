@@ -714,7 +714,7 @@ export default function SettingsPage() {
                                 type="text"
                                 value={form.usbQueue ?? ""}
                                 onChange={(e) => setForm({ ...form, usbQueue: e.target.value })}
-                                placeholder="Honeywell PC42 (USB)"
+                                placeholder="Ej: Honeywell PC42E-T (203 dpi) - DP"
                                 className="w-full rounded-lg border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                               />
                             </div>
