@@ -114,6 +114,15 @@ BarTender tiene **119+ simbologías** organizadas por categoría (Atención méd
 
 La diferencia es enorme en cantidad, pero la mayoría de esas 119 son de nicho (farmacéutico, atención médica, automotriz — GS1 AI específicos). Las 6 que tenemos cubren el uso real de nuestro público actual (retail, catering, e-commerce). Si en el futuro crecemos hacia logística/mayoristas, las que más probablemente pidan y no tenemos: **ITF-14** (cajas/cartones de logística), **GS1-128** (estándar de cadena de suministro/retail), **PDF417** (usado en carnets/documentos, algunos couriers). No vale la pena construir el catálogo completo — son casos de nicho que no aplican a este mercado.
 
+### Tercera confirmación de Andrea — celdas vacías + cómo carga el archivo en BarTender
+
+Andrea confirmó por escrito los diagramas corregidos y agregó dos precisiones:
+
+1. **Las celdas vacías, no las filas, indican quién no pidió ese día.** Un empleado que pidió el lunes pero no el miércoles sigue apareciendo en la lista igual — el casillero de "miércoles" queda vacío para esa fila. Ella tilda/destilda en base a eso. Esto **no cambia el diagrama enviado**: el paso "destildás lo que no querés imprimir" ya cubre este caso tal cual, porque en Inteliar Labels esas filas con la columna del día vacía muestran el dato en blanco y se destildan igual que hoy — no hace falta desarrollar nada nuevo para esto tampoco.
+2. **Cómo carga el archivo en BarTender**: primero arma la etiqueta (el diseño), y recién después usa el ícono chico de conexión a datos (el Asistente de conexión a base de datos ya documentado arriba, con Excel entre los tipos soportados) para indicarle desde dónde levantar el archivo. Su sistema le genera el Excel con extensión `.xlsx` — tuvo un problema anterior porque el archivo no tenía esa extensión y tuvo que corregirlo.
+
+Se ofreció a grabar un video mostrando cómo arma la etiqueta en BarTender paso a paso — pendiente, sería la confirmación definitiva del único punto que seguía marcado "¿ASÍ ES?" en el diagrama (el cambio manual de a qué columna de día apunta el campo "comida").
+
 ## Pendientes para Inteliar Labels (backlog, sin decidir fecha)
 
 - [ ] Certificado de firma de código para el instalador (evita el bloqueo de SmartScreen/antivirus reportado por clientes). Costo ~US$100-400/año, requiere verificación de la empresa — decisión de negocio, no solo técnica.
