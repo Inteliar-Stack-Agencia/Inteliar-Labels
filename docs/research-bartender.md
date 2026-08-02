@@ -28,6 +28,14 @@ Conclusión: lo que el prospecto/cliente describió ("filtra por día") es simpl
 
 **Idea concreta y acotada para Inteliar Labels**: agregar un filtro simple en el paso 2 de `/upload` — "mostrar solo filas donde [columna] = [valor]" — antes de la vista previa/confirmación. Con esto el cliente podría subir un Excel con columna "día" (o una por cada día) y quedarse solo con las filas de hoy antes de imprimir. Bajo costo de desarrollo, resuelve exactamente el caso de uso sin copiar nada de BarTender (es una función de filtrado de datos genérica y obvia, no algo propietario de ellos).
 
+### ⚠️ Corrección — lo que el cliente real mostró es distinto
+
+El cliente (no el prospecto de la EULA, otro caso) mostró algo más específico: su etiqueta tiene 4 datos (empresa, plato, comensal, fecha de elaboración), y explicó que desde BarTender elegía **siempre la misma carpeta**, porque su propio software de pedidos le **generaba plantillas ya armadas** ahí — y el desplegable que parecía "elegir el día" en realidad mostraba los archivos que su sistema había generado para ese pedido/día específico.
+
+Es decir: **no es el "Filtro" genérico de BarTender el que resuelve esto** — es el software de pedidos del cliente el que hace el trabajo pesado (arma el archivo/plantilla del día y lo deja en una carpeta fija). BarTender solo abre lo que ya encuentra ahí. Esto cambia la pregunta relevante: no necesitamos replicar "el filtro de BarTender", necesitamos saber si el software de pedidos del cliente puede generar un **Excel/CSV simple** (además de lo que ya arma para BarTender) que podamos subir a nuestro `/upload` — ahí no hace falta construir nada de filtro automático, alcanza con que el cliente suba ese archivo del día como ya hace con cualquier otro Excel.
+
+**Pregunta concreta a hacerle al cliente**: *"Tu sistema de pedidos, ¿puede exportar un archivo Excel con los pedidos del día (plato, cantidad, empresa, etc.), además de lo que ya usa para mandarle a BarTender?"* Si la respuesta es sí, no hay nada nuevo que construir — usa `/upload` como cualquier cliente. Si la respuesta es no (el software solo sabe generar el formato específico para BarTender), ahí sí habría que evaluar una integración a medida con ese software.
+
 ## Hallazgos previos de esta investigación (sesión anterior)
 
 - BarTender licencia por **impresora en uso simultáneo**, no por IP/computadora — ver `docs/google-ads-campaign.md` y el PDF comparativo armado para Expocater (Inteliar-vs-BarTender-Expocater.pdf) para el detalle completo de precios y diferencias.
