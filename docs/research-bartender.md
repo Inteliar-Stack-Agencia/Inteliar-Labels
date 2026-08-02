@@ -76,6 +76,16 @@ Extremadamente amplio: Archivo de texto/CSV, XML, BarTender Data Builder, **Micr
 
 **Nota metodológica**: no llegamos a conectar un Excel real ni a ver el mecanismo del filtro por día — quedó pendiente para la próxima sesión de prueba, con un Excel armado a propósito (columnas LUNES/MARTES/MIÉRCOLES/JUEVES/VIERNES + EMPRESA + NOMBRE Y APELLIDO, tal como se vio en la captura original del prospecto).
 
+### Serialización (numeración incremental)
+
+Diálogo completo: valor inicial, incremento/decremento, método (numérico o alfabético A-Z), preservar cantidad de caracteres, cuándo incrementar (por evento, con intervalo configurable), y "Cantidad de impresión" separada en "Números de serie" (cuántos valores distintos) x "Copias por número de serie" (cuántas copias idénticas de cada uno). Nuestro elemento `serial` (`lib/label-types.ts`) ya cubre prefix/suffix/start/increment/digits — el matiz que nos falta es la separación entre "números de serie distintos" y "copias por cada uno" como dos controles independientes en la pantalla de impresión (hoy lo resolvemos con la columna `cantidad` del Excel, que es distinto pero cumple un rol similar).
+
+### Códigos de barras — catálogo completo
+
+BarTender tiene **119+ simbologías** organizadas por categoría (Atención médica, Digimarc, Farmacéutico, GS1 por aplicación/por simbología, Postal/Envíos, TLC — automotriz, Todas). Nosotros soportamos 6: Code128, EAN-13, EAN-8, Code39, DataMatrix, QR.
+
+La diferencia es enorme en cantidad, pero la mayoría de esas 119 son de nicho (farmacéutico, atención médica, automotriz — GS1 AI específicos). Las 6 que tenemos cubren el uso real de nuestro público actual (retail, catering, e-commerce). Si en el futuro crecemos hacia logística/mayoristas, las que más probablemente pidan y no tenemos: **ITF-14** (cajas/cartones de logística), **GS1-128** (estándar de cadena de suministro/retail), **PDF417** (usado en carnets/documentos, algunos couriers). No vale la pena construir el catálogo completo — son casos de nicho que no aplican a este mercado.
+
 ## Pendientes para Inteliar Labels (backlog, sin decidir fecha)
 
 - [ ] Certificado de firma de código para el instalador (evita el bloqueo de SmartScreen/antivirus reportado por clientes). Costo ~US$100-400/año, requiere verificación de la empresa — decisión de negocio, no solo técnica.
@@ -85,3 +95,4 @@ Extremadamente amplio: Archivo de texto/CSV, XML, BarTender Data Builder, **Micr
 - [ ] Evaluar si conviene soportar ingesta automática de archivos (carpeta compartida o API) desde un software de pedidos externo, en vez de requerir upload manual a `/upload` — depende de qué tan atado esté el cliente a su software actual.
 - [ ] Evaluar si vale la pena un "Historial" con más trazabilidad (por etiqueta individual, no solo por trabajo) — BarTender tiene "History Explorer" nativo, nosotros no.
 - [ ] Si en el futuro apuntamos a carnicerías/verdulerías/fiambrerías: BarTender soporta integración nativa con balanzas — anotado para no reinventar la rueda si surge esa necesidad.
+- [ ] Si crecemos hacia logística/mayoristas: evaluar sumar ITF-14, GS1-128 y PDF417 como simbologías adicionales (hoy solo tenemos Code128/EAN-13/EAN-8/Code39/DataMatrix/QR).
