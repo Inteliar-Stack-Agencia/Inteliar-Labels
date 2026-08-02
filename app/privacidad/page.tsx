@@ -16,7 +16,7 @@ export default function PrivacidadPage() {
 
         <article className="prose prose-slate max-w-none">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Política de Privacidad</h1>
-          <p className="text-sm text-gray-500 mb-2">Última actualización: 28 de junio de 2026</p>
+          <p className="text-sm text-gray-500 mb-2">Última actualización: 28 de julio de 2026</p>
           <p className="text-sm text-gray-500 mb-8">
             Esta política cumple con la Ley 25.326 de Protección de los Datos Personales de la República
             Argentina y su Decreto Reglamentario 1558/2001.
@@ -40,6 +40,18 @@ export default function PrivacidadPage() {
               <li>
                 <strong>Datos técnicos:</strong> dirección IP, tipo de navegador y sistema operativo,
                 recopilados automáticamente con fines de seguridad y diagnóstico.
+              </li>
+              <li>
+                <strong>Datos del agente de impresión:</strong> si instalás el agente local de impresión,
+                recopilamos un identificador único del dispositivo y el nombre de host de la computadora,
+                usados exclusivamente para validar tu licencia y hacer cumplir los límites de dispositivos e
+                impresoras de tu plan. No recopilamos el contenido de las etiquetas que imprimís.
+              </li>
+              <li>
+                <strong>Datos de navegación con fines publicitarios:</strong> usamos Google Analytics, Google
+                Ads y Meta Pixel para medir el rendimiento de nuestras campañas y entender cómo se usa el
+                sitio. Estas herramientas pueden usar cookies y recopilar datos de navegación de forma
+                anónima o pseudonimizada.
               </li>
             </ul>
           </section>
@@ -88,6 +100,16 @@ export default function PrivacidadPage() {
                     <td className="p-3 border border-gray-200">MercadoPago / Stripe</td>
                     <td className="p-3 border border-gray-200">Procesamiento de pagos</td>
                     <td className="p-3 border border-gray-200">Email, datos de pago (gestionados por ellos)</td>
+                  </tr>
+                  <tr className="bg-gray-50">
+                    <td className="p-3 border border-gray-200">Google Analytics / Google Ads</td>
+                    <td className="p-3 border border-gray-200">Analítica del sitio y medición de campañas publicitarias</td>
+                    <td className="p-3 border border-gray-200">Datos de navegación, eventos de uso del sitio</td>
+                  </tr>
+                  <tr>
+                    <td className="p-3 border border-gray-200">Meta (Facebook/Instagram) Pixel</td>
+                    <td className="p-3 border border-gray-200">Medición de campañas publicitarias en Meta Ads</td>
+                    <td className="p-3 border border-gray-200">Datos de navegación, eventos de uso del sitio</td>
                   </tr>
                 </tbody>
               </table>
