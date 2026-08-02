@@ -29,6 +29,7 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
+  AlignVerticalSpaceAround,
   FileSpreadsheet,
   Pencil,
 } from "lucide-react"
@@ -46,6 +47,42 @@ const PRESET_SIZES = [
   { label: "100 × 100 mm (cuadrada)", width: 100, height: 100 },
   { label: "Personalizado", width: 0, height: 0 },
 ]
+
+// Minimum forced clearance (mm) between an element and the top/bottom edges
+// of the label, and between stacked elements when auto-distributing.
+const MIN_EDGE_MARGIN_MM = 2
+const MIN_GAP_MM = 1
+
+// Rough average character width relative to font height, tuned for the
+// editor's font ('Arial Narrow' with -0.03em letter-spacing) — used only to
+// estimate how many lines a text element will wrap to, so we can reserve
+// enough vertical space for it instead of assuming everything is one line.
+const AVG_CHAR_WIDTH_FACTOR = 0.52
+
+function estimateTextLines(content: string, boxWidthTenths: number, fontSizePx: number, bold?: boolean): number {
+  const fontHeightMm = fontSizePx / 3
+  const boxWidthMm = boxWidthTenths / 10
+  const avgCharW = fontHeightMm * (bold ? AVG_CHAR_WIDTH_FACTOR + 0.05 : AVG_CHAR_WIDTH_FACTOR)
+  const charsPerLine = Math.max(1, Math.floor(boxWidthMm / Math.max(0.1, avgCharW)))
+  const segments = (content || "").split("\n")
+  let lines = 0
+  for (const seg of segments) lines += Math.max(1, Math.ceil(seg.length / charsPerLine))
+  return lines
+}
+
+// Estimated footprint height (mm) of an element, accounting for text that
+// wraps to multiple lines — used for the min-margin clamp, the "Distribuir
+// verticalmente" auto-layout, and overlap warnings.
+function estimateElementHeightMm(el: LabelElement, widthMm: number): number {
+  if (el.type === "image") return (el.imgHeight ?? 150) / 10
+  if (el.type === "rect" || el.type === "ellipse") return (el.lineHeight ?? 100) / 10
+  if (el.type === "line") return (el.lineThickness ?? 5) / 10
+  const fontHeightMm = (el.fontSize ?? 12) / 3
+  if (el.type !== "text") return fontHeightMm * 1.25
+  const boxWidthTenths = el.boxWidth ?? (widthMm - 4) * 10
+  const lines = estimateTextLines(el.content ?? "", boxWidthTenths, el.fontSize ?? 12, el.bold)
+  return lines * fontHeightMm * 1.25
+}
 
 export default function TemplateEditPage() {
   const router = useRouter()
@@ -74,6 +111,8 @@ export default function TemplateEditPage() {
   const canvasRef = useRef<HTMLDivElement>(null)
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [cropping, setCropping] = useState(false)
+  const [cropError, setCropError] = useState<string | null>(null)
   const [showAiModal, setShowAiModal] = useState(false)
   const [aiDescription, setAiDescription] = useState("")
   const [aiLoading, setAiLoading] = useState(false)
@@ -185,6 +224,63 @@ export default function TemplateEditPage() {
     setElements(elements.filter(Boolean).map((el) => (el.id === id ? { ...el, ...updates } : el)))
   }
 
+  // Forces a minimum margin from the top/bottom edges of the label — used
+  // both while dragging and when typing a Y position by hand.
+  const clampY = useCallback((el: LabelElement, newY: number) => {
+    const minY = MIN_EDGE_MARGIN_MM * 10
+    const elHeightTenths = Math.round(estimateElementHeightMm(el, widthMm) * 10)
+    const maxY = Math.max(minY, heightMm * 10 - MIN_EDGE_MARGIN_MM * 10 - elHeightTenths)
+    return Math.min(Math.max(newY, minY), maxY)
+  }, [widthMm, heightMm])
+
+  // Stacks all text elements one below the other, respecting the minimum
+  // top/bottom margin and reserving extra height for any that wrap to more
+  // than one line (e.g. a long plato name) so the next field doesn't overlap it.
+  const distributeVertically = () => {
+    const textEls = elements
+      .filter((e): e is LabelElement => !!e && e.type === "text")
+      .slice()
+      .sort((a, b) => a.y - b.y)
+    if (textEls.length < 2) return
+
+    const heights = textEls.map((e) => estimateElementHeightMm(e, widthMm))
+    const totalContentMm = heights.reduce((s, h) => s + h, 0)
+    const availableMm = heightMm - MIN_EDGE_MARGIN_MM * 2
+    const gapCount = textEls.length - 1
+    const gapMm = gapCount > 0 ? Math.max(MIN_GAP_MM, (availableMm - totalContentMm) / gapCount) : 0
+
+    const newY = new Map<string, number>()
+    let curY = MIN_EDGE_MARGIN_MM
+    textEls.forEach((e, i) => {
+      newY.set(e.id, Math.round(curY * 10))
+      curY += heights[i] + gapMm
+    })
+    setElements((prev) => prev.map((e) => (e && newY.has(e.id) ? { ...e, y: newY.get(e.id)! } : e)))
+  }
+
+  // Flags pairs of text elements (top-to-bottom order) whose estimated
+  // footprint overlaps — most commonly because the one above wraps to more
+  // lines than a single-line layout assumed.
+  const { overlapIds, overlapWarnings } = (() => {
+    const textEls = elements
+      .filter((e): e is LabelElement => !!e && e.type === "text")
+      .slice()
+      .sort((a, b) => a.y - b.y)
+    const ids = new Set<string>()
+    const warnings: string[] = []
+    for (let i = 0; i < textEls.length - 1; i++) {
+      const cur = textEls[i]
+      const next = textEls[i + 1]
+      const curHeightTenths = Math.round(estimateElementHeightMm(cur, widthMm) * 10)
+      if (next.y < cur.y + curHeightTenths) {
+        ids.add(cur.id)
+        ids.add(next.id)
+        warnings.push(`"${cur.content || "Texto"}" puede superponerse con "${next.content || "Texto"}" si ocupa más de una línea.`)
+      }
+    }
+    return { overlapIds: ids, overlapWarnings: warnings }
+  })()
+
   const deleteElement = (id: string) => {
     setElements(elements.filter((el) => el && el.id !== id))
     if (selectedElement === id) setSelectedElement(null)
@@ -249,6 +345,84 @@ export default function TemplateEditPage() {
     setSelectedElement(newElement.id)
   }
 
+  // Trims a uniform-color or transparent margin baked into an uploaded PNG
+  // (common when a client exports their logo with padding around it), so the
+  // artwork fills the element's box and can sit flush against the label edge
+  // instead of being stuck with dead space around it.
+  const handleAutoCrop = async (id: string, imageUrl: string) => {
+    setCropping(true)
+    setCropError(null)
+    try {
+      const img = new Image()
+      img.crossOrigin = "anonymous"
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve()
+        img.onerror = () => reject(new Error("load"))
+        img.src = imageUrl
+      })
+
+      const w = img.naturalWidth
+      const h = img.naturalHeight
+      const canvas = document.createElement("canvas")
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext("2d")
+      if (!ctx) throw new Error("canvas")
+      ctx.drawImage(img, 0, 0)
+      const { data } = ctx.getImageData(0, 0, w, h)
+
+      // Sample the 4 corners to guess the background (transparent, or a
+      // solid color like a green square behind the logo).
+      const at = (x: number, y: number) => {
+        const i = (y * w + x) * 4
+        return [data[i], data[i + 1], data[i + 2], data[i + 3]]
+      }
+      const corners = [at(0, 0), at(w - 1, 0), at(0, h - 1), at(w - 1, h - 1)]
+      const hasTransparency = corners.some((c) => c[3] < 250)
+      const bg = corners[0]
+      const TOL = 18
+
+      const isBackground = (x: number, y: number) => {
+        const [r, g, b, a] = at(x, y)
+        if (hasTransparency) return a < 10
+        return Math.abs(r - bg[0]) <= TOL && Math.abs(g - bg[1]) <= TOL && Math.abs(b - bg[2]) <= TOL
+      }
+
+      let top = 0, bottom = h - 1, left = 0, right = w - 1
+      const rowIsBg = (y: number) => { for (let x = 0; x < w; x += 2) if (!isBackground(x, y)) return false; return true }
+      const colIsBg = (x: number) => { for (let y = 0; y < h; y += 2) if (!isBackground(x, y)) return false; return true }
+      while (top < bottom && rowIsBg(top)) top++
+      while (bottom > top && rowIsBg(bottom)) bottom--
+      while (left < right && colIsBg(left)) left++
+      while (right > left && colIsBg(right)) right--
+
+      const cropW = right - left + 1
+      const cropH = bottom - top + 1
+      if (cropW >= w - 1 && cropH >= h - 1) {
+        setCropError("No se detectó margen para recortar en esta imagen.")
+        setCropping(false)
+        return
+      }
+
+      const outCanvas = document.createElement("canvas")
+      outCanvas.width = cropW
+      outCanvas.height = cropH
+      const outCtx = outCanvas.getContext("2d")
+      if (!outCtx) throw new Error("canvas")
+      outCtx.drawImage(canvas, left, top, cropW, cropH, 0, 0, cropW, cropH)
+      const newUrl = outCanvas.toDataURL("image/png")
+
+      const el = elements.find((e) => e?.id === id)
+      const curW = el?.imgWidth ?? 30
+      const newImgWidth = curW
+      const newImgHeight = Math.round((curW * cropH) / cropW)
+      updateElement(id, { imageUrl: newUrl, imgWidth: newImgWidth, imgHeight: newImgHeight })
+    } catch {
+      setCropError("No se pudo recortar esta imagen automáticamente (puede ser un problema de permisos del archivo). Probá subiendo un PNG ya recortado.")
+    }
+    setCropping(false)
+  }
+
   const handleElementMouseDown = useCallback((e: React.MouseEvent, id: string) => {
     e.stopPropagation()
     e.preventDefault()
@@ -305,6 +479,7 @@ export default function TemplateEditPage() {
         }
       }
       newY = snapY
+      newY = clampY(el, newY)
       setDragGuides({ vs: guideX != null ? [guideX] : [], hs: guideY != null ? [guideY] : [] })
       setElements((prev) => prev.map((e) => e.id === drag.id ? { ...e, x: newX, y: newY } : e))
     }
@@ -318,7 +493,7 @@ export default function TemplateEditPage() {
 
     window.addEventListener("mousemove", onMouseMove)
     window.addEventListener("mouseup", onMouseUp)
-  }, [elements, SCALE, widthMm, heightMm])
+  }, [elements, SCALE, widthMm, heightMm, clampY])
 
   const handleResizeMouseDown = useCallback((e: React.MouseEvent, id: string) => {
     e.stopPropagation()
@@ -647,7 +822,19 @@ export default function TemplateEditPage() {
                 className="hidden"
                 onChange={handleLogoUpload}
               />
+              <div className="h-5 w-px bg-border mx-1" />
+              <Button variant="outline" size="sm" className="gap-2" onClick={distributeVertically}>
+                <AlignVerticalSpaceAround className="h-4 w-4" /> Distribuir verticalmente
+              </Button>
             </div>
+
+            {overlapWarnings.length > 0 && (
+              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs text-amber-700 space-y-1">
+                <p className="font-medium">⚠ Posible superposición de texto</p>
+                {overlapWarnings.map((w, i) => <p key={i}>{w}</p>)}
+                <p>Probá "Distribuir verticalmente" o separá los campos a mano.</p>
+              </div>
+            )}
 
             {uploadError && (
               <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -718,6 +905,8 @@ export default function TemplateEditPage() {
                             "absolute cursor-grab active:cursor-grabbing rounded border-2 transition-colors",
                             selectedElement === element.id
                               ? "border-primary bg-primary/10"
+                              : overlapIds.has(element.id)
+                              ? "border-amber-500 border-dashed"
                               : "border-transparent hover:border-border"
                           )}
                           style={(() => {
@@ -868,9 +1057,24 @@ export default function TemplateEditPage() {
               </div>
 
               {selectedElementData.type === "image" && selectedElementData.imageUrl && (
-                <div className="rounded-lg border border-border bg-muted/50 p-2 flex items-center justify-center" style={{ minHeight: 80 }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={selectedElementData.imageUrl} alt="Logo" className="max-h-20 max-w-full object-contain" />
+                <div className="space-y-2">
+                  <div className="rounded-lg border border-border bg-muted/50 p-2 flex items-center justify-center" style={{ minHeight: 80 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={selectedElementData.imageUrl} alt="Logo" className="max-h-20 max-w-full object-contain" />
+                  </div>
+                  <Button
+                    variant="outline" size="sm" className="w-full gap-2"
+                    disabled={cropping}
+                    onClick={() => handleAutoCrop(selectedElementData.id, selectedElementData.imageUrl!)}
+                  >
+                    {cropping
+                      ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      : "✂"} Recortar bordes vacíos
+                  </Button>
+                  <p className="text-[10px] text-muted-foreground">
+                    Si el logo tiene un margen de color parejo alrededor del dibujo (como suele pasar con PNGs exportados), esto lo recorta para que el diseño ocupe todo el espacio y puedas acercarlo más al borde.
+                  </p>
+                  {cropError && <p className="text-[10px] text-destructive">{cropError}</p>}
                 </div>
               )}
 
@@ -1021,9 +1225,9 @@ export default function TemplateEditPage() {
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Pos. Y (mm)</label>
                   <input type="number" value={+(selectedElementData.y / 10).toFixed(1)}
-                    onChange={(e) => updateElement(selectedElementData.id, { y: Math.round(Number(e.target.value) * 10) })}
+                    onChange={(e) => updateElement(selectedElementData.id, { y: clampY(selectedElementData, Math.round(Number(e.target.value) * 10)) })}
                     className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                    min={0} step={0.5}
+                    min={MIN_EDGE_MARGIN_MM} step={0.5}
                   />
                 </div>
               </div>
