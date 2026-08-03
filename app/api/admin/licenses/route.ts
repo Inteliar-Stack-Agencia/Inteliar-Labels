@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
 
   const body = await req.json()
-  const plan: "monthly" | "lifetime" = body.plan ?? "monthly"
+  const plan: "monthly" | "pro" | "lifetime" = body.plan ?? "monthly"
   const email: string = body.email ?? ""
   const notes: string = body.notes ?? ""
 

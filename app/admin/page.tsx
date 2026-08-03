@@ -72,7 +72,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [creating, setCreating] = useState(false)
-  const [newPlan, setNewPlan] = useState<"monthly" | "lifetime">("monthly")
+  const [newPlan, setNewPlan] = useState<"monthly" | "pro" | "lifetime">("monthly")
   const [newEmail, setNewEmail] = useState("")
   const [newNotes, setNewNotes] = useState("")
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -409,10 +409,11 @@ export default function AdminPage() {
               <label className="mb-1 block text-xs text-muted-foreground">Plan</label>
               <select
                 value={newPlan}
-                onChange={(e) => setNewPlan(e.target.value as "monthly" | "lifetime")}
+                onChange={(e) => setNewPlan(e.target.value as "monthly" | "pro" | "lifetime")}
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 <option value="monthly">Mensual ($10)</option>
+                <option value="pro">Pro ($25)</option>
                 <option value="lifetime">De por vida ($300)</option>
               </select>
             </div>
