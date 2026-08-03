@@ -23,6 +23,17 @@ export default function LoginPage() {
   useEffect(() => {
     const saved = localStorage.getItem("remembered_email")
     if (saved) { setEmail(saved); setRemember(true) }
+
+    // If there's already a valid session (Supabase keeps it alive across
+    // browser restarts and auto-refreshes the token), skip the login form
+    // entirely instead of asking for the password again.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        router.push("/dashboard")
+        router.refresh()
+      }
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function handleLogin(e: React.FormEvent) {
