@@ -370,6 +370,7 @@ export default function NewTemplatePage() {
   const deleteElement = (id: string) => {
     setElements(elements.filter((el) => el && el.id !== id))
     if (selectedElement === id) setSelectedElement(null)
+    setMultiSelected((prev) => { if (!prev.has(id)) return prev; const next = new Set(prev); next.delete(id); return next })
   }
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
