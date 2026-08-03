@@ -100,6 +100,10 @@ export default function NewTemplatePage() {
   const [cutEveryN, setCutEveryN] = useState(1)
   const [elements, setElements] = useState<LabelElement[]>([])
   const [selectedElement, setSelectedElement] = useState<string | null>(null)
+  // Shift+click adds elements here for "Alinear seleccionados" — separate
+  // from selectedElement (which keeps driving the properties panel/resize
+  // handles for a single element, unchanged from before).
+  const [multiSelected, setMultiSelected] = useState<Set<string>>(new Set())
   const [dragGuides, setDragGuides] = useState<{ vs: number[]; hs: number[] }>({ vs: [], hs: [] })
   const [saving, setSaving] = useState(false)
   const [showSizePanel, setShowSizePanel] = useState(true)
@@ -235,25 +239,29 @@ export default function NewTemplatePage() {
     return Math.min(Math.max(newY, minY), maxY)
   }, [widthMm, heightMm])
 
-  // Stacks all text elements one below the other, respecting the minimum
-  // top/bottom margin and reserving extra height for any that wrap to more
-  // than one line (e.g. a long plato name) so the next field doesn't overlap it.
-  const distributeVertically = () => {
-    const textEls = elements
-      .filter((e): e is LabelElement => !!e && e.type === "text")
-      .slice()
-      .sort((a, b) => a.y - b.y)
-    if (textEls.length < 2) return
+  // Stacks elements one below the other, respecting the minimum top/bottom
+  // margin and reserving extra height for any that wrap to more than one
+  // line (e.g. a long plato name) so the next field doesn't overlap it.
+  // With no ids given: automatic mode, applies to every text element.
+  // With ids given (2+): manual mode, applies only to the elements the user
+  // selected (shift+click), in whatever order they're currently stacked,
+  // leaving everything else untouched.
+  const distributeVertically = (ids?: string[]) => {
+    const targets = ids && ids.length > 0
+      ? elements.filter((e): e is LabelElement => !!e && ids.includes(e.id))
+      : elements.filter((e): e is LabelElement => !!e && e.type === "text")
+    const sorted = targets.slice().sort((a, b) => a.y - b.y)
+    if (sorted.length < 2) return
 
-    const heights = textEls.map((e) => estimateElementHeightMm(e, widthMm))
+    const heights = sorted.map((e) => estimateElementHeightMm(e, widthMm))
     const totalContentMm = heights.reduce((s, h) => s + h, 0)
     const availableMm = heightMm - MIN_EDGE_MARGIN_MM * 2
-    const gapCount = textEls.length - 1
+    const gapCount = sorted.length - 1
     const gapMm = gapCount > 0 ? Math.max(MIN_GAP_MM, (availableMm - totalContentMm) / gapCount) : 0
 
     const newY = new Map<string, number>()
     let curY = MIN_EDGE_MARGIN_MM
-    textEls.forEach((e, i) => {
+    sorted.forEach((e, i) => {
       newY.set(e.id, Math.round(curY * 10))
       curY += heights[i] + gapMm
     })
@@ -428,6 +436,19 @@ export default function NewTemplatePage() {
     e.stopPropagation()
     e.preventDefault()
     setSelectedElement(id)
+
+    // Shift+click toggles this element in/out of the manual-align selection
+    // instead of dragging — lets you pick exactly which fields to line up.
+    if (e.shiftKey) {
+      setMultiSelected((prev) => {
+        const next = new Set(prev)
+        if (next.has(id)) next.delete(id); else next.add(id)
+        return next
+      })
+      return
+    }
+    if (!multiSelected.has(id)) setMultiSelected(new Set())
+
     const el = elements.find((el) => el?.id === id)
     if (!el) return
     dragRef.current = { id, startX: e.clientX, startY: e.clientY, origX: el.x, origY: el.y }
@@ -491,7 +512,7 @@ export default function NewTemplatePage() {
 
     window.addEventListener("mousemove", onMouseMove)
     window.addEventListener("mouseup", onMouseUp)
-  }, [elements, SCALE, widthMm, heightMm, clampY])
+  }, [elements, SCALE, widthMm, heightMm, clampY, multiSelected])
 
   const handleResizeMouseDown = useCallback((e: React.MouseEvent, id: string) => {
     e.stopPropagation()
@@ -800,16 +821,27 @@ export default function NewTemplatePage() {
                 onChange={handleLogoUpload}
               />
               <div className="h-5 w-px bg-border mx-1" />
-              <Button variant="outline" size="sm" className="gap-2" onClick={distributeVertically}>
-                <AlignVerticalSpaceAround className="h-4 w-4" /> Distribuir verticalmente
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => distributeVertically()}>
+                <AlignVerticalSpaceAround className="h-4 w-4" /> Distribuir todos
+              </Button>
+              <Button
+                variant="outline" size="sm" className="gap-2"
+                disabled={multiSelected.size < 2}
+                onClick={() => { distributeVertically(Array.from(multiSelected)); setMultiSelected(new Set()) }}
+              >
+                <AlignVerticalSpaceAround className="h-4 w-4" />
+                Alinear seleccionados{multiSelected.size > 0 ? ` (${multiSelected.size})` : ""}
               </Button>
             </div>
+            <p className="text-[11px] text-muted-foreground -mt-3">
+              Mayús + click para elegir a mano qué campos alinear (en vez de mover todos).
+            </p>
 
             {overlapWarnings.length > 0 && (
               <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs text-amber-700 space-y-1">
                 <p className="font-medium">⚠ Posible superposición de texto</p>
                 {overlapWarnings.map((w, i) => <p key={i}>{w}</p>)}
-                <p>Probá "Distribuir verticalmente" o separá los campos a mano.</p>
+                <p>Probá "Distribuir todos" o separá los campos a mano.</p>
               </div>
             )}
 
@@ -857,7 +889,7 @@ export default function NewTemplatePage() {
                     ref={canvasRef}
                     className="relative border-2 border-dashed border-border bg-white shadow-lg select-none"
                     style={{ width: `${canvasW}px`, height: `${canvasH}px`, minWidth: "200px", minHeight: "100px" }}
-                    onClick={() => setSelectedElement(null)}
+                    onClick={() => { setSelectedElement(null); setMultiSelected(new Set()) }}
                   >
                     <div className="absolute inset-0 opacity-10" style={{
                       backgroundImage: `linear-gradient(to right, #888 1px, transparent 1px), linear-gradient(to bottom, #888 1px, transparent 1px)`,
@@ -880,6 +912,8 @@ export default function NewTemplatePage() {
                           "absolute cursor-grab active:cursor-grabbing rounded border-2 transition-colors",
                           selectedElement === element.id
                             ? "border-primary bg-primary/10"
+                            : multiSelected.has(element.id)
+                            ? "border-blue-500 border-dashed bg-blue-500/10"
                             : overlapIds.has(element.id)
                             ? "border-amber-500 border-dashed"
                             : "border-transparent hover:border-border"
