@@ -64,6 +64,11 @@ export async function POST(req: Request) {
   try {
     const { license } = await createLicense({ plan, email: trimmedEmail, notes: "Venta externa (Mercado Libre / manual)", sendEmail: false })
     licenseKey = license.key
+    // Normally a license only gets linked to a user_id once they log in
+    // (see /api/license/link) — link it immediately here since we just
+    // created both, so it shows up correctly in the admin panel right away
+    // instead of showing "Sin licencia" until their first login.
+    await supabaseAdmin.from("licenses").update({ user_id: data.user.id }).eq("key", license.key)
   } catch (e: any) {
     return NextResponse.json({ error: `Usuario creado pero falló la licencia: ${e.message}` }, { status: 500 })
   }
