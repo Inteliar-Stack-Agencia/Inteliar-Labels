@@ -140,8 +140,13 @@ export default function AdminPage() {
   const [showCreateUser, setShowCreateUser] = useState(false)
   const [creatingUser, setCreatingUser] = useState(false)
   const [newUserForm, setNewUserForm] = useState({ firstName: "", lastName: "", email: "", countryCode: "+54", phone: "" })
-  const [newUserResult, setNewUserResult] = useState<{ email: string; password: string } | null>(null)
+  const [newUserResult, setNewUserResult] = useState<{ email: string; password: string; licenseKey?: string; plan?: string } | null>(null)
   const [newUserError, setNewUserError] = useState<string | null>(null)
+  // Sale made outside the normal web checkout (Mercado Libre, transferencia,
+  // etc.): also create + link a license and send one combined welcome email
+  // with credentials + key, instead of just the bare trial account.
+  const [externalSale, setExternalSale] = useState(false)
+  const [externalSalePlan, setExternalSalePlan] = useState<"monthly" | "pro" | "lifetime">("monthly")
 
   // Payments tab
   const [payments, setPayments] = useState<PaymentEvent[]>([])
@@ -213,17 +218,19 @@ export default function AdminPage() {
     setCreatingUser(true)
     setNewUserError(null)
     try {
-      const res = await fetch("/api/admin/users", {
+      const endpoint = externalSale ? "/api/admin/onboard-sale" : "/api/admin/users"
+      const body = externalSale ? { ...newUserForm, plan: externalSalePlan } : newUserForm
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newUserForm),
+        body: JSON.stringify(body),
       })
       const json = await res.json()
       if (!res.ok) {
         setNewUserError(json.error ?? "No se pudo crear el usuario")
         return
       }
-      setNewUserResult({ email: json.email, password: json.password })
+      setNewUserResult({ email: json.email, password: json.password, licenseKey: json.licenseKey, plan: json.plan })
       setNewUserForm({ firstName: "", lastName: "", email: "", countryCode: "+54", phone: "" })
       fetchUsers()
     } catch {
@@ -1021,7 +1028,9 @@ export default function AdminPage() {
               {newUserResult ? (
                 <div className="space-y-3">
                   <div className="rounded-lg border border-success/30 bg-success/10 p-3 text-sm text-foreground">
-                    Usuario creado. Con trial de 15 días activo, igual que un registro por la landing.
+                    {newUserResult.licenseKey
+                      ? `Usuario y licencia ${newUserResult.plan === "pro" ? "Pro" : newUserResult.plan === "lifetime" ? "De por vida" : "Mensual"} creados. Le mandamos un mail de bienvenida con todo esto (si Resend está configurado).`
+                      : "Usuario creado. Con trial de 15 días activo, igual que un registro por la landing."}
                   </div>
                   <div className="space-y-2 text-sm">
                     <div>
@@ -1032,12 +1041,18 @@ export default function AdminPage() {
                       <span className="text-muted-foreground">Contraseña generada: </span>
                       <span className="font-mono font-medium text-foreground">{newUserResult.password}</span>
                     </div>
+                    {newUserResult.licenseKey && (
+                      <div>
+                        <span className="text-muted-foreground">Clave de licencia: </span>
+                        <span className="font-mono font-medium text-foreground">{newUserResult.licenseKey}</span>
+                      </div>
+                    )}
                     <p className="text-[11px] text-muted-foreground">
-                      Guardá esta contraseña ahora — no se vuelve a mostrar. Compartísela al cliente por WhatsApp o email; puede cambiarla después con &quot;Olvidé mi contraseña&quot;.
+                      Guardá estos datos ahora — la contraseña no se vuelve a mostrar. Si el mail automático no llegó, compartíselos al cliente por WhatsApp.
                     </p>
                   </div>
                   <button
-                    onClick={() => setShowCreateUser(false)}
+                    onClick={() => { setShowCreateUser(false); setNewUserResult(null); setExternalSale(false) }}
                     className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
                   >
                     Cerrar
@@ -1112,12 +1127,40 @@ export default function AdminPage() {
                       />
                     </div>
                   </div>
+                  <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-2">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={externalSale}
+                        onChange={(e) => setExternalSale(e.target.checked)}
+                        className="h-4 w-4 rounded border-input accent-primary"
+                      />
+                      Venta fuera del checkout (Mercado Libre, transferencia, etc.)
+                    </label>
+                    {externalSale && (
+                      <div className="space-y-1.5 pl-6">
+                        <label className="text-xs font-medium text-muted-foreground">Plan que compró</label>
+                        <select
+                          value={externalSalePlan}
+                          onChange={(e) => setExternalSalePlan(e.target.value as "monthly" | "pro" | "lifetime")}
+                          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                        >
+                          <option value="monthly">Mensual</option>
+                          <option value="pro">Pro</option>
+                          <option value="lifetime">De por vida</option>
+                        </select>
+                        <p className="text-[11px] text-muted-foreground">
+                          Crea la licencia ya vinculada y manda un solo mail con el login + la clave.
+                        </p>
+                      </div>
+                    )}
+                  </div>
                   <button
                     onClick={handleCreateUser}
                     disabled={creatingUser || !newUserForm.firstName || !newUserForm.lastName || !newUserForm.email || !newUserForm.phone}
                     className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                   >
-                    {creatingUser ? "Creando..." : "Crear usuario · trial 15 días"}
+                    {creatingUser ? "Creando..." : externalSale ? "Crear usuario + licencia y enviar bienvenida" : "Crear usuario · trial 15 días"}
                   </button>
                 </>
               )}
