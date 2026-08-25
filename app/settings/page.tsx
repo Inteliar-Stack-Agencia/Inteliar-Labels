@@ -33,6 +33,7 @@ import {
   Monitor,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { brandFromQueueName } from "@/lib/printer-drivers"
 import { createClient } from "@/lib/supabase/client"
 import { PrinterAgentStatus } from "@/components/printer/agent-status"
 import { PasswordInput } from "@/components/ui/password-input"
@@ -76,7 +77,10 @@ const emptyForm: Omit<PrinterConfig, "id"> & { id: string } = {
   id: "",
   name: "",
   brand: "generic",
-  connection: "tcp",
+  // USB es la conexión más común entre los clientes, y es la única que se
+  // autodetecta: abrir el formulario ahí evita que arranquen pidiéndoles una
+  // IP que no conocen.
+  connection: "usb",
   language: "auto",
   host: "",
   port: 9100,
@@ -99,6 +103,10 @@ function connectionLabel(conn: ConnectionType) {
   if (conn === "serial") return "Serie (RS-232)"
   return "Simulación"
 }
+
+// Windows virtual queues that are never label printers — hidden from the
+// discovery list so the user only chooses among real candidates.
+const VIRTUAL_QUEUE_RE = /microsoft print to pdf|microsoft xps|onenote|^fax$|send to onenote/i
 
 function printerSummary(p: PrinterConfig) {
   if (p.connection === "tcp") return `${p.host ?? ""}:${p.port ?? 9100}`
@@ -126,6 +134,8 @@ export default function SettingsPage() {
   // Discovery
   const [discoveringUsb, setDiscoveringUsb] = useState(false)
   const [usbQueues, setUsbQueues] = useState<string[]>([])
+  const [usbDiscoveryDone, setUsbDiscoveryDone] = useState(false)
+  const [showManualQueue, setShowManualQueue] = useState(false)
   const [discoveringNet, setDiscoveringNet] = useState(false)
   const [netPrinters, setNetPrinters] = useState<{ ip: string; port: number }[]>([])
   const [subnet, setSubnet] = useState("192.168.1")
@@ -354,8 +364,31 @@ export default function SettingsPage() {
       setUsbQueues([])
     } finally {
       setDiscoveringUsb(false)
+      setUsbDiscoveryDone(true)
     }
   }
+
+  // Choosing a detected queue is the primary path: it also fills in the
+  // display name and brand so the user doesn't have to type anything.
+  function selectUsbQueue(q: string) {
+    setForm((f) => ({
+      ...f,
+      usbQueue: q,
+      name: f.name.trim() ? f.name : q,
+      brand: f.brand === "generic" ? brandFromQueueName(q) : f.brand,
+    }))
+    setShowManualQueue(false)
+  }
+
+  // Auto-discover as soon as the USB connection type is active in the form.
+  const usbFormActive = (showAddForm || editingId !== null) && form.connection === "usb"
+  useEffect(() => {
+    if (usbFormActive && agentOnline) {
+      setShowManualQueue(false)
+      handleDiscoverUsb()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usbFormActive, agentOnline])
 
   async function handleDiscoverNet() {
     setDiscoveringNet(true)
@@ -705,19 +738,10 @@ export default function SettingsPage() {
                       {/* USB fields */}
                       {form.connection === "usb" && (
                         <div className="sm:col-span-2 space-y-2">
-                          <div className="flex items-end gap-2">
-                            <div className="flex-1">
-                              <label className="mb-1 block text-xs font-medium text-foreground">
-                                Cola de impresión (nombre exacto)
-                              </label>
-                              <input
-                                type="text"
-                                value={form.usbQueue ?? ""}
-                                onChange={(e) => setForm({ ...form, usbQueue: e.target.value })}
-                                placeholder="Ej: Honeywell PC42E-T (203 dpi) - DP"
-                                className="w-full rounded-lg border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                              />
-                            </div>
+                          <div className="flex items-center justify-between">
+                            <label className="block text-xs font-medium text-foreground">
+                              Elegí tu impresora
+                            </label>
                             <Button
                               type="button"
                               variant="outline"
@@ -729,35 +753,84 @@ export default function SettingsPage() {
                               {discoveringUsb
                                 ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                 : <Search className="h-3.5 w-3.5" />}
-                              Detectar
+                              {discoveringUsb ? "Buscando…" : "Volver a buscar"}
                             </Button>
                           </div>
-                          <p className="text-[11px] text-amber-600 dark:text-amber-400">
-                            ⚠️ Obligatorio: tiene que ser el nombre <strong>exacto</strong> de la impresora tal como
-                            aparece en Windows (Configuración → Bluetooth y dispositivos → Impresoras y escáneres).
-                            Un nombre parecido pero no idéntico (mayúsculas, "(203 dpi)", sufijos como "- DP", etc.)
-                            hace que falle con "OpenPrinter failed". Mejor usá "Detectar" para elegirlo de la lista
-                            en vez de escribirlo a mano.
-                          </p>
-                          {usbQueues.length > 0 && (
-                            <div className="space-y-1">
-                              {usbQueues.map((q) => (
-                                <button
-                                  key={q}
-                                  type="button"
-                                  onClick={() => setForm({ ...form, usbQueue: q })}
-                                  className={cn(
-                                    "w-full rounded-lg border px-3 py-1.5 text-left text-sm transition-colors",
-                                    form.usbQueue === q
-                                      ? "border-primary bg-primary/10 text-primary"
-                                      : "border-border bg-muted/30 hover:border-ring"
-                                  )}
-                                >
-                                  {q}
-                                </button>
-                              ))}
-                            </div>
-                          )}
+                          {(() => {
+                            const realQueues = usbQueues.filter((q) => !VIRTUAL_QUEUE_RE.test(q))
+                            const selectedIsHidden = !!form.usbQueue && usbQueues.length > 0 && !realQueues.includes(form.usbQueue)
+                            return (
+                              <>
+                                {realQueues.length > 0 && (
+                                  <div className="space-y-1">
+                                    {realQueues.map((q) => (
+                                      <button
+                                        key={q}
+                                        type="button"
+                                        onClick={() => selectUsbQueue(q)}
+                                        className={cn(
+                                          "w-full rounded-lg border px-3 py-1.5 text-left text-sm transition-colors",
+                                          form.usbQueue === q
+                                            ? "border-primary bg-primary/10 text-primary"
+                                            : "border-border bg-muted/30 hover:border-ring"
+                                        )}
+                                      >
+                                        {q}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                                {!agentOnline && (
+                                  <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                                    El agente de impresión no está conectado, así que no podemos detectar
+                                    tus impresoras. Abrí el agente en esta computadora y volvé a intentar.
+                                  </p>
+                                )}
+                                {agentOnline && usbDiscoveryDone && !discoveringUsb && realQueues.length === 0 && (
+                                  <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                                    No encontramos impresoras de etiquetas instaladas en Windows. Verificá que
+                                    la impresora esté encendida, conectada por USB y con su driver instalado
+                                    (Configuración → Bluetooth y dispositivos → Impresoras y escáneres).{" "}
+                                    <a
+                                      href="/drivers"
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="underline hover:no-underline"
+                                    >
+                                      Descargar el driver de tu impresora
+                                    </a>
+                                  </p>
+                                )}
+                                {(showManualQueue || selectedIsHidden) ? (
+                                  <div>
+                                    <label className="mb-1 block text-xs font-medium text-foreground">
+                                      Cola de impresión (nombre exacto)
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={form.usbQueue ?? ""}
+                                      onChange={(e) => setForm({ ...form, usbQueue: e.target.value })}
+                                      placeholder="Ej: Honeywell PC42E-T (203 dpi) - DP"
+                                      className="w-full rounded-lg border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                    />
+                                    <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
+                                      ⚠️ Tiene que ser el nombre <strong>exacto</strong> tal como aparece en
+                                      Windows: mayúsculas, "(203 dpi)", sufijos como "- DP", todo idéntico.
+                                      Si no coincide, la impresión falla con "OpenPrinter failed".
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowManualQueue(true)}
+                                    className="text-[11px] text-muted-foreground underline hover:text-foreground"
+                                  >
+                                    Mi impresora no aparece en la lista — escribir el nombre manualmente
+                                  </button>
+                                )}
+                              </>
+                            )
+                          })()}
                           <div className="pt-2">
                             <label className="mb-1 block text-xs font-medium text-foreground">
                               Orientación de imagen (solo si sale espejada o al revés)

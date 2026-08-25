@@ -367,6 +367,31 @@ const SECTIONS: Section[] = [
         ),
       },
       {
+        q: "¿Dónde consigo el driver de mi impresora?",
+        a: (
+          <div className="space-y-3 text-xs text-muted-foreground">
+            <p>
+              Si la impresora no aparece en Windows (Configuración → Bluetooth y dispositivos →
+              Impresoras y escáneres), le falta el <strong>driver</strong> del fabricante. Sin eso,
+              ni Windows ni el agente la pueden ver.
+            </p>
+            <p>
+              Tenemos los enlaces oficiales por marca —Honeywell, Zebra, TSC, Citizen, Sato y
+              Bixolon— en{" "}
+              <a href="/drivers" target="_blank" rel="noopener noreferrer" className="font-medium text-foreground underline hover:no-underline">
+                la página de drivers
+              </a>
+              . Si tu modelo no está o es viejo, ahí mismo está el enlace a Seagull, que publica
+              drivers para casi todas las marcas.
+            </p>
+            <p>
+              Una vez instalado, probá <strong>&quot;Imprimir página de prueba&quot;</strong> desde
+              Windows. Si eso no sale, el problema es del driver o del cable, todavía no de la app.
+            </p>
+          </div>
+        ),
+      },
+      {
         q: "Windows / el antivirus bloquea la instalación del Agente",
         a: (
           <div className="space-y-3 text-xs text-muted-foreground">
