@@ -33,6 +33,7 @@ import {
   Monitor,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { brandFromQueueName } from "@/lib/printer-drivers"
 import { createClient } from "@/lib/supabase/client"
 import { PrinterAgentStatus } from "@/components/printer/agent-status"
 import { PasswordInput } from "@/components/ui/password-input"
@@ -103,17 +104,6 @@ function connectionLabel(conn: ConnectionType) {
 // Windows virtual queues that are never label printers — hidden from the
 // discovery list so the user only chooses among real candidates.
 const VIRTUAL_QUEUE_RE = /microsoft print to pdf|microsoft xps|onenote|^fax$|send to onenote/i
-
-function brandFromQueueName(queue: string): Brand {
-  const q = queue.toLowerCase()
-  if (q.includes("zebra") || /\bz[dt]\d{3}/.test(q) || q.includes("gk420") || q.includes("gc420")) return "zebra"
-  if (q.includes("honeywell") || q.includes("intermec") || /\bpc4[23]/.test(q) || q.includes("datamax")) return "honeywell"
-  if (q.includes("tsc") || q.includes("ttp-")) return "tsc"
-  if (q.includes("citizen") || /\bcl-?[se]\d/.test(q)) return "citizen"
-  if (q.includes("sato")) return "sato"
-  if (q.includes("bixolon") || q.includes("srp-")) return "bixolon"
-  return "generic"
-}
 
 function printerSummary(p: PrinterConfig) {
   if (p.connection === "tcp") return `${p.host ?? ""}:${p.port ?? 9100}`
@@ -797,7 +787,15 @@ export default function SettingsPage() {
                                   <p className="text-[11px] text-amber-600 dark:text-amber-400">
                                     No encontramos impresoras de etiquetas instaladas en Windows. Verificá que
                                     la impresora esté encendida, conectada por USB y con su driver instalado
-                                    (Configuración → Bluetooth y dispositivos → Impresoras y escáneres).
+                                    (Configuración → Bluetooth y dispositivos → Impresoras y escáneres).{" "}
+                                    <a
+                                      href="/drivers"
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="underline hover:no-underline"
+                                    >
+                                      Descargar el driver de tu impresora
+                                    </a>
                                   </p>
                                 )}
                                 {(showManualQueue || selectedIsHidden) ? (

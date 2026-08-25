@@ -220,6 +220,13 @@ export default function SetupWizardPage() {
           {printers.length === 0 ? (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-400 space-y-2">
               <p>Abrí el agente (ícono en la bandeja del sistema, cerca del reloj de Windows) y agregá tu impresora ahí — USB, red o serie.</p>
+              <p>
+                Si tu impresora no aparece en Windows, todavía le falta el driver del fabricante.{" "}
+                <a href="/drivers" target="_blank" rel="noopener noreferrer" className="font-medium underline hover:no-underline">
+                  Descargalo acá
+                </a>
+                .
+              </p>
               <button onClick={checkAgent} className="flex items-center gap-1.5 font-medium hover:underline">
                 <RefreshCw className="h-3.5 w-3.5" /> Volver a buscar
               </button>
