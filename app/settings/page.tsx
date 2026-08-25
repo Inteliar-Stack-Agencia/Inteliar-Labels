@@ -77,7 +77,10 @@ const emptyForm: Omit<PrinterConfig, "id"> & { id: string } = {
   id: "",
   name: "",
   brand: "generic",
-  connection: "tcp",
+  // USB es la conexión más común entre los clientes, y es la única que se
+  // autodetecta: abrir el formulario ahí evita que arranquen pidiéndoles una
+  // IP que no conocen.
+  connection: "usb",
   language: "auto",
   host: "",
   port: 9100,
