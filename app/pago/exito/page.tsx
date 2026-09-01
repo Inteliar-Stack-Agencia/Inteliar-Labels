@@ -1,5 +1,6 @@
 import { CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { whatsappLink } from "@/lib/contact"
 
 export default function PagoExitoPage() {
   return (
@@ -21,7 +22,7 @@ export default function PagoExitoPage() {
             <a href="/dashboard">Ir al dashboard</a>
           </Button>
           <Button variant="outline" asChild>
-            <a href="https://wa.me/5491165689145?text=Hola%2C%20acabo%20de%20pagar%20y%20quiero%20activar%20mi%20licencia" target="_blank" rel="noopener noreferrer">
+            <a href={whatsappLink("Hola, acabo de pagar y quiero activar mi licencia")} target="_blank" rel="noopener noreferrer">
               Contactar por WhatsApp
             </a>
           </Button>

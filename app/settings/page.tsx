@@ -37,6 +37,7 @@ import { brandFromQueueName } from "@/lib/printer-drivers"
 import { createClient } from "@/lib/supabase/client"
 import { PrinterAgentStatus } from "@/components/printer/agent-status"
 import { PasswordInput } from "@/components/ui/password-input"
+import { supportMailto } from "@/lib/contact"
 import {
   listPrinters,
   savePrinter,
@@ -1360,7 +1361,7 @@ export default function SettingsPage() {
                     Para eliminar tu cuenta y todos los datos asociados, contactá a soporte. Un administrador procesará tu solicitud.
                   </p>
                   <a
-                    href="mailto:soporte@etiquetar.app?subject=Solicitud de eliminación de cuenta"
+                    href={supportMailto("Solicitud de eliminación de cuenta")}
                     className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
                   >
                     Contactar soporte

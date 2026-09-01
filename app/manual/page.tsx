@@ -23,6 +23,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState } from "react"
+import { SUPPORT_EMAIL, supportMailto } from "@/lib/contact"
 
 // ─────────────────────────────────────────────
 // Table of contents definition
@@ -1185,10 +1186,10 @@ export default function ManualPage() {
             <p className="text-sm text-muted-foreground">
               Escribinos a{" "}
               <a
-                href="mailto:soporte@inteliar.com"
+                href={supportMailto("Consulta desde el manual")}
                 className="text-primary font-medium hover:underline"
               >
-                soporte@inteliar.com
+                {SUPPORT_EMAIL}
               </a>{" "}
               y te respondemos a la brevedad.
             </p>

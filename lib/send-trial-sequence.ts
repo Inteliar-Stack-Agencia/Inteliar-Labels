@@ -1,3 +1,5 @@
+import { SUPPORT_WHATSAPP_URL } from "./contact"
+
 const FROM = process.env.LICENSE_EMAIL_FROM || "Inteliar Labels <onboarding@resend.dev>"
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://etiquetar.app"
 const RESEND_API_KEY = process.env.RESEND_API_KEY
@@ -173,7 +175,7 @@ export async function sendTrialDay13(to: string) {
     ${btn("Ver planes y suscribirme →", `${APP_URL}/#pricing`)}
     <p style="font-size:13px;color:#555;">
       ¿Todavía tenés dudas? Respondé este mail o escribinos por
-      <a href="https://wa.me/5491165689145" style="color:#1e78dc;">WhatsApp</a> y te ayudamos a elegir el plan.
+      <a href="${SUPPORT_WHATSAPP_URL}" style="color:#1e78dc;">WhatsApp</a> y te ayudamos a elegir el plan.
     </p>`)
   await sendEmail(to, "Tu prueba de Inteliar Labels termina mañana", html)
 }
@@ -195,7 +197,7 @@ export async function sendTrialDay14(to: string) {
     ${btn("Activar mi plan ahora →", `${APP_URL}/#pricing`)}
     <p style="font-size:13px;color:#555;line-height:1.6;">
       ¿Querés hablarlo antes de decidir? Escribinos por
-      <a href="https://wa.me/5491165689145" style="color:#1e78dc;">WhatsApp</a>
+      <a href="${SUPPORT_WHATSAPP_URL}" style="color:#1e78dc;">WhatsApp</a>
       o respondé este mail. Respondemos siempre.
     </p>`)
   await sendEmail(to, "Último día de prueba — Inteliar Labels", html)

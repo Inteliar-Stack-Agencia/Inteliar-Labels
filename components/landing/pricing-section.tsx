@@ -4,8 +4,9 @@ import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Check, ArrowRight, Loader2, Globe, MapPin, X } from "lucide-react"
 import { analytics } from "@/lib/analytics"
+import { whatsappLink } from "@/lib/contact"
 
-const EMPRESA_WA = "https://wa.me/5491165689145?text=Hola%2C%20quiero%20cotizar%20el%20plan%20Empresa%20de%20Inteliar%20Labels"
+const EMPRESA_WA = whatsappLink("Hola, quiero cotizar el plan Empresa de Inteliar Labels")
 
 const plansARS = [
   {
@@ -174,11 +175,11 @@ export function PricingSection() {
       } else {
         console.error("[checkout] sin URL:", data)
         alert(`Error al iniciar el pago: ${data.error || "respuesta inesperada"}. Te redirigimos a WhatsApp.`)
-        window.location.href = "https://wa.me/5491165689145?text=Hola%2C%20quiero%20comprar%20el%20plan%20" + plan
+        window.location.href = whatsappLink("Hola, quiero comprar el plan " + plan)
       }
     } catch (e: any) {
       console.error("[checkout] excepción:", e.message)
-      window.location.href = "https://wa.me/5491165689145?text=Hola%2C%20quiero%20comprar%20el%20plan%20" + plan
+      window.location.href = whatsappLink("Hola, quiero comprar el plan " + plan)
     } finally {
       setLoading(null)
     }
@@ -383,14 +384,14 @@ export function PricingSection() {
         <div className="mt-12 text-center space-y-3">
           <p className="text-sm text-muted-foreground">
             ¿Dudas antes de comprar?{" "}
-            <a href="https://wa.me/5491165689145?text=Hola%2C%20quiero%20saber%20m%C3%A1s%20sobre%20los%20planes%20de%20Inteliar%20Labels" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+            <a href={whatsappLink("Hola, quiero saber más sobre los planes de Inteliar Labels")} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
               Escribinos por WhatsApp
             </a>{" "}
             y te ayudamos a elegir.
           </p>
           <p className="text-sm text-muted-foreground">
             ¿Necesitás una función específica o un ajuste para tu operación?{" "}
-            <a href="https://wa.me/5491165689145?text=Hola%2C%20necesito%20un%20desarrollo%20personalizado%20para%20Inteliar%20Labels" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+            <a href={whatsappLink("Hola, necesito un desarrollo personalizado para Inteliar Labels")} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
               Contanos qué necesitás
             </a>{" "}
             — podemos desarrollarlo para vos.
