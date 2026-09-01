@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils"
 import { usePlanLimits } from "@/lib/use-plan-limits"
 import { checkPrinterAgent } from "@/lib/printer-agent-client"
 import { analytics } from "@/lib/analytics"
+import { whatsappLink } from "@/lib/contact"
 
 const AGENT_DOWNLOAD_URL = "/api/download/agent"
 
@@ -74,7 +75,7 @@ export default function DashboardPage() {
       const data = await res.json()
       if (data.url) window.location.href = data.url
     } catch {
-      window.location.href = "https://wa.me/5491165689145?text=Hola%2C%20quiero%20comprar%20una%20licencia"
+      window.location.href = whatsappLink("Hola, quiero comprar una licencia")
     } finally {
       setCheckoutLoading(null)
     }
@@ -294,10 +295,10 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                   <a
-                    href={`https://wa.me/5491165689145?text=${encodeURIComponent(
+                    href={whatsappLink(
                       `Hola! 👋 Te escribo desde *Inteliar Labels*${userEmail ? ` (${userEmail})` : ""}.\n` +
                       `Quería comentarte / necesito una plantilla especial: `
-                    )}`}
+                    )}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 rounded-lg bg-[#25D366] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#20bd5a] transition-colors"

@@ -1,5 +1,6 @@
 import { XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { whatsappLink } from "@/lib/contact"
 
 export default function PagoErrorPage() {
   return (
@@ -18,7 +19,7 @@ export default function PagoErrorPage() {
             <a href="/#pricing">Volver a los planes</a>
           </Button>
           <Button variant="outline" asChild>
-            <a href="https://wa.me/5491165689145?text=Hola%2C%20tuve%20un%20problema%20con%20el%20pago%20en%20Inteliar%20Labels" target="_blank" rel="noopener noreferrer">
+            <a href={whatsappLink("Hola, tuve un problema con el pago en Inteliar Labels")} target="_blank" rel="noopener noreferrer">
               Contactar por WhatsApp
             </a>
           </Button>

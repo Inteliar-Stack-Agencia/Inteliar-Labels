@@ -20,8 +20,7 @@ import {
   MessageCircle,
   ShoppingBag,
 } from "lucide-react"
-
-const SUPPORT_WHATSAPP = "5491165689145"
+import { whatsappLink } from "@/lib/contact"
 
 const navigation = [
   { name: "Panel", href: "/dashboard", icon: LayoutDashboard },
@@ -109,11 +108,11 @@ export function Sidebar() {
 
         {/* Support via WhatsApp — prefilled, identified message */}
         <a
-          href={`https://wa.me/${SUPPORT_WHATSAPP}?text=${encodeURIComponent(
+          href={whatsappLink(
             `Hola! 👋 Te escribo desde *Inteliar Labels* (impresión de etiquetas).\n` +
             ((displayName || email) ? `Soy ${[displayName, email && `(${email})`].filter(Boolean).join(" ")}.\n` : "") +
             `Necesito ayuda con: `
-          )}`}
+          )}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-green-600 dark:text-green-400 transition-colors hover:bg-green-500/10"

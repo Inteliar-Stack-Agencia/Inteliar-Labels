@@ -1,4 +1,5 @@
 import { CheckCircle2, ExternalLink } from "lucide-react"
+import { whatsappLink } from "@/lib/contact"
 
 interface RecommendedPrinter {
   tier: string
@@ -98,7 +99,7 @@ export function RecommendedPrintersSection() {
           No vendemos impresoras directamente ni cobramos comisión por estos links — son solo una referencia
           para arrancar. ¿Sos vendedor de impresoras o insumos?{" "}
           <a
-            href="https://wa.me/5491165689145?text=Hola%2C%20vendemos%20impresoras%20t%C3%A9rmicas%20o%20insumos%20y%20queremos%20evaluar%20una%20alianza%20con%20etiquetar.app"
+            href={whatsappLink("Hola, vendemos impresoras térmicas o insumos y queremos evaluar una alianza con etiquetar.app")}
             target="_blank"
             rel="noopener noreferrer"
             className="text-primary hover:underline"

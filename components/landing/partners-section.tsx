@@ -1,4 +1,5 @@
 import { Store, ArrowRight, Handshake } from "lucide-react"
+import { whatsappLink } from "@/lib/contact"
 
 // Real reseller partners go here once a deal actually closes — each entry
 // gets a logo/name, a short pitch, and a link to their store. Empty for now
@@ -73,7 +74,7 @@ export function PartnersSection() {
             </div>
           </div>
           <a
-            href="https://wa.me/5491165689145?text=Hola%2C%20vendemos%20impresoras%20t%C3%A9rmicas%20o%20insumos%20y%20queremos%20evaluar%20una%20alianza%20con%20etiquetar.app"
+            href={whatsappLink("Hola, vendemos impresoras térmicas o insumos y queremos evaluar una alianza con etiquetar.app")}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 whitespace-nowrap flex-shrink-0"
