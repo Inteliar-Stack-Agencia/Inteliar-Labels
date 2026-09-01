@@ -1,4 +1,5 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
+import { SUPPORT_EMAIL } from "./contact"
 
 const supabaseAdmin = createSupabaseClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,7 +11,7 @@ const CLIENT_SECRET = process.env.TIENDANUBE_CLIENT_SECRET
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://etiquetar.app"
 
 export const TN_REDIRECT_URI = `${APP_URL}/api/integrations/tiendanube/callback`
-const USER_AGENT = "InteliarLabels/1.0 (soporte@inteliarstack.com)"
+const USER_AGENT = `InteliarLabels/1.0 (${SUPPORT_EMAIL})`
 
 export function isTiendanubeConfigured(): boolean {
   return Boolean(CLIENT_ID && CLIENT_SECRET)

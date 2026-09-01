@@ -5,6 +5,7 @@ import { Header } from "@/components/dashboard/header"
 import { useState } from "react"
 import { ChevronDown, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { SUPPORT_EMAIL, supportMailto } from "@/lib/contact"
 
 interface FAQItem {
   q: string
@@ -523,7 +524,7 @@ export default function AyudaPage() {
 
         <div className="rounded-xl border border-border bg-card p-5 text-center space-y-2">
           <p className="text-sm text-muted-foreground">¿Tenés una pregunta que no está acá?</p>
-          <p className="text-xs text-muted-foreground">Contactanos en <span className="text-primary">soporte@inteliarstack.com</span></p>
+          <p className="text-xs text-muted-foreground">Contactanos en <a href={supportMailto("Consulta desde Ayuda")} className="text-primary hover:underline">{SUPPORT_EMAIL}</a></p>
         </div>
       </div>
     </DashboardLayout>

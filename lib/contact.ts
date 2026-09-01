@@ -6,6 +6,15 @@
  * alguno viejo. Todo lo que muestre el contacto debe importarlo de acá.
  */
 
+/** Email de soporte y contacto. */
+export const SUPPORT_EMAIL = "inteliarstack.ia@gmail.com"
+
+/** Link mailto al soporte, con asunto opcional. */
+export function supportMailto(subject?: string): string {
+  const base = `mailto:${SUPPORT_EMAIL}`
+  return subject ? `${base}?subject=${encodeURIComponent(subject)}` : base
+}
+
 /** Número de WhatsApp en formato internacional, sin + ni separadores. */
 export const SUPPORT_WHATSAPP = "5491133649730"
 
