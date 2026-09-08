@@ -17,6 +17,8 @@ import {
   Cable,
   FlaskConical,
   RotateCcw,
+  BarChart3,
+  Download,
 } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
@@ -31,6 +33,28 @@ interface CompletedJob {
   completed_at: string | null
   created_at: string
   status: string
+  source_file: string | null
+}
+
+// Columns a row might use to identify which client company it belongs to.
+// Checked in order; the first one present with a non-empty value wins.
+const COMPANY_COLUMN_CANDIDATES = ["empresa", "cliente", "company", "razon social", "razón social"]
+
+/** Strips a file extension for a friendlier fallback label ("menu_lunes.xlsx" -> "menu_lunes"). */
+function stripExtension(name: string) {
+  return name.replace(/\.[a-z0-9]+$/i, "")
+}
+
+function companyFromRow(row: Record<string, unknown>, fallback: string): string {
+  const keys = Object.keys(row)
+  for (const candidate of COMPANY_COLUMN_CANDIDATES) {
+    const key = keys.find((k) => k.toLowerCase().trim() === candidate)
+    if (key) {
+      const value = String(row[key] ?? "").trim()
+      if (value) return value
+    }
+  }
+  return fallback
 }
 
 function formatDateTime(dateStr: string) {
@@ -43,7 +67,17 @@ function formatDateTime(dateStr: string) {
   })
 }
 
-type HistoryView = "jobs" | "agent"
+type HistoryView = "jobs" | "agent" | "report"
+
+interface CompanyTotal {
+  company: string
+  labels: number
+  jobs: number
+}
+
+function toInputDate(d: Date) {
+  return d.toISOString().slice(0, 10)
+}
 
 function modeIcon(mode: string) {
   if (mode === "tcp") return <Wifi className="h-4 w-4" />
@@ -62,6 +96,19 @@ export default function HistoryPage() {
   const [agentLog, setAgentLog] = useState<AgentLogEntry[]>([])
   const [loadingAgent, setLoadingAgent] = useState(false)
   const [agentError, setAgentError] = useState<string | null>(null)
+
+  // Report: labels printed per company, for billing the companies that
+  // order the food/labels — grouped by the "empresa" column in each row
+  // when present, falling back to the source file name otherwise.
+  const [reportFrom, setReportFrom] = useState(() => {
+    const d = new Date()
+    d.setDate(1)
+    return toInputDate(d)
+  })
+  const [reportTo, setReportTo] = useState(() => toInputDate(new Date()))
+  const [reportTotals, setReportTotals] = useState<CompanyTotal[]>([])
+  const [loadingReport, setLoadingReport] = useState(false)
+  const [reportError, setReportError] = useState<string | null>(null)
 
   useEffect(() => {
     loadHistory()
@@ -83,7 +130,80 @@ export default function HistoryPage() {
 
   useEffect(() => {
     if (view === "agent") loadAgentLog()
+    if (view === "report") loadReport()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view])
+
+  async function loadReport() {
+    setLoadingReport(true)
+    setReportError(null)
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      // "completed" jobs with completed_at is what was actually printed —
+      // pending/cancelled jobs shouldn't show up as billable.
+      const fromIso = new Date(`${reportFrom}T00:00:00`).toISOString()
+      const toIso = new Date(`${reportTo}T23:59:59.999`).toISOString()
+      const { data: reportJobs, error: jobsError } = await supabase
+        .from("print_jobs")
+        .select("id, name, source_file, completed_at")
+        .eq("user_id", user.id)
+        .eq("status", "completed")
+        .gte("completed_at", fromIso)
+        .lte("completed_at", toIso)
+      if (jobsError) throw jobsError
+      if (!reportJobs || reportJobs.length === 0) {
+        setReportTotals([])
+        return
+      }
+
+      const { data: jobRows, error: rowsError } = await supabase
+        .from("print_job_rows")
+        .select("job_id, row_data, quantity")
+        .in("job_id", reportJobs.map((j) => j.id))
+      if (rowsError) throw rowsError
+
+      const fallbackByJob = new Map(
+        reportJobs.map((j) => [j.id, j.source_file ? stripExtension(j.source_file) : j.name])
+      )
+      const jobsByCompany = new Map<string, Set<string>>()
+      const totals = new Map<string, number>()
+      for (const row of jobRows ?? []) {
+        const fallback = fallbackByJob.get(row.job_id) ?? "Sin identificar"
+        const company = companyFromRow((row.row_data ?? {}) as Record<string, unknown>, fallback)
+        const qty = Math.max(1, Number(row.quantity) || 1)
+        totals.set(company, (totals.get(company) ?? 0) + qty)
+        if (!jobsByCompany.has(company)) jobsByCompany.set(company, new Set())
+        jobsByCompany.get(company)!.add(row.job_id)
+      }
+
+      const result = Array.from(totals.entries())
+        .map(([company, labels]) => ({ company, labels, jobs: jobsByCompany.get(company)?.size ?? 0 }))
+        .sort((a, b) => b.labels - a.labels)
+      setReportTotals(result)
+    } catch (err) {
+      setReportError(err instanceof Error ? err.message : "No se pudo generar el reporte")
+      setReportTotals([])
+    } finally {
+      setLoadingReport(false)
+    }
+  }
+
+  function downloadReportCsv() {
+    const header = "Empresa,Etiquetas,Trabajos\n"
+    const body = reportTotals
+      .map((r) => `"${r.company.replace(/"/g, '""')}",${r.labels},${r.jobs}`)
+      .join("\n")
+    const blob = new Blob([header + body], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `reporte_etiquetas_${reportFrom}_a_${reportTo}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   async function loadHistory() {
     const supabase = createClient()
@@ -92,7 +212,7 @@ export default function HistoryPage() {
       if (!user) return
       const { data } = await supabase
         .from("print_jobs")
-        .select("id, name, total_labels, printed_labels, completed_at, created_at, status")
+        .select("id, name, total_labels, printed_labels, completed_at, created_at, status, source_file")
         .eq("user_id", user.id)
         .eq("status", "completed")
         .order("completed_at", { ascending: false })
@@ -156,6 +276,16 @@ export default function HistoryPage() {
           >
             <Activity className="h-4 w-4" />
             Actividad del agente
+          </button>
+          <button
+            onClick={() => setView("report")}
+            className={cn(
+              "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              view === "report" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <BarChart3 className="h-4 w-4" />
+            Reporte por empresa
           </button>
         </div>
 
@@ -246,6 +376,94 @@ export default function HistoryPage() {
                         </tr>
                       ))}
                     </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : view === "report" ? (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Suma de etiquetas impresas por empresa en el rango elegido, para llevar el control de lo que hay que
+              facturarle a cada una. Agrupa por la columna &quot;Empresa&quot; (o &quot;Cliente&quot;) de tu Excel
+              cuando existe; si un trabajo no la tiene, usa el nombre del archivo.
+            </p>
+
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Desde</label>
+                <input
+                  type="date"
+                  value={reportFrom}
+                  onChange={(e) => setReportFrom(e.target.value)}
+                  className="h-9 rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Hasta</label>
+                <input
+                  type="date"
+                  value={reportTo}
+                  onChange={(e) => setReportTo(e.target.value)}
+                  className="h-9 rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+              <Button size="sm" variant="outline" className="gap-1.5 h-9" onClick={loadReport} disabled={loadingReport}>
+                <RefreshCw className={cn("h-3.5 w-3.5", loadingReport && "animate-spin")} />
+                Generar
+              </Button>
+              {reportTotals.length > 0 && (
+                <Button size="sm" variant="outline" className="gap-1.5 h-9" onClick={downloadReportCsv}>
+                  <Download className="h-3.5 w-3.5" />
+                  Descargar CSV
+                </Button>
+              )}
+            </div>
+
+            {loadingReport ? (
+              <div className="py-16 text-center text-sm text-muted-foreground">Generando reporte…</div>
+            ) : reportError ? (
+              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16 text-center">
+                <BarChart3 className="mb-3 h-10 w-10 text-muted-foreground" />
+                <p className="text-sm text-foreground">No se pudo generar el reporte</p>
+                <p className="mt-1 text-xs text-muted-foreground">{reportError}</p>
+              </div>
+            ) : reportTotals.length === 0 ? (
+              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16 text-center">
+                <BarChart3 className="mb-3 h-10 w-10 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">No hay trabajos completados en ese rango de fechas</p>
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-xl border border-border bg-card">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="border-b border-border bg-muted">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Empresa</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground">Trabajos</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Etiquetas</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {reportTotals.map((r, i) => (
+                        <tr key={r.company} className={cn(i % 2 === 0 ? "bg-background" : "bg-muted/20")}>
+                          <td className="px-4 py-2.5 font-medium text-foreground">{r.company}</td>
+                          <td className="px-4 py-2.5 text-center text-muted-foreground">{r.jobs}</td>
+                          <td className="px-4 py-2.5 text-right text-foreground">{r.labels.toLocaleString("es-AR")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="border-t border-border bg-muted/40">
+                      <tr>
+                        <td className="px-4 py-2.5 font-semibold text-foreground">Total</td>
+                        <td className="px-4 py-2.5 text-center font-semibold text-foreground">
+                          {reportTotals.reduce((sum, r) => sum + r.jobs, 0)}
+                        </td>
+                        <td className="px-4 py-2.5 text-right font-semibold text-foreground">
+                          {reportTotals.reduce((sum, r) => sum + r.labels, 0).toLocaleString("es-AR")}
+                        </td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               </div>
