@@ -286,8 +286,14 @@ export default function UploadPage() {
     ? Array.from(new Set(data.rows.map((r) => String(r[filterColumn] ?? "").trim()).filter(Boolean)))
     : []
 
-  const matchesFilter = (row: Record<string, string>) =>
-    !filterColumn || !filterValue || String(row[filterColumn] ?? "").trim() === filterValue
+  const matchesFilter = (row: Record<string, string>) => {
+    if (filterColumn && filterValue && String(row[filterColumn] ?? "").trim() !== filterValue) return false
+    // Wide weekly format: not every diner has a meal every day, so printing
+    // "lunes" should skip rows with an empty cell in that day's column
+    // instead of generating a blank label for them.
+    if (weekdaySource && String(row[weekdaySource] ?? "").trim() === "") return false
+    return true
+  }
 
   const visibleRows = data ? data.rows.filter((row) => matchesFilter(row)).map(withWeekdayVar) : []
   const includedRows = data
@@ -746,6 +752,12 @@ export default function UploadPage() {
                 {weekdayVarName && (
                   <p className="text-xs text-primary">
                     En la plantilla usá <strong>{`{{${weekdayVarName}}}`}</strong> — hoy va a mostrar el valor de <strong>{weekdaySource}</strong>.
+                  </p>
+                )}
+                {weekdaySource && (
+                  <p className="text-xs text-muted-foreground">
+                    Se van a imprimir <strong className="text-foreground">{visibleRows.length} de {data.totalRows}</strong> comensales
+                    — los que tienen algo cargado en <strong>{weekdaySource}</strong>. Las filas vacías ese día se saltean solas.
                   </p>
                 )}
               </div>
