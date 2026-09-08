@@ -38,6 +38,37 @@ function detectDayColumn(columns: string[]): string | null {
   return columns.find((c) => ["dia", "día", "day", "weekday"].includes(c.toLowerCase().trim())) ?? null
 }
 
+function normalizeDay(s: string): string {
+  return s.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+}
+
+// Unaccented, in getDay() order (0 = domingo) — used to match weekday columns
+// regardless of accents/case in the Excel header.
+const WEEKDAY_KEYS = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"]
+
+/**
+ * Detects a "wide" weekly format: one column per weekday (LUNES, MARTES...)
+ * instead of a single "Día" column with one row per day. Common when a
+ * client keeps one weekly file with a column per day's value per person.
+ * Returns the matched columns in weekday order, or [] if fewer than 2 match
+ * (a single stray column named like a day isn't worth the extra UI).
+ */
+function detectWeekdayColumns(columns: string[]): string[] {
+  const matches = columns
+    .map((col) => ({ col, index: WEEKDAY_KEYS.indexOf(normalizeDay(col)) }))
+    .filter((m) => m.index !== -1)
+    .sort((a, b) => a.index - b.index)
+  return matches.length >= 2 ? matches.map((m) => m.col) : []
+}
+
+/** Matches the casing style of an existing column, so a suggested variable
+ * name (e.g. "del_dia") reads consistently next to columns like "LUNES". */
+function matchCase(sample: string, text: string): string {
+  if (sample === sample.toUpperCase()) return text.toUpperCase()
+  if (sample === sample.toLowerCase()) return text.toLowerCase()
+  return text
+}
+
 export default function UploadPage() {
   const router = useRouter()
   const supabase = createClient()
@@ -62,6 +93,9 @@ export default function UploadPage() {
   const [suggestedMatch, setSuggestedMatch] = useState<{ name: string; matched: number; total: number } | null>(null)
   const [filterColumn, setFilterColumn] = useState<string>("")
   const [filterValue, setFilterValue] = useState<string>("")
+  const [weekdayColumns, setWeekdayColumns] = useState<string[]>([])
+  const [weekdayVarName, setWeekdayVarName] = useState<string>("")
+  const [weekdaySource, setWeekdaySource] = useState<string>("")
 
   useEffect(() => {
     loadSavedLists()
@@ -78,6 +112,7 @@ export default function UploadPage() {
           setData(handoff)
           setExcludedRows(new Set())
           applyDayColumnDefault(handoff.columns, handoff.rows)
+          applyWeekdayColumnsDefault(handoff.columns)
           setStep(2)
           loadTemplates(handoff.columns)
         }
@@ -103,6 +138,30 @@ export default function UploadPage() {
     const todayMatch = values.find((v) => v.toLowerCase() === todayName)
     setFilterValue(todayMatch ?? "")
   }
+
+  // If the file has one column per weekday (LUNES, MARTES...) instead of a
+  // single "Día" column, there's no one column a template can point to.
+  // Detect that shape and offer a synthetic variable whose value is picked
+  // from today's (or a chosen) weekday column, so the template only needs
+  // one placeholder instead of one per day.
+  const applyWeekdayColumnsDefault = (columns: string[]) => {
+    const cols = detectWeekdayColumns(columns)
+    setWeekdayColumns(cols)
+    if (cols.length === 0) {
+      setWeekdayVarName("")
+      setWeekdaySource("")
+      return
+    }
+    const todayKey = WEEKDAY_KEYS[new Date().getDay()]
+    const todayCol = cols.find((c) => normalizeDay(c) === todayKey)
+    setWeekdaySource(todayCol ?? cols[0])
+    setWeekdayVarName(matchCase(cols[0], "del_dia"))
+  }
+
+  const withWeekdayVar = (row: Record<string, string>) =>
+    weekdayVarName && weekdaySource
+      ? { ...row, [weekdayVarName]: row[weekdaySource] ?? "" }
+      : row
 
   const parseFile = useCallback((file: File) => {
     setError(null)
@@ -159,6 +218,7 @@ export default function UploadPage() {
         if (cantCol) setQuantityColumn(cantCol)
 
         applyDayColumnDefault(columns, jsonData)
+        applyWeekdayColumnsDefault(columns)
 
         setStep(2)
         loadTemplates(columns)
@@ -229,9 +289,9 @@ export default function UploadPage() {
   const matchesFilter = (row: Record<string, string>) =>
     !filterColumn || !filterValue || String(row[filterColumn] ?? "").trim() === filterValue
 
-  const visibleRows = data ? data.rows.filter((row) => matchesFilter(row)) : []
+  const visibleRows = data ? data.rows.filter((row) => matchesFilter(row)).map(withWeekdayVar) : []
   const includedRows = data
-    ? data.rows.filter((row, i) => !excludedRows.has(i) && matchesFilter(row))
+    ? data.rows.filter((row, i) => !excludedRows.has(i) && matchesFilter(row)).map(withWeekdayVar)
     : []
   const includedCount = includedRows.length
 
@@ -321,7 +381,7 @@ export default function UploadPage() {
       .map((row, i) => ({
         job_id: job.id,
         row_index: i,
-        row_data: row,
+        row_data: withWeekdayVar(row),
         quantity: quantityColumn ? Math.max(1, Number(row[quantityColumn]) || 1) : 1,
       }))
 
@@ -377,6 +437,7 @@ export default function UploadPage() {
     )
     if (cantCol) setQuantityColumn(cantCol)
     applyDayColumnDefault(list.columns, list.rows)
+    applyWeekdayColumnsDefault(list.columns)
     setStep(2)
     loadTemplates(list.columns)
   }
@@ -641,9 +702,54 @@ export default function UploadPage() {
                     {`{{${col}}}`}
                   </span>
                 ))}
+                {weekdayVarName && weekdaySource && (
+                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/5 px-3 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    {`{{${weekdayVarName}}}`} · según el día
+                  </span>
+                )}
               </div>
               <p className="text-xs text-muted-foreground">Usá estas variables en tu plantilla de etiqueta</p>
             </div>
+
+            {weekdayColumns.length > 0 && (
+              <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+                <h3 className="text-sm font-semibold">Menú semanal detectado ({weekdayColumns.join(", ")})</h3>
+                <p className="text-xs text-muted-foreground">
+                  Tu Excel tiene una columna por día en vez de una sola columna &quot;Día&quot;. No hace falta poner
+                  las {weekdayColumns.length} columnas en la plantilla: elegí un nombre de variable acá y usala una
+                  sola vez — el sistema la completa con el valor de la columna del día que elijas.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-foreground">Nombre de la variable</label>
+                    <input
+                      type="text"
+                      value={weekdayVarName}
+                      onChange={(e) => setWeekdayVarName(e.target.value.trim())}
+                      placeholder="del_dia"
+                      className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-foreground">Día a imprimir</label>
+                    <select
+                      value={weekdaySource}
+                      onChange={(e) => setWeekdaySource(e.target.value)}
+                      className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                    >
+                      {weekdayColumns.map((col) => (
+                        <option key={col} value={col}>{col}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                {weekdayVarName && (
+                  <p className="text-xs text-primary">
+                    En la plantilla usá <strong>{`{{${weekdayVarName}}}`}</strong> — hoy va a mostrar el valor de <strong>{weekdaySource}</strong>.
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="rounded-xl border border-border bg-card p-5 space-y-3">
               <h3 className="text-sm font-semibold">Columna de cantidad</h3>
