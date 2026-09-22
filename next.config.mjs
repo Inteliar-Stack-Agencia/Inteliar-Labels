@@ -9,10 +9,19 @@ const csp = [
   // googleadservices.com and googletagmanager loads a doubleclick script
   // for view-through conversions — both required for Ads campaigns to track.
   // connect.facebook.net serves the Meta Pixel's fbevents.js script.
-  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://va.vercel-scripts.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://connect.facebook.net",
+  // pagead2.googlesyndication.com and google.com serve Google Ads'
+  // conversion/remarketing scripts (gtag.js loads them when an Ads
+  // conversion tag fires) — missing them silently drops some conversions
+  // per Google Tag Assistant, same failure mode as the connect-src gaps
+  // documented below.
+  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://va.vercel-scripts.com https://www.googleadservices.com https://www.google.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://connect.facebook.net",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https:",
   "font-src 'self' data:",
+  // GTM's own tag templates load in a sandboxed iframe from
+  // googletagmanager.com — with no frame-src set this fell back to
+  // default-src 'self' and silently blocked it.
+  "frame-src 'self' https://www.googletagmanager.com",
   // http://localhost:* / 127.0.0.1:* let the dashboard talk to the local
   // Inteliar Printer Agent (default port 9638, user-configurable) running
   // on the customer's own machine — without this, the browser silently
@@ -32,7 +41,7 @@ const csp = [
   // optional customer-hosted relay) — we don't run one, the hostnames are
   // generated per session, and the probe is designed to fail silently, so
   // there's no fixed domain to allowlist and blocking it is expected/fine.
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://vitals.vercel-insights.com https://api.mercadopago.com https://open.er-api.com https://ad.doubleclick.net https://www.google.com https://googleads.g.doubleclick.net https://www.facebook.com https://connect.facebook.net http://localhost:* http://127.0.0.1:*",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://vitals.vercel-insights.com https://api.mercadopago.com https://open.er-api.com https://ad.doubleclick.net https://www.google.com https://www.googleadservices.com https://www.googletagmanager.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.facebook.com https://connect.facebook.net http://localhost:* http://127.0.0.1:*",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "object-src 'none'",
