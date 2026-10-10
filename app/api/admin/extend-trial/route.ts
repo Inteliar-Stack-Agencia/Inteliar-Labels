@@ -35,11 +35,18 @@ export async function POST(req: NextRequest) {
   const { data: targetUser } = await supabaseAdmin.auth.admin.getUserById(userId)
   if (!targetUser?.user) return NextResponse.json({ error: "User not found" }, { status: 404 })
 
-  // Upsert a trial_extension record in user_metadata table
-  // Simplest: store extension days in a dedicated table
+  // Each press ADDS to what was already granted (7, 14, 21…): the button says
+  // "+7 días", and replacing the total made a second press a silent no-op.
+  const { data: current } = await supabaseAdmin
+    .from("trial_extensions")
+    .select("extra_days")
+    .eq("user_id", userId)
+    .maybeSingle()
+  const totalExtraDays = (current?.extra_days ?? 0) + days
+
   const { error } = await supabaseAdmin
     .from("trial_extensions")
-    .upsert({ user_id: userId, extra_days: days, granted_by: user.email, granted_at: new Date().toISOString() }, { onConflict: "user_id" })
+    .upsert({ user_id: userId, extra_days: totalExtraDays, granted_by: user.email, granted_at: new Date().toISOString() }, { onConflict: "user_id" })
 
   if (error) {
     // Table may not exist yet — fallback: just log
@@ -51,7 +58,7 @@ export async function POST(req: NextRequest) {
   // refuses to start on the old date. Same formula as the web limits:
   // registration date + trial days + extra days.
   const trialEnd = new Date(
-    new Date(targetUser.user.created_at).getTime() + (TRIAL_DAYS + days) * 24 * 60 * 60 * 1000
+    new Date(targetUser.user.created_at).getTime() + (TRIAL_DAYS + totalExtraDays) * 24 * 60 * 60 * 1000
   )
   await supabaseAdmin
     .from("licenses")
@@ -63,7 +70,7 @@ export async function POST(req: NextRequest) {
     .eq("plan", "trial")
     .in("status", ["active", "expired"])
 
-  await logAdminAction(supabaseAdmin, user.email ?? "unknown", "trial.extend", userId, { days })
+  await logAdminAction(supabaseAdmin, user.email ?? "unknown", "trial.extend", userId, { days, totalExtraDays })
 
-  return NextResponse.json({ ok: true, userId, days })
+  return NextResponse.json({ ok: true, userId, days, totalExtraDays })
 }
