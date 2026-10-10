@@ -13,7 +13,7 @@ import {
 import { cn } from "@/lib/utils"
 import type { License, LicenseActivation } from "@/lib/license-utils"
 
-const PLAN_LABEL: Record<string, string> = { monthly: "Mensual", pro: "Pro", lifetime: "De por vida" }
+const PLAN_LABEL: Record<string, string> = { monthly: "Mensual", pro: "Pro", lifetime: "De por vida", trial: "Prueba" }
 
 type AdminTab = "licenses" | "users" | "payments" | "config"
 const STATUS_STYLE: Record<string, string> = {
@@ -1478,7 +1478,9 @@ function LicenseRow({
                 className="rounded-lg border border-input bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 <option value="monthly">Mensual</option>
+                <option value="pro">Pro</option>
                 <option value="lifetime">De por vida</option>
+                <option value="trial">Prueba</option>
               </select>
             </div>
             {license.plan === "monthly" && (
