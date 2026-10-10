@@ -29,7 +29,7 @@ export interface License {
   id: string
   key: string
   user_id: string | null
-  plan: "monthly" | "pro" | "lifetime"
+  plan: "monthly" | "pro" | "lifetime" | "trial"
   status: "active" | "suspended" | "expired"
   email: string | null
   notes: string | null

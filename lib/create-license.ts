@@ -9,7 +9,7 @@ const supabaseAdmin = createSupabaseClient(
 )
 
 export interface CreateLicenseInput {
-  plan: "monthly" | "pro" | "lifetime"
+  plan: "monthly" | "pro" | "lifetime" | "trial"
   email?: string
   notes?: string
   /** External payment reference (MercadoPago/Stripe id) to avoid duplicates */
@@ -22,10 +22,12 @@ export interface CreateLicenseInput {
    * monthly/pro subscriptions. Has no effect on "lifetime" (never expires).
    */
   termMonths?: number
+  /** Explicit expiry (ISO). Used by "trial" licenses, which expire with the free trial. */
+  expiresAt?: string
 }
 
 export async function createLicense(input: CreateLicenseInput) {
-  const { plan, email = "", notes = "", paymentRef, sendEmail = false, termMonths = 1 } = input
+  const { plan, email = "", notes = "", paymentRef, sendEmail = false, termMonths = 1, expiresAt } = input
   const termDays = Math.max(1, termMonths) * 30
 
   // Idempotency: if a license already exists for this payment, return it
@@ -84,7 +86,9 @@ export async function createLicense(input: CreateLicenseInput) {
     }
   }
 
-  const expires_at = (plan === "monthly" || plan === "pro")
+  const expires_at = plan === "trial"
+    ? (expiresAt ?? null)
+    : (plan === "monthly" || plan === "pro")
     ? new Date(Date.now() + termDays * 24 * 60 * 60 * 1000).toISOString()
     : null
 
@@ -101,7 +105,8 @@ export async function createLicense(input: CreateLicenseInput) {
 
   if (error) throw new Error(error.message)
 
-  if (sendEmail && email) {
+  // Trial keys are shown in Configuración → Licencia, not emailed.
+  if (sendEmail && email && plan !== "trial") {
     await sendLicenseEmail(email, data.key, plan, false).catch((e) =>
       console.error("[create-license] email failed:", e.message)
     )

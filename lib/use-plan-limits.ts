@@ -50,6 +50,9 @@ export function usePlanLimits(): PlanLimits {
         .select("plan, status, expires_at")
         .eq("user_id", user.id)
         .in("status", ["active", "expired"])
+        // Trial licenses only exist to give the agent an activation code;
+        // their limits (days/labels) keep coming from the trial logic below.
+        .neq("plan", "trial")
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle()
