@@ -34,6 +34,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { brandFromQueueName } from "@/lib/printer-drivers"
+import { analytics } from "@/lib/analytics"
 import { createClient } from "@/lib/supabase/client"
 import { PrinterAgentStatus } from "@/components/printer/agent-status"
 import { PasswordInput } from "@/components/ui/password-input"
@@ -920,7 +921,7 @@ export default function SettingsPage() {
                     <p className="mt-1 text-xs text-muted-foreground">
                       Abrí la app <strong>Inteliar Printer Agent</strong> en tu PC (ícono de la bandeja del
                       sistema) o{" "}
-                      <a href="/api/download/agent" className="underline hover:text-foreground">
+                      <a href="/api/download/agent" onClick={() => analytics.agentDownloaded()} className="underline hover:text-foreground">
                         descargala acá
                       </a>
                     </p>

@@ -24,6 +24,7 @@ import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 import { getPrinterAgentLog, type AgentLogEntry } from "@/lib/printer-agent-client"
+import { analytics } from "@/lib/analytics"
 
 interface CompletedJob {
   id: string
@@ -317,7 +318,7 @@ export default function HistoryPage() {
                 <p className="mt-1 text-xs text-muted-foreground">{agentError}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Abrí la app <strong>Inteliar Printer Agent</strong> en tu PC (ícono de la bandeja del sistema) o{" "}
-                  <a href="/api/download/agent" className="underline hover:text-foreground">descargala acá</a>
+                  <a href="/api/download/agent" onClick={() => analytics.agentDownloaded()} className="underline hover:text-foreground">descargala acá</a>
                 </p>
               </div>
             ) : agentLog.length === 0 ? (
