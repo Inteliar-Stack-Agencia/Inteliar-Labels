@@ -185,13 +185,21 @@ export default function SettingsPage() {
   async function loadLicense(supabase: ReturnType<typeof createClient>, userId: string) {
     setLicenseLoading(true)
     try {
-      const { data } = await supabase
+      const query = () => supabase
         .from("licenses")
         .select("key, plan, status, expires_at, created_at, max_devices, activations")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle()
+      let { data } = await query()
+      // No license yet: users still in the free trial get a trial key
+      // (needed to activate the printer agent). No-op once the trial is over.
+      if (!data) {
+        const res = await fetch("/api/license/ensure-trial", { method: "POST" }).catch(() => null)
+        const json = res?.ok ? await res.json().catch(() => null) : null
+        if (json?.created) ({ data } = await query())
+      }
       setLicense(data ?? null)
     } finally {
       setLicenseLoading(false)
@@ -1101,7 +1109,7 @@ export default function SettingsPage() {
                           </div>
                           <div>
                             <p className="font-semibold text-foreground capitalize">
-                              Plan {license.plan === "monthly" ? "Mensual" : license.plan === "pro" ? "Pro" : license.plan === "lifetime" ? "De por vida" : license.plan}
+                              Plan {license.plan === "monthly" ? "Mensual" : license.plan === "pro" ? "Pro" : license.plan === "lifetime" ? "De por vida" : license.plan === "trial" ? "de prueba gratis" : license.plan}
                             </p>
                             <p className={cn("text-sm", license.status === "active" ? "text-emerald-500" : "text-amber-500")}>
                               {license.status === "active" ? "Activa" : license.status === "expired" ? "Vencida" : "Suspendida"}
@@ -1180,6 +1188,24 @@ export default function SettingsPage() {
                         )}
                       </div>
                     </div>
+
+                    {/* Subscribe CTA for the free trial key */}
+                    {license.plan === "trial" && (
+                      <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 flex items-center justify-between gap-4">
+                        <div>
+                          <p className="font-semibold text-foreground text-sm">Esta es tu clave de prueba gratis</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Sirve para activar el agente de impresión. Al terminar la prueba deja de funcionar: suscribite para seguir imprimiendo.
+                          </p>
+                        </div>
+                        <a href="/#pricing">
+                          <Button size="sm" className="gap-2 whitespace-nowrap">
+                            Ver planes
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </a>
+                      </div>
+                    )}
 
                     {/* Upgrade CTA for monthly plan */}
                     {license.plan === "monthly" && license.status === "active" && (

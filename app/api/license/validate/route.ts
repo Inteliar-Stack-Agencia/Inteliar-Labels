@@ -46,13 +46,19 @@ export async function POST(req: NextRequest) {
 
     if (license.expires_at) {
       const expiredAt = new Date(license.expires_at)
-      const graceDeadline = new Date(expiredAt.getTime() + 2 * 24 * 60 * 60 * 1000)
+      const graceDays = license.plan === "trial" ? 0 : 2
+      const graceDeadline = new Date(expiredAt.getTime() + graceDays * 24 * 60 * 60 * 1000)
       const now = new Date()
       if (now > graceDeadline) {
         if (license.status !== "expired") {
           await supabase.from("licenses").update({ status: "expired" }).eq("id", license.id)
         }
-        return NextResponse.json({ valid: false, message: "Licencia vencida. Renová tu suscripción." }, { status: 403 })
+        return NextResponse.json({
+          valid: false,
+          message: license.plan === "trial"
+            ? "Tu prueba gratis terminó. Suscribite en etiquetar.app para seguir imprimiendo."
+            : "Licencia vencida. Renová tu suscripción.",
+        }, { status: 403 })
       }
       if (now > expiredAt) {
         // Within grace period — still valid but warn
