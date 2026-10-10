@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { checkPrinterAgent, getPrinterAgentUrl, type AgentStatus } from "@/lib/printer-agent-client"
 import { Settings, X, Printer } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { analytics } from "@/lib/analytics"
 
 interface Props {
   onStatusChange?: (online: boolean, simulate: boolean) => void
@@ -151,7 +152,7 @@ export function PrinterAgentStatus({ onStatusChange, className }: Props) {
         <p className="text-xs text-muted-foreground">
           Abrí la app <strong>Inteliar Printer Agent</strong> en tu PC (ícono de la bandeja del sistema, cerca del
           reloj) para conectar tu impresora.{" "}
-          <a href="/api/download/agent" className="underline hover:text-foreground">
+          <a href="/api/download/agent" onClick={() => analytics.agentDownloaded()} className="underline hover:text-foreground">
             ¿No la tenés instalada? Descargala acá
           </a>
         </p>
