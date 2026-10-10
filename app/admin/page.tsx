@@ -47,7 +47,10 @@ interface AdminUser {
   last_sign_in_at: string | null
   whatsapp: string | null
   name: string | null
-  license: { key: string; plan: string; status: string; expires_at: string | null } | null
+  license: {
+    key: string; plan: string; status: string; expires_at: string | null
+    max_devices?: number; devices_used?: number
+  } | null
 }
 
 interface PaymentEvent {
@@ -92,6 +95,7 @@ export default function AdminPage() {
   interface UserTemplate { name: string; width_mm: number; height_mm: number; created_at: string }
   interface UserJob { name: string; total_labels: number; status: string; printer_name: string | null; created_at: string }
   const [detailUser, setDetailUser] = useState<AdminUser | null>(null)
+  const [detailKeyCopied, setDetailKeyCopied] = useState(false)
   const [detailData, setDetailData] = useState<{ templates: UserTemplate[]; jobs: UserJob[]; milestones?: { excelDownloaded: string | null; agentDownloaded: string | null; agentConnected: string | null } } | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   interface PrinterAgg { name: string; jobs: number; users: number }
@@ -1203,6 +1207,46 @@ export default function AdminPage() {
               </div>
             ) : (
               <div className="p-5 space-y-6">
+                {/* License */}
+                <div className="flex items-start gap-2 rounded-lg border border-border px-3 py-2.5">
+                  <Key className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] font-medium text-foreground mb-1">Licencia de uso</div>
+                    {detailUser.license ? (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <code className="select-all rounded bg-muted px-2 py-1 text-xs font-mono tracking-wide">{detailUser.license.key}</code>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(detailUser.license!.key)
+                              setDetailKeyCopied(true)
+                              setTimeout(() => setDetailKeyCopied(false), 2000)
+                            }}
+                            className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                            title="Copiar clave"
+                          >
+                            {detailKeyCopied
+                              ? <><Check className="h-3.5 w-3.5 text-success" /><span className="text-[11px] text-success">Copiado</span></>
+                              : <Copy className="h-3.5 w-3.5" />}
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                          <span className={cn("rounded-full border px-2 py-0.5 text-[10px] font-medium", STATUS_STYLE[detailUser.license.status])}>
+                            {STATUS_LABEL[detailUser.license.status] ?? detailUser.license.status}
+                          </span>
+                          <span className="font-medium text-foreground">{PLAN_LABEL[detailUser.license.plan] ?? detailUser.license.plan}</span>
+                          <span>{detailUser.license.expires_at ? `vence ${formatDate(detailUser.license.expires_at)}` : "no vence"}</span>
+                          {detailUser.license.max_devices !== undefined && (
+                            <span>· PCs activadas {detailUser.license.devices_used ?? 0}/{detailUser.license.max_devices}</span>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs italic text-muted-foreground">Sin licencia (todavía no abrió Configuración → Licencia).</p>
+                    )}
+                  </div>
+                </div>
+
                 {/* Printers used */}
                 {(() => {
                   const printers = Array.from(new Set(
