@@ -602,7 +602,7 @@ export default function AdminPage() {
                           })()}
                         </td>
                         <td className="px-4 py-3">
-                          {u.license ? (
+                          {u.license && u.license.plan !== "trial" ? (
                             <span className="text-xs text-muted-foreground">—</span>
                           ) : trialExpired ? (
                             <span className="rounded-full border px-2 py-0.5 text-[10px] font-medium bg-destructive/10 text-destructive border-destructive/30">Vencido</span>
@@ -649,7 +649,7 @@ export default function AdminPage() {
                             >
                               <Mail className="h-4 w-4" />
                             </a>
-                            {!u.license && (
+                            {(!u.license || u.license.plan === "trial") && (
                               <button
                                 onClick={async () => {
                                   await fetch("/api/admin/extend-trial", {
