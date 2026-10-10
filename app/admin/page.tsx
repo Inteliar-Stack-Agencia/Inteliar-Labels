@@ -1184,9 +1184,17 @@ export default function AdminPage() {
                   ) : null}
                 </p>
               </div>
-              <button onClick={() => setDetailUser(null)} className="text-muted-foreground hover:text-foreground">
-                <X className="h-5 w-5" />
-              </button>
+              <div className="flex items-center gap-3">
+                <a
+                  href={`/admin/users/${detailUser.id}`}
+                  className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted"
+                >
+                  Ver cuenta
+                </a>
+                <button onClick={() => setDetailUser(null)} className="text-muted-foreground hover:text-foreground">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
             {detailLoading || !detailData ? (
