@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { TRIAL_DAYS } from "@/lib/trial"
 
-const TRIAL_DAYS = 15
 const TRIAL_LABELS = 500
 const MONTHLY_LABELS_MAX = 2000
 

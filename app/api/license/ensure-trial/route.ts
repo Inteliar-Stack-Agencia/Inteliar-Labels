@@ -3,14 +3,12 @@ import { createServerClient } from "@supabase/ssr"
 import { createClient } from "@supabase/supabase-js"
 import { cookies } from "next/headers"
 import { createLicense } from "@/lib/create-license"
+import { TRIAL_DAYS } from "@/lib/trial"
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
-
-// Must match TRIAL_DAYS in lib/use-plan-limits.ts
-const TRIAL_DAYS = 15
 
 // POST /api/license/ensure-trial
 // Gives a user still inside the free trial a license key, so the printer

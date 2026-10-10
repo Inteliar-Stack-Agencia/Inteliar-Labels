@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js"
 import { cookies } from "next/headers"
 import { createServerClient } from "@supabase/ssr"
 import { logAdminAction } from "@/lib/admin-audit-log"
+import { TRIAL_DAYS } from "@/lib/trial"
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -44,6 +45,23 @@ export async function POST(req: NextRequest) {
     // Table may not exist yet — fallback: just log
     console.warn("[extend-trial] trial_extensions table missing:", error.message)
   }
+
+  // Keep the user's trial license (the key the agent validates) in step with
+  // the extension, or the web would let them keep printing while the agent
+  // refuses to start on the old date. Same formula as the web limits:
+  // registration date + trial days + extra days.
+  const trialEnd = new Date(
+    new Date(targetUser.user.created_at).getTime() + (TRIAL_DAYS + days) * 24 * 60 * 60 * 1000
+  )
+  await supabaseAdmin
+    .from("licenses")
+    .update({
+      expires_at: trialEnd.toISOString(),
+      ...(trialEnd > new Date() ? { status: "active" } : {}),
+    })
+    .eq("user_id", userId)
+    .eq("plan", "trial")
+    .in("status", ["active", "expired"])
 
   await logAdminAction(supabaseAdmin, user.email ?? "unknown", "trial.extend", userId, { days })
 
