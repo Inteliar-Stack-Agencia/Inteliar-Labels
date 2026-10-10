@@ -27,14 +27,23 @@ export async function GET() {
   // Get all licenses (to join)
   const { data: licenses } = await supabaseAdmin
     .from("licenses")
-    .select("user_id, email, key, plan, status, expires_at, created_at")
+    .select("user_id, email, key, plan, status, expires_at, created_at, max_devices, activations")
     .order("created_at", { ascending: true })
 
   // A license created from /admin (or a payment) carries only the customer's
   // email: it gets its user_id when they open the dashboard or activate the
   // key. Until then, match it by email so the list doesn't say "Sin licencia"
   // for someone who already has one. Ascending order → newest wins.
-  type LicenseRow = { key: string; plan: string; status: string; expires_at: string | null }
+  type LicenseRow = {
+    key: string; plan: string; status: string; expires_at: string | null
+    max_devices: number; activations: unknown[] | null
+  }
+  const summarize = (l: LicenseRow | undefined) => l
+    ? {
+        key: l.key, plan: l.plan, status: l.status, expires_at: l.expires_at,
+        max_devices: l.max_devices, devices_used: (l.activations ?? []).length,
+      }
+    : null
   const licenseByUser: Record<string, LicenseRow> = {}
   const licenseByEmail: Record<string, LicenseRow> = {}
   for (const l of licenses ?? []) {
@@ -50,7 +59,7 @@ export async function GET() {
     whatsapp: (u.user_metadata?.whatsapp as string | undefined) ?? u.phone ?? null,
     name: ((u.user_metadata?.full_name as string | undefined)
       ?? [u.user_metadata?.first_name, u.user_metadata?.last_name].filter(Boolean).join(" ")).trim() || null,
-    license: licenseByUser[u.id] ?? licenseByEmail[(u.email ?? "").trim().toLowerCase()] ?? null,
+    license: summarize(licenseByUser[u.id] ?? licenseByEmail[(u.email ?? "").trim().toLowerCase()]),
   }))
 
   return NextResponse.json(result)
