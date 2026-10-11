@@ -96,6 +96,23 @@ export const PRESET_TEMPLATES: PresetTemplate[] = [
     },
   },
   {
+    id: "product-variant-barcode",
+    name: "Producto con color, talle y código",
+    description: "Nombre, color, talle y código de barras fijo por producto (columna codigo del Excel). Unidades iguales llevan el mismo código",
+    emoji: "👕",
+    widthMm: 60,
+    heightMm: 40,
+    canvas: {
+      cutBetweenLabels: true,
+      cutEveryN: 1,
+      elements: [
+        { id: "1", type: "text", content: "{{producto}}", x: 40, y: 30, fontSize: 12, bold: true },
+        { id: "2", type: "text", content: "{{color}} - Talle {{talle}}", x: 40, y: 90, fontSize: 9, bold: false },
+        { id: "3", type: "barcode", content: "{{codigo}}", x: 40, y: 150, fontSize: 8, bold: false, barcodeType: "code128" },
+      ],
+    },
+  },
+  {
     id: "mercadolibre-product",
     name: "Producto Mercado Libre",
     description: "Nombre, SKU, cantidad, precio y número de orden — para pedidos importados de ML",
