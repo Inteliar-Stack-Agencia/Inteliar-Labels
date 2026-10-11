@@ -20,6 +20,9 @@ export interface LabelElement {
   // text: force the resolved content to print in uppercase, regardless of
   // how the value is cased in the Excel column or typed in a static label.
   uppercase?: boolean
+  // barcode: print the next number of a series on every label (uses the
+  // serial* fields below) instead of a value taken from the Excel.
+  autoNumber?: boolean
   // image
   imageUrl?: string
   imgWidth?: number

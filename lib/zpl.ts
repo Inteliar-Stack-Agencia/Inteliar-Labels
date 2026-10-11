@@ -52,7 +52,7 @@ function fontSizeToZpl(fontSize: number): string {
   return `^A0N,${h},${w}`
 }
 
-function serialValue(el: LabelElement, labelIndex: number): string {
+export function serialValue(el: LabelElement, labelIndex: number): string {
   const start = el.serialStart ?? 1
   const inc = el.serialIncrement ?? 1
   const digits = el.serialDigits ?? 4
@@ -98,7 +98,11 @@ function buildLabelZpl(
       continue
     }
 
-    let content = toAsciiSafe(substituteVars(el.content, row))
+    // A barcode set to auto-number prints the next number of its series,
+    // not the (ignored) variable content.
+    let content = toAsciiSafe(
+      el.type === "barcode" && el.autoNumber ? serialValue(el, labelIndex) : substituteVars(el.content, row)
+    )
     if (el.uppercase) content = content.toUpperCase()
 
     if (el.type === "text") {

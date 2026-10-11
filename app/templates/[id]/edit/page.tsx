@@ -35,6 +35,8 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { LabelElement, ElementType, BarcodeType } from "@/lib/label-types"
+import { serialValue } from "@/lib/zpl"
+import { BarcodeAutoNumber } from "@/components/templates/barcode-autonumber"
 import { resolveDateVars, DATE_SHORTCUTS, isDateToken } from "@/lib/date-vars"
 import { analytics } from "@/lib/analytics"
 import * as XLSX from "xlsx"
@@ -1245,6 +1247,12 @@ export default function TemplateEditPage() {
                       </select>
                     </div>
                   )}
+                  {selectedElementData.type === "barcode" && (
+                    <BarcodeAutoNumber
+                      element={selectedElementData}
+                      onChange={(patch) => updateElement(selectedElementData.id, patch)}
+                    />
+                  )}
                 </div>
               )}
 
@@ -1518,7 +1526,7 @@ export default function TemplateEditPage() {
                     <div style={{ width: "100%" }}>
                       <div style={{ width: "100%", height: "48px", background: "repeating-linear-gradient(90deg, #111 0, #111 2px, #fff 2px, #fff 4px, #111 4px, #111 5px, #fff 5px, #fff 8px)" }} />
                       <div className="text-center truncate" style={{ fontSize: "10px", fontFamily: "monospace", color: "#555" }}>
-                        {applyPreviewData(element.content ?? "")}
+                        {element.autoNumber ? serialValue(element, 0) : applyPreviewData(element.content ?? "")}
                       </div>
                     </div>
                   ) : (
