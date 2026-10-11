@@ -74,6 +74,28 @@ export const PRESET_TEMPLATES: PresetTemplate[] = [
     },
   },
   {
+    id: "product-auto-barcode",
+    name: "Producto con código de barras numerado",
+    description: "Nombre del producto y un código de barras que se numera solo (000001, 000002…), sin cargar códigos en el Excel",
+    emoji: "🔢",
+    widthMm: 60,
+    heightMm: 40,
+    canvas: {
+      cutBetweenLabels: true,
+      cutEveryN: 1,
+      elements: [
+        { id: "1", type: "text", content: "{{producto}}", x: 40, y: 40, fontSize: 12, bold: true },
+        // autoNumber: the barcode prints the next number of the series on every
+        // label, so its content is unused (and must not become an Excel column).
+        {
+          id: "2", type: "barcode", content: "", x: 40, y: 150, fontSize: 8, bold: false,
+          barcodeType: "code128", autoNumber: true,
+          serialStart: 1, serialIncrement: 1, serialDigits: 6, serialPrefix: "", serialSuffix: "",
+        },
+      ],
+    },
+  },
+  {
     id: "mercadolibre-product",
     name: "Producto Mercado Libre",
     description: "Nombre, SKU, cantidad, precio y número de orden — para pedidos importados de ML",

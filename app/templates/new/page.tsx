@@ -36,6 +36,8 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { LabelElement, ElementType } from "@/lib/label-types"
+import { serialValue } from "@/lib/zpl"
+import { BarcodeAutoNumber } from "@/components/templates/barcode-autonumber"
 import { PRESET_TEMPLATES } from "@/lib/preset-templates"
 import { resolveDateVars, DATE_SHORTCUTS, isDateToken } from "@/lib/date-vars"
 import { analytics } from "@/lib/analytics"
@@ -589,6 +591,7 @@ export default function NewTemplatePage() {
     Array.from(new Set(
       elements
         .filter(Boolean)
+        .filter((el) => !(el.type === "barcode" && el.autoNumber)) // its content is ignored: no variable, no Excel column
         .flatMap((el) => [...(el.content ?? "").matchAll(/\{\{([^}]+?)(?:\+[^}]*)?\}\}/g)].map((m) => m[1].trim()))
         .filter((v) => !isDateToken(v))
     ))
@@ -615,6 +618,7 @@ export default function NewTemplatePage() {
 
     const variables = elements
       .filter(Boolean)
+      .filter((el) => !(el.type === "barcode" && el.autoNumber)) // its content is ignored: no variable, no Excel column
       .map((el) => {
         const matches = (el.content ?? "").match(/\{\{([^}]+)\}\}/g)
         return matches ? matches.map((m) => m.replace(/[{}]/g, "").trim()) : []
@@ -1229,6 +1233,12 @@ export default function NewTemplatePage() {
                       </select>
                     </div>
                   )}
+                  {selectedElementData.type === "barcode" && (
+                    <BarcodeAutoNumber
+                      element={selectedElementData}
+                      onChange={(patch) => updateElement(selectedElementData.id, patch)}
+                    />
+                  )}
                   <p className="mt-1 text-[10px] text-muted-foreground">Usá {"{{nombre_columna}}"} para datos del Excel</p>
                 </div>
               )}
@@ -1514,7 +1524,7 @@ export default function NewTemplatePage() {
                     <div style={{ width: "100%" }}>
                       <div style={{ width: "100%", height: "48px", background: "repeating-linear-gradient(90deg, #111 0, #111 2px, #fff 2px, #fff 4px, #111 4px, #111 5px, #fff 5px, #fff 8px)" }} />
                       <div className="text-center truncate" style={{ fontSize: "10px", fontFamily: "monospace", color: "#555" }}>
-                        {applyPreviewData(element.content ?? "")}
+                        {element.autoNumber ? serialValue(element, 0) : applyPreviewData(element.content ?? "")}
                       </div>
                     </div>
                   ) : (
