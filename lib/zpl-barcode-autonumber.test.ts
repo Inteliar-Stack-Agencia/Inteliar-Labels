@@ -75,3 +75,20 @@ describe("preset 'Producto con código de barras numerado'", () => {
     expect(zpl).toContain("Cuaderno A4")
   })
 })
+
+describe("preset product-variant-barcode", () => {
+  it("imprime el mismo código en unidades iguales y otro en cada variante", async () => {
+    const { PRESET_TEMPLATES } = await import("./preset-templates")
+    const preset = PRESET_TEMPLATES.find((p) => p.id === "product-variant-barcode")!
+    const zpl = generateZPL(
+      { width_mm: preset.widthMm, height_mm: preset.heightMm, canvas_data: preset.canvas },
+      [
+        { row_data: { producto: "Remera", color: "Negro", talle: "M", codigo: "1001" }, quantity: 3 },
+        { row_data: { producto: "Remera", color: "Blanco", talle: "M", codigo: "1003" }, quantity: 1 },
+      ]
+    )
+    expect(zpl.match(/\^FD1001\^FS/g)).toHaveLength(3)
+    expect(zpl.match(/\^FD1003\^FS/g)).toHaveLength(1)
+    expect(zpl).toContain("Negro - Talle M")
+  })
+})
