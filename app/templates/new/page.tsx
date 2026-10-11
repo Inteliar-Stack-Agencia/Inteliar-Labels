@@ -591,6 +591,7 @@ export default function NewTemplatePage() {
     Array.from(new Set(
       elements
         .filter(Boolean)
+        .filter((el) => !(el.type === "barcode" && el.autoNumber)) // its content is ignored: no variable, no Excel column
         .flatMap((el) => [...(el.content ?? "").matchAll(/\{\{([^}]+?)(?:\+[^}]*)?\}\}/g)].map((m) => m[1].trim()))
         .filter((v) => !isDateToken(v))
     ))
@@ -617,6 +618,7 @@ export default function NewTemplatePage() {
 
     const variables = elements
       .filter(Boolean)
+      .filter((el) => !(el.type === "barcode" && el.autoNumber)) // its content is ignored: no variable, no Excel column
       .map((el) => {
         const matches = (el.content ?? "").match(/\{\{([^}]+)\}\}/g)
         return matches ? matches.map((m) => m.replace(/[{}]/g, "").trim()) : []

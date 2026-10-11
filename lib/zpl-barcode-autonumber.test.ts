@@ -47,3 +47,31 @@ describe("barcode auto-numbering", () => {
     expect(fds(zpl)).toEqual(["A1", "B2"])
   })
 })
+
+import { PRESET_TEMPLATES } from "./preset-templates"
+
+describe("preset 'Producto con código de barras numerado'", () => {
+  const preset = PRESET_TEMPLATES.find((p) => p.id === "product-auto-barcode")!
+
+  it("only needs the 'producto' variable (no phantom Excel column)", () => {
+    const vars = new Set(
+      preset.canvas.elements
+        .filter((el) => !(el.type === "barcode" && el.autoNumber))
+        .flatMap((el) => [...el.content.matchAll(/\{\{(\w+)\}\}/g)].map((m) => m[1]))
+    )
+    expect([...vars]).toEqual(["producto"])
+  })
+
+  it("prints each product with its own number, honouring cantidad", () => {
+    const zpl = generateZPL(
+      { width_mm: preset.widthMm, height_mm: preset.heightMm, canvas_data: preset.canvas },
+      [
+        { row_data: { producto: "Mochila escolar" }, quantity: 2 },
+        { row_data: { producto: "Cuaderno A4" }, quantity: 1 },
+      ]
+    )
+    expect(fds(zpl)).toEqual(["000001", "000002", "000003"])
+    expect(zpl).toContain("Mochila escolar")
+    expect(zpl).toContain("Cuaderno A4")
+  })
+})
